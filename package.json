@@ -12,8 +12,21 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "5.15.4",
+    "@mui/lab": "^5.0.0-alpha.160",
+    "@mui/material": "5.15.4",
+    "debug": "^4.3.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-audio-visualize": "^1.1.3",
+    "react-audio-voice-recorder": "^2.2.0",
+    "react-dom": "^18.2.0",
+    "react-inspector": "^6.0.2",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "supports-color": "^9.4.0",
+    "use-file-picker": "^2.1.1"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^7.6.17",
@@ -36,5 +49,12 @@
     "storybook": "^7.6.17",
     "typescript": "^5.2.2",
     "vite": "^5.1.4"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "semi": false,
+    "singleQuote": true,
+    "jsxSingleQuote": true,
+    "proseWrap": "always"
   }
 }
