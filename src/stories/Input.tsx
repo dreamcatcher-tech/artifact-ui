@@ -1,4 +1,4 @@
-import { usePrompt } from '../react/hooks.ts'
+import { useGoalie } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
@@ -44,6 +44,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
 
   const [value, setValue] = useState(preload || '')
   const [disabled, setDisabled] = useState(false)
+  const [placeholder, setPlaceholder] = useState('')
   const [isTransReady, setIsTransReady] = useState(false)
   const { startRecording, stopRecording, recordingBlob, mediaRecorder } =
     useAudioRecorder()
@@ -52,12 +53,24 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     onTranscription && onTranscription(true)
     setDisabled(true)
   }, [startRecording, onTranscription])
-
-  const prompt = usePrompt()
+  const pid = { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] }
+  const prompt = useGoalie(pid)
+  useEffect(() => {
+    if (!prompt) {
+      setDisabled(true)
+      setPlaceholder('loading...')
+    } else {
+      setPlaceholder('Message DreamcatcherGPT...')
+      setDisabled(false)
+    }
+  }, [prompt])
   const send = useCallback(() => {
     debug('send', value)
     setValue('')
     setDisabled(true)
+    if (!prompt) {
+      throw new Error('prompt is not defined')
+    }
     prompt(value)
       .catch(setError)
       .finally(() => setDisabled(false))
@@ -178,7 +191,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
       fullWidth
       variant='outlined'
       label='Input'
-      placeholder={disabled ? undefined : 'Message DreamcatcherGPT...'}
+      placeholder={placeholder}
       InputProps={inputProps}
       onChange={(e) => setValue(e.target.value)}
       disabled={disabled}

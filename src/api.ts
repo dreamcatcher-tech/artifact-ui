@@ -4,6 +4,9 @@ import {
   PierceRequest,
   AudioPierceRequest,
   Cradle,
+  PID,
+  DispatchFunctions,
+  PROCTYPE,
 } from '../constants.ts'
 
 export default class API implements Cradle {
@@ -33,7 +36,29 @@ export default class API implements Cradle {
   logs(params: { repo: string }) {
     return this.request('logs', params)
   }
-
+  async pierces(isolate: string, target: PID) {
+    // cradle side, since functions cannot be returned from isolate calls
+    const apiSchema = await this.apiSchema({ isolate })
+    const pierces: DispatchFunctions = {}
+    for (const functionName of Object.keys(apiSchema)) {
+      pierces[functionName] = (
+        params: Params = {},
+        options?: { branch?: boolean }
+      ) => {
+        const proctype = options?.branch ? PROCTYPE.BRANCH : PROCTYPE.SERIAL
+        const pierce: PierceRequest = {
+          target,
+          ulid: 'calculated-server-side',
+          isolate,
+          functionName,
+          params,
+          proctype,
+        }
+        return this.pierce(pierce)
+      }
+    }
+    return pierces
+  }
   private async request(path: string, params: Params) {
     const response = await fetch(`${this.url}/api/${path}`, {
       method: 'POST',

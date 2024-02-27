@@ -22,12 +22,3 @@ Fake.args = { preload }
 export const Presubmit = Template.bind({})
 Presubmit.args = { preload, presubmit: true }
 
-/**
- * How would this work?
- *
- * We would search for the right goal
- * Then the help would tell us what to do, and would load up the right functions
- * into the runner for execution.
- *
- * Always have to get some commands and some instructions from somewhere.
- */

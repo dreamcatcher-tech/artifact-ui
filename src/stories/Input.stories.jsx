@@ -1,4 +1,5 @@
 import Input from './Input.tsx'
+import Provider from './MockAPI.tsx'
 import Debug from 'debug'
 
 export default {
@@ -6,16 +7,12 @@ export default {
   component: Input,
 }
 
-const fetcher = (key) => {
-  console.log('fetcher', key)
-}
-
 const Template = (args) => {
   Debug.enable('*')
   return (
-    <SWRConfig value={{ fetcher }}>
+    <Provider>
       <Input {...args} />
-    </SWRConfig>
+    </Provider>
   )
 }
 

@@ -7,7 +7,14 @@ import { useMemo, FC } from 'react'
 import Real from '../api.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
-import { AudioPierceRequest, Cradle, PierceRequest } from '../../constants.ts'
+import {
+  AudioPierceRequest,
+  Cradle,
+  DispatchFunctions,
+  PID,
+  Params,
+  PierceRequest,
+} from '../../constants.ts'
 
 const log = Debug('AI:MockAPI')
 
@@ -20,6 +27,7 @@ interface Props {
 }
 class Mock implements Cradle {
   // TODO have controls for delays
+  // TODO select different mock responses for different tests
   constructor() {
     log('MockAPI loaded')
   }
@@ -45,10 +53,23 @@ class Mock implements Cradle {
     log('params', params)
     return Promise.resolve([])
   }
+  async pierces(isolate: string, target: PID) {
+    log('isolate', isolate, 'target', target)
+    await Promise.resolve()
+    const pierces: DispatchFunctions = {}
+    if (isolate === 'engage-help') {
+      pierces.engageInBand = async (params?: Params) => {
+        // Update the type of 'params' parameter
+        const { help, text } = params || { help: '', text: '' }
+        log('engageInBand', help, text)
+        return 'TODO'
+      }
+    }
+    return pierces
+  }
 }
 
 const Provider: FC<Props> = ({ children, url }) => {
-  url = url || import.meta.env.VITE_API_URL
   const artifact = useMemo(() => (url ? new Real(url) : new Mock()), [url])
 
   return (

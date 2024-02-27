@@ -84,4 +84,5 @@ export interface Cradle {
   pierce(params: PierceRequest): Promise<IsolateReturn>
   audioPierce(params: AudioPierceRequest): Promise<IsolateReturn>
   logs(params: { repo: string }): Promise<object[]>
+  pierces(isolate: string, target: PID): Promise<DispatchFunctions>
 }
