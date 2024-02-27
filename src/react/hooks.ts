@@ -46,6 +46,7 @@ export const useActions = (isolate) => {
 
 export const usePierces = (isolate: string) => {
   // make a call to the isolateApi endpoint
+  debug('usePierces', isolate)
 }
 
 export const useSession = () => {
@@ -73,7 +74,7 @@ export const usePrompt = () => {
       const data = await response.json()
       mutate(data)
     },
-    [pid]
+    [pid, mutate]
   )
 
   const actions = useAPI('engage-help')
@@ -98,7 +99,7 @@ export const usePrompt = () => {
       prompt({ text }).then(resolve).catch(setError)
     }
     setBuffer([])
-  }, [prompt, buffer])
+  }, [prompt])
 
   const bufferingPrompt = useCallback(
     async (text) => {

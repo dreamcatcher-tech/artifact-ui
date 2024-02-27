@@ -71,6 +71,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     const file = new File([recordingBlob], 'recording.webm', {
       type: recordingBlob.type,
     })
+    debug('transcribe', file)
     // openai.audio.transcriptions
     //   .create({ file, model: 'whisper-1' })
     //   .then((transcription) => {
@@ -94,6 +95,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
   })
+  debug('filesContent', filesContent, loading)
   const inputProps = {
     endAdornment: (
       <InputAdornment position='end'>

@@ -1,8 +1,6 @@
-import { useMemo, createContext, useEffect, useState, FC } from 'react'
+import { useMemo, createContext, FC } from 'react'
 import API from '../api.ts'
 import { Cradle } from '../../constants.ts'
-import Debug from 'debug'
-const debug = Debug('AI:Provider')
 
 interface ContextType {
   artifact: Cradle
@@ -12,10 +10,15 @@ export const ArtifactContext = createContext<ContextType>({
 })
 interface Props {
   children: React.ReactNode
+  url?: string
 }
 
-const Provider: FC<Props> = ({ children }) => {
-  const artifact = useMemo(() => new API(import.meta.env.VITE_API_URL), [])
+const Provider: FC<Props> = ({ children, url }) => {
+  url = url || import.meta.env.VITE_API_URL
+  if (!url) {
+    throw new Error('API URL not set')
+  }
+  const artifact = useMemo(() => new API(url!), [url])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

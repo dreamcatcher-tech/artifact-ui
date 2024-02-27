@@ -20,7 +20,7 @@ const PingButton = () => {
     await ping()
     setLatency(Date.now() - start)
     log('done')
-  }, [])
+  }, [ping])
 
   return (
     <>
