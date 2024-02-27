@@ -1,13 +1,14 @@
-// this is supposed to have been copied over from the artifact project
+// THIS IS SYCNED WITH THE ARTIFACT PROJECT
+// TODO publish to standalone repo
 import {
-  Params,
-  PierceRequest,
   AudioPierceRequest,
   Cradle,
-  PID,
   DispatchFunctions,
+  Params,
+  PID,
+  PierceRequest,
   PROCTYPE,
-} from '../constants.ts'
+} from './web-client.types.ts'
 
 export default class API implements Cradle {
   constructor(private readonly url: string) {
@@ -43,7 +44,7 @@ export default class API implements Cradle {
     for (const functionName of Object.keys(apiSchema)) {
       pierces[functionName] = (
         params: Params = {},
-        options?: { branch?: boolean }
+        options?: { branch?: boolean },
       ) => {
         const proctype = options?.branch ? PROCTYPE.BRANCH : PROCTYPE.SERIAL
         const pierce: PierceRequest = {

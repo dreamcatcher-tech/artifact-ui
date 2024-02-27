@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "chromatic": "npx chromatic --project-token=chpt_06e1ea93d90dd7c"
+    "chromatic": "npx chromatic --project-token=chpt_06e1ea93d90dd7c",
+    "pull": "cp ../artifact/artifact/api/web-client* src/api/"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -46,7 +47,6 @@
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "ajv": "^8.12.0",
     "chromatic": "^11.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",

@@ -1,5 +1,5 @@
 // copied from the artifact project
-import { JSONSchemaType } from 'ajv'
+import { JSONSchemaType } from './web-client.ajv.ts'
 export enum PROCTYPE {
   SERIAL = 'SERIAL',
   BRANCH = 'BRANCH',
@@ -13,14 +13,14 @@ export type JsonValue =
   | null
   | JsonValue[]
   | {
-      [key: string]: JsonValue
-    }
+    [key: string]: JsonValue
+  }
 export type IsolateReturn = JsonValue | void
 
 export type DispatchFunctions = {
   [key: string]: (
     params?: Params,
-    options?: { branch?: boolean }
+    options?: { branch?: boolean },
   ) => unknown | Promise<unknown>
 }
 export type Params = Record<string, unknown>
