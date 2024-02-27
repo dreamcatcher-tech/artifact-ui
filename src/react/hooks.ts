@@ -1,9 +1,18 @@
-import useSWR, { SWRConfig } from 'swr'
-import { ArtifactContext } from '../stories/MockAPI'}
+import useSWR from 'swr'
+import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 const debug = Debug('AI:hooks')
 
+const useAPI = () => {
+  const { artifact } = useContext(ArtifactContext)
+  return artifact
+}
+
+export const usePing = () => {
+  const api = useAPI()
+  return (...args: Parameters<typeof api.ping>) => api.ping(...args)
+}
 
 export const useActions = (isolate) => {
   assert(!posix.isAbsolute(isolate), `path must be relative: ${isolate}`)
@@ -35,12 +44,12 @@ export const useActions = (isolate) => {
   return actions
 }
 
-export const usePierces = (isolate:string) => {
-    // make a call to the isolateApi endpoint
+export const usePierces = (isolate: string) => {
+  // make a call to the isolateApi endpoint
 }
 
 export const useSession = () => {
-    // start a new session if we don't have one, or use current session
+  // start a new session if we don't have one, or use current session
 }
 
 export const usePrompt = () => {
@@ -48,24 +57,25 @@ export const usePrompt = () => {
   // so make a new one if one not running ?
 
   // can rely on useSession to get the PID
-    const pid = useSession()
+  const pid = useSession()
 
-    // want to pierce the pid, then mutate the session file
-    // to show pending data
+  // want to pierce the pid, then mutate the session file
+  // to show pending data
 
-const { mutate } = useSWR({path: '/api/prompt', pid })
+  const { mutate } = useSWR({ path: '/api/prompt', pid })
 
-const prompt = useCallback(async (text) => {
-
-    const response = await fetch('/api/prompt', {
+  const prompt = useCallback(
+    async (text) => {
+      const response = await fetch('/api/prompt', {
         method: 'POST',
-        body: JSON.stringify({text, pid})
-    })
-    const data = await response.json()
-    mutate(data)
-}, [pid])
+        body: JSON.stringify({ text, pid }),
+      })
+      const data = await response.json()
+      mutate(data)
+    },
+    [pid]
+  )
 
-  const isolate = 
   const actions = useAPI('engage-help')
 
   useEffect(() => {
@@ -104,7 +114,7 @@ const prompt = useCallback(async (text) => {
       debug('prompt', text)
       return await prompt({ text })
     },
-    [prompt],
+    [prompt]
   )
   return bufferingPrompt
 }

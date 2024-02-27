@@ -1,3 +1,4 @@
+// this is supposed to have been copied over from the artifact project
 import {
   Params,
   PierceRequest,
@@ -42,29 +43,3 @@ export default class API implements Cradle {
     return await response.json()
   }
 }
-
-/**
- * This is the real api, which is copied from the api project.
- *
- *
- * Testing this thing
- *
- * Ultimately this needs to get exported from the api project
- *
- * Fire up the api server on localhost and run tests against it.
- *
- * All the integration tests for Cradle should pass if this was dropped in to
- * those tests.
- *
- * Need to test with mock data in storybook,
- * then test, in storybook, with the real api server.
- * So if real api server is set in env, use that, otherwise use mock data.
- *
- * So the cradle comes from the provider hook.
- * Some of its functions will be used by the fetcher hook for swr.
- * Parts of storybook will
- *
- * Make a top level context for both swr and artifact together.
- * Then provide a mock artifact for ui testing.
- * Verify function calls and types in the steps of the play function
- */

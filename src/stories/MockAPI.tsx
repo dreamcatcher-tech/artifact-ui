@@ -7,32 +7,43 @@ import { useMemo, createContext, useEffect, useState, FC } from 'react'
 import Real from '../api.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
+import { AudioPierceRequest, Cradle, PierceRequest } from '../../constants.ts'
 
 const debug = Debug('AI:MockAPI')
 
 interface Props {
   children: React.ReactNode
+  /**
+   * When provided, the mock will be bypassed and the real API will be used
+   */
+  url?: string
 }
-
-class Mock {
-  ping() {
-    return { message: 'pong' }
+class Mock implements Cradle {
+  // TODO have controls for delays
+  async ping(params = {}) {
+    await Promise.resolve()
+    return params
   }
-  apiSchema() {}
+  async apiSchema(params: { isolate: string }) {
+    await Promise.resolve()
+    return { isolate: {} }
+  }
+  async pierce(params: PierceRequest) {
+    await Promise.resolve()
+    return 'TODO'
+  }
+  audioPierce(params: AudioPierceRequest) {
+    return Promise.resolve('TODO')
+  }
+  logs(params: { repo: string }): Promise<object[]> {
+    return Promise.resolve([])
+  }
 }
 
-export const api = import.meta.env.VITE_API_URL
-  ? new Real(import.meta.env.VITE_API_URL)
-  : new Mock()
+const Provider: FC<Props> = ({ children, url }) => {
+  url = url || import.meta.env.VITE_API_URL
+  const artifact = useMemo(() => (url ? new Real(url) : new Mock()), [url])
 
-const Provider: FC<Props> = ({ children }) => {
-  // start the api fetch client
-  // in storybook, we should make a mock client
-  // then use this to test the splice formats
-  const real = useMemo(() => new Real(import.meta.env.VITE_API_URL), [])
-  const mock = useMemo(() => new Mock(), [])
-
-  const artifact = import.meta.env.VITE_API_URL ? real : mock
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

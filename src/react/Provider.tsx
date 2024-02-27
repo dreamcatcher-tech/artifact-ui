@@ -1,9 +1,15 @@
 import { useMemo, createContext, useEffect, useState, FC } from 'react'
 import API from '../api.ts'
+import { Cradle } from '../../constants.ts'
 import Debug from 'debug'
 const debug = Debug('AI:Provider')
 
-export const ArtifactContext = createContext({})
+interface ContextType {
+  artifact: Cradle
+}
+export const ArtifactContext = createContext<ContextType>({
+  artifact: {} as API,
+})
 interface Props {
   children: React.ReactNode
 }
