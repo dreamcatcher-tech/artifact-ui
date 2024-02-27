@@ -18,7 +18,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    "paths": {
+      "react-audio-visualize": [
+        // https://github.com/samhirtarif/react-audio-visualize/pull/20
+        "./node_modules/react-audio-visualize/dist/index.d.ts"
+      ]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

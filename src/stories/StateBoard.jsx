@@ -2,7 +2,6 @@ import Box from '@mui/material/Box'
 import React, { useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import Debug from 'debug'
-import assert from 'assert-fast'
 
 const debug = Debug('AI:StateBoard')
 

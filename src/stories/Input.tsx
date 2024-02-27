@@ -2,7 +2,7 @@ import { usePrompt } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
-import { useCallback, useEffect, useState } from 'react'
+import { FC, useCallback, useEffect, useState } from 'react'
 import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
@@ -11,24 +11,32 @@ import MicIcon from '@mui/icons-material/Mic'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 
-
 const debug = Debug('AI:Input')
 
-const Send = ({ send }) => (
+interface SendProps {
+  send: (arg0: unknown) => void
+}
+const Send: FC<SendProps> = ({ send }) => (
   <IconButton onClick={send}>
     <SendIcon />
   </IconButton>
 )
-Send.propTypes = { send: PropTypes.func }
 
-const Mic = ({ onEvent }) => (
+interface MicProps {
+  onEvent: () => void
+}
+const Mic: FC<MicProps> = ({ onEvent }) => (
   <IconButton onClick={onEvent}>
     <MicIcon />
   </IconButton>
 )
-Mic.propTypes = { onEvent: PropTypes.func.isRequired }
 
-const Input = ({ preload, presubmit, onTranscription }) => {
+interface InputProps {
+  preload: string
+  presubmit: boolean
+  onTranscription: (arg0: boolean) => void
+}
+const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
   const [error, setError] = useState()
   if (error) {
     throw error
@@ -37,13 +45,8 @@ const Input = ({ preload, presubmit, onTranscription }) => {
   const [value, setValue] = useState(preload || '')
   const [disabled, setDisabled] = useState(false)
   const [isTransReady, setIsTransReady] = useState(false)
-  const {
-    startRecording,
-    stopRecording,
-    recordingBlob,
-    isRecording,
-    mediaRecorder,
-  } = useAudioRecorder()
+  const { startRecording, stopRecording, recordingBlob, mediaRecorder } =
+    useAudioRecorder()
   const start = useCallback(() => {
     startRecording()
     onTranscription && onTranscription(true)
@@ -68,17 +71,17 @@ const Input = ({ preload, presubmit, onTranscription }) => {
     const file = new File([recordingBlob], 'recording.webm', {
       type: recordingBlob.type,
     })
-    openai.audio.transcriptions
-      .create({ file, model: 'whisper-1' })
-      .then((transcription) => {
-        setValue(transcription.text)
-        setIsTransReady(true)
-      })
-      .catch(console.error)
-      .finally(() => {
-        onTranscription && onTranscription(false)
-        setDisabled(false)
-      })
+    // openai.audio.transcriptions
+    //   .create({ file, model: 'whisper-1' })
+    //   .then((transcription) => {
+    //     setValue(transcription.text)
+    //     setIsTransReady(true)
+    //   })
+    //   .catch(console.error)
+    //   .finally(() => {
+    //     onTranscription && onTranscription(false)
+    //     setDisabled(false)
+    //   })
   }, [recordingBlob, onTranscription])
   useEffect(() => {
     if (!isTransReady) {
@@ -88,36 +91,36 @@ const Input = ({ preload, presubmit, onTranscription }) => {
     send()
   }, [isTransReady, send])
 
+  const { openFilePicker, filesContent, loading } = useFilePicker({
+    accept: '.txt',
+  })
   const inputProps = {
     endAdornment: (
       <InputAdornment position='end'>
-        {value ? <Send send={send} /> : (
+        {value ? (
+          <Send send={send} />
+        ) : (
           <>
-            {isRecording && (
+            {mediaRecorder && (
               <LiveAudioVisualizer height={50} mediaRecorder={mediaRecorder} />
             )}
-            <Mic onEvent={isRecording ? stopRecording : start} />
+            <Mic onEvent={mediaRecorder ? stopRecording : start} />
           </>
         )}
       </InputAdornment>
     ),
-  }
-  const { openFilePicker, filesContent, loading } = useFilePicker({
-    accept: '.txt',
-  })
-  // TODO if a file is uploaded, store on fs, then sample it, then goal it
-  if (!disabled) {
-    inputProps.startAdornment = (
+    startAdornment: !disabled && (
       <InputAdornment position='start'>
         <IconButton onClick={openFilePicker}>
           <Attach fontSize='medium' />
         </IconButton>
       </InputAdornment>
-    )
+    ),
   }
+  // TODO if a file is uploaded, store on fs, then sample it, then goal it
 
   const onKeyDown = useCallback(
-    (e) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       const isUnmodified = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey
       if (e.key === 'Enter' && isUnmodified) {
         e.preventDefault()
@@ -128,17 +131,17 @@ const Input = ({ preload, presubmit, onTranscription }) => {
         setValue('')
       }
     },
-    [send],
+    [send]
   )
   useEffect(() => {
     const listener = (e) => {
       if (e.key === ' ' && e.ctrlKey) {
-        if (disabled && !isRecording) {
+        if (disabled && !mediaRecorder) {
           return
         }
         e.preventDefault()
         setValue('')
-        if (isRecording) {
+        if (mediaRecorder) {
           stopRecording()
         } else {
           start()
@@ -147,15 +150,15 @@ const Input = ({ preload, presubmit, onTranscription }) => {
     }
     globalThis.addEventListener('keydown', listener)
     return () => globalThis.removeEventListener('keydown', listener)
-  }, [start, disabled, isRecording, stopRecording])
+  }, [start, disabled, mediaRecorder, stopRecording])
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
     if (!doPreSubmit) {
       return
     }
-    setDoPreSubmit()
-    send(value)
+    setDoPreSubmit(false) // Pass an argument to setDoPreSubmit
+    send() // Remove the argument passed to the send function
   }, [doPreSubmit, send, value])
 
   return (
@@ -173,18 +176,13 @@ const Input = ({ preload, presubmit, onTranscription }) => {
       fullWidth
       variant='outlined'
       label='Input'
-      placeholder={disabled ? null : 'Message DreamcatcherGPT...'}
+      placeholder={disabled ? undefined : 'Message DreamcatcherGPT...'}
       InputProps={inputProps}
       onChange={(e) => setValue(e.target.value)}
       disabled={disabled}
       onKeyDown={onKeyDown}
     />
   )
-}
-Input.propTypes = {
-  preload: PropTypes.string,
-  presubmit: PropTypes.bool,
-  onTranscription: PropTypes.func,
 }
 
 export default Input

@@ -1,39 +1,9 @@
+import useSWR, { SWRConfig } from 'swr'
+import { ArtifactContext } from '../stories/MockAPI'}
 import { useCallback, useContext, useEffect, useState } from 'react'
-import { ArtifactContext } from '../stories/Provider'
-import assert from 'assert-fast'
-import posix from 'path-browserify'
 import Debug from 'debug'
 const debug = Debug('AI:hooks')
 
-export const useArtifact = (path) => {
-  // TODO needs to be branch aware and commit aware
-  assert(posix.isAbsolute(path), `path must be absolute: ${path}`)
-  const { artifact } = useContext(ArtifactContext)
-  const [file, setFile] = useState()
-  useEffect(() => {
-    debug('useArtifact', path, artifact)
-    if (!artifact) {
-      return
-    }
-    const unsubscribe = artifact.subscribe(path, (file) => {
-      setFile(file)
-    })
-    return () => {
-      debug('useArtifact unmount', path)
-      unsubscribe()
-      setFile(undefined)
-    }
-  }, [artifact, path])
-  return file
-}
-
-export const useArtifactJSON = (path) => {
-  const file = useArtifact(path)
-  if (file === undefined) {
-    return
-  }
-  return JSON.parse(file)
-}
 
 export const useActions = (isolate) => {
   assert(!posix.isAbsolute(isolate), `path must be relative: ${isolate}`)
@@ -65,15 +35,38 @@ export const useActions = (isolate) => {
   return actions
 }
 
+export const usePierces = (isolate:string) => {
+    // make a call to the isolateApi endpoint
+}
+
+export const useSession = () => {
+    // start a new session if we don't have one, or use current session
+}
+
 export const usePrompt = () => {
-  const isolate = 'engage-help'
-  const actions = useActions(isolate)
-  const [buffer, setBuffer] = useState([])
-  const [prompt, setPrompt] = useState()
-  const [error, setError] = useState()
-  if (error) {
-    throw error
-  }
+  // must be in a PID session
+  // so make a new one if one not running ?
+
+  // can rely on useSession to get the PID
+    const pid = useSession()
+
+    // want to pierce the pid, then mutate the session file
+    // to show pending data
+
+const { mutate } = useSWR({path: '/api/prompt', pid })
+
+const prompt = useCallback(async (text) => {
+
+    const response = await fetch('/api/prompt', {
+        method: 'POST',
+        body: JSON.stringify({text, pid})
+    })
+    const data = await response.json()
+    mutate(data)
+}, [pid])
+
+  const isolate = 
+  const actions = useAPI('engage-help')
 
   useEffect(() => {
     if (!actions) {

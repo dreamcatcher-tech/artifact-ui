@@ -1,5 +1,4 @@
-import Input from './Input'
-import { Provider } from './Provider'
+import Input from './Input.tsx'
 import Debug from 'debug'
 
 export default {
@@ -7,12 +6,16 @@ export default {
   component: Input,
 }
 
+const fetcher = (key) => {
+  console.log('fetcher', key)
+}
+
 const Template = (args) => {
   Debug.enable('*')
   return (
-    <Provider>
+    <SWRConfig value={{ fetcher }}>
       <Input {...args} />
-    </Provider>
+    </SWRConfig>
   )
 }
 
