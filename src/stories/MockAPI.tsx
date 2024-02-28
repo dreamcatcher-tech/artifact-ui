@@ -2,19 +2,18 @@
 // provide a top level component to wrap any other components so they will
 // receive the mock api
 // BUT pass thru to the real one if it is set in the env
-
+import { deserializeError } from 'serialize-error'
 import { useMemo, FC } from 'react'
-import Real from '../api.ts'
+import WebClient from '../api/web-client.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
 import {
-  AudioPierceRequest,
   Cradle,
   DispatchFunctions,
   PID,
   Params,
   PierceRequest,
-} from '../../constants.ts'
+} from '../api/web-client.types.ts'
 
 const log = Debug('AI:MockAPI')
 
@@ -45,9 +44,9 @@ class Mock implements Cradle {
     await Promise.resolve()
     return 'TODO'
   }
-  audioPierce(params: AudioPierceRequest) {
+  transcribe(params: { audio: File }) {
     log('params', params)
-    return Promise.resolve('TODO')
+    return Promise.resolve({ text: 'TODO' })
   }
   logs(params: { repo: string }): Promise<object[]> {
     log('params', params)
@@ -67,10 +66,30 @@ class Mock implements Cradle {
     }
     return pierces
   }
+  stop() {
+    throw new Error('Not implemented')
+  }
+  init(params: { repo: string }) {
+    log('params', params)
+    return Promise.resolve({
+      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+    })
+  }
+  clone(params: { repo: string }) {
+    log('params', params)
+    return Promise.resolve({
+      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+    })
+  }
 }
 
 const Provider: FC<Props> = ({ children, url }) => {
-  const artifact = useMemo(() => (url ? new Real(url) : new Mock()), [url])
+  const artifact = useMemo(() => {
+    if (url) {
+      return new WebClient(url, deserializeError)
+    }
+    return new Mock()
+  }, [url])
 
   return (
     <ArtifactContext.Provider value={{ artifact }}>

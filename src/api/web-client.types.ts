@@ -7,6 +7,7 @@ export enum PROCTYPE {
 export type { JSONSchemaType }
 
 export type JsonValue =
+  | undefined
   | string
   | number
   | boolean
@@ -30,11 +31,6 @@ export type IsolateApiSchema = {
 }
 
 export type Outcome = { result?: unknown; error?: Error }
-export type IoStruct = {
-  sequence: number
-  requests: { [key: string]: Request }
-  replies: { [key: string]: Outcome }
-}
 export const ENTRY_BRANCH = 'main'
 /**
  * The Process Identifier used to address a specific process branch.
@@ -69,20 +65,15 @@ export type PierceRequest = {
   params: Params
   proctype: PROCTYPE
 }
-export type AudioPierceRequest = {
-  target: PID
-  ulid: string
-  isolate: string
-  functionName: string
-  params: Params
-  proctype: PROCTYPE
-  audio: Blob
-}
 export interface Cradle {
   ping(params?: Params): Promise<IsolateReturn>
   apiSchema(params: { isolate: string }): Promise<Record<string, object>>
-  pierce(params: PierceRequest): Promise<IsolateReturn>
-  audioPierce(params: AudioPierceRequest): Promise<IsolateReturn>
+  pierce(params: PierceRequest): Promise<unknown>
+  transcribe(params: { audio: File }): Promise<{ text: string }>
   logs(params: { repo: string }): Promise<object[]>
   pierces(isolate: string, target: PID): Promise<DispatchFunctions>
+  stop(): Promise<void> | void
+  // TODO should move these git functions elsewhere ?
+  init(params: { repo: string }): Promise<{ pid: PID }>
+  clone(params: { repo: string }): Promise<{ pid: PID }>
 }

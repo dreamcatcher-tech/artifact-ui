@@ -1,7 +1,6 @@
-// THIS IS SYCNED WITH THE ARTIFACT PROJECT
+// THIS IS SYCNED FROM THE ARTIFACT PROJECT
 // TODO publish to standalone repo
 import {
-  AudioPierceRequest,
   Cradle,
   DispatchFunctions,
   Params,
@@ -10,9 +9,22 @@ import {
   PROCTYPE,
 } from './web-client.types.ts'
 
-export default class API implements Cradle {
-  constructor(private readonly url: string) {
+type toError = (object: object) => Error
+export default class WebClient implements Cradle {
+  private readonly fetcher: (
+    input: URL | RequestInfo,
+    init?: RequestInit,
+  ) => Promise<Response>
+  private readonly url: string
+  private readonly toError: toError
+  constructor(url: string, toError: toError, fetcher?: typeof fetch) {
     this.url = url
+    if (fetcher) {
+      this.fetcher = fetcher
+    } else {
+      this.fetcher = (path, opts) => fetch(`${url}${path}`, opts)
+    }
+    this.toError = toError
   }
   ping(params = {}) {
     return this.request('ping', params)
@@ -23,9 +35,10 @@ export default class API implements Cradle {
   pierce(params: PierceRequest) {
     return this.request('pierce', params)
   }
-  async audioPierce(params: AudioPierceRequest) {
+  async transcribe(params: { audio: File }) {
     // this is a special one that uses a blob arg
-    const response = await fetch(`${this.url}/api/audioPierce`, {
+    // if all used formdata, then we don't care the type of the args
+    const response = await fetch(`${this.url}/api/transcribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -60,12 +73,28 @@ export default class API implements Cradle {
     }
     return pierces
   }
+  init(params: { repo: string }) {
+    return this.request('init', params)
+  }
+  clone(params: { repo: string }) {
+    return this.request('clone', params)
+  }
+  stop() {
+    throw new Error('WebClient does not stop')
+  }
   private async request(path: string, params: Params) {
-    const response = await fetch(`${this.url}/api/${path}`, {
+    const response = await this.fetcher(`/api/${path}?pretty`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     })
-    return await response.json()
+    if (!response.ok) {
+      throw new Error(path + ' ' + response.status + ' ' + response.statusText)
+    }
+    const outcome = await response.json()
+    if (outcome.error) {
+      throw this.toError(outcome.error)
+    }
+    return outcome.result
   }
 }

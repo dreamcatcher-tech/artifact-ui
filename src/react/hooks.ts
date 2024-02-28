@@ -1,8 +1,7 @@
-import useSWR from 'swr'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
-import { DispatchFunctions, PID } from '../../constants.ts'
+import { DispatchFunctions, PID } from '../api/web-client.types.ts'
 const debug = Debug('AI:hooks')
 
 const useAPI = () => {

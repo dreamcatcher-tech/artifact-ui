@@ -1,3 +1,4 @@
+// deno-lint-ignore-file
 type StrictNullChecksWrapper<Name extends string, Type> = undefined extends null
   ? `strictNullChecks must be true in tsconfig to use ${Name}`
   : Type
@@ -125,12 +126,13 @@ type UncheckedJSONSchemaType<T, IsPartial extends boolean> =
             }
             & (IsPartial extends true ? {
                 required: Readonly<(keyof T)[]>
-              } : [UncheckedRequiredMembers<T>] extends [never] ? {
-                required?: Readonly<UncheckedRequiredMembers<T>[]>
               }
-            : {
-              required: Readonly<UncheckedRequiredMembers<T>[]>
-            })
+              : [UncheckedRequiredMembers<T>] extends [never] ? {
+                  required?: Readonly<UncheckedRequiredMembers<T>[]>
+                }
+              : {
+                required: Readonly<UncheckedRequiredMembers<T>[]>
+              })
         : T extends null ? {
             type: JSONType<'null', IsPartial>
             nullable: true
