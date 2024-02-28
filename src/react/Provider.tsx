@@ -1,12 +1,13 @@
 import { useMemo, createContext, FC } from 'react'
-import API from '../api.ts'
-import { Cradle } from '../../constants.ts'
+import WebClient from '../api/web-client.ts'
+import { Cradle } from '../api/web-client.types.ts'
+import { deserializeError } from 'serialize-error'
 
 interface ContextType {
   artifact: Cradle
 }
 export const ArtifactContext = createContext<ContextType>({
-  artifact: {} as API,
+  artifact: {} as WebClient,
 })
 interface Props {
   children: React.ReactNode
@@ -18,7 +19,7 @@ const Provider: FC<Props> = ({ children, url }) => {
   if (!url) {
     throw new Error('API URL not set')
   }
-  const artifact = useMemo(() => new API(url!), [url])
+  const artifact = useMemo(() => new WebClient(url!, deserializeError), [url])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

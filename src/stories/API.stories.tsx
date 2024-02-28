@@ -1,6 +1,7 @@
+import { deserializeError } from 'serialize-error'
 import '../examples/button.css'
 import MockAPI from './MockAPI'
-import API from '../api.ts'
+import WebClient from '../api/web-client.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/testing-library'
 import Debug from 'debug'
@@ -66,13 +67,18 @@ type Story = StoryObj<typeof APIHarness>
 export const Harness: Story = {
   play: async ({ canvasElement, step }) => {
     within(canvasElement)
-    const api = new API(url)
+    const api = new WebClient(url, deserializeError)
     // const { hostname } = globalThis.location
     // const api = new API(`http://${hostname}:8000`)
     await step('ping ' + url, async () => {
       log('ping')
-      await api.ping()
-      log('done')
+      const result = await api.ping()
+      log('done', result)
+    })
+    await step('clone ' + url, async () => {
+      log('clone')
+      const result = await api.clone({ repo: 'dreamcatcher-tech/HAL' })
+      log('done', result)
     })
   },
 }
