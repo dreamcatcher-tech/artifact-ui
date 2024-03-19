@@ -14,6 +14,7 @@ import {
   PID,
   Params,
   PierceRequest,
+  Splice,
 } from '../api/web-client.types.ts'
 
 const log = Debug('AI:MockAPI')
@@ -92,6 +93,41 @@ class Mock implements Cradle {
     return Promise.resolve({
       pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
       head: 'testCommitHash',
+    })
+  }
+  rm(params: { repo: string }) {
+    log('params', params)
+    return Promise.resolve()
+  }
+  read(params: { pid: PID; path?: string }): ReadableStream<Splice> {
+    log('params', params)
+    return new ReadableStream<Splice>({
+      start: async (controller) => {
+        const mockSplice: Splice = {
+          pid: params.pid,
+          commit: {
+            message: 'test commit message',
+            tree: 'mockTreeHash',
+            parent: ['mockParentHash'],
+            author: {
+              name: 'mockAuthorName',
+              email: '',
+              timestamp: 0,
+              timezoneOffset: 0,
+            },
+            committer: {
+              name: 'mockCommitterName',
+              email: '',
+              timestamp: 0,
+              timezoneOffset: 0,
+            },
+          },
+          timestamp: Date.now(),
+          path: params.path,
+          changes: [],
+        }
+        controller.enqueue(mockSplice)
+      },
     })
   }
 }

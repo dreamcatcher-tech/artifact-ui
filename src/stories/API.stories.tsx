@@ -1,6 +1,6 @@
 import { deserializeError as toError } from 'serialize-error'
 import '../examples/button.css'
-import { toEvents } from '../react/Provider.tsx'
+import { toEvents } from '../react/utils.ts'
 import MockAPI from './MockProvider.tsx'
 import WebClient from '../api/web-client.ts'
 import type { Meta, StoryObj } from '@storybook/react'
