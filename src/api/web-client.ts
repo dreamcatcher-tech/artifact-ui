@@ -162,19 +162,19 @@ export default class WebClient implements Cradle {
   }
 }
 
-function createAbortableStream(src: ReadableStream, abortSignal: AbortSignal) {
+function createAbortableStream(src: ReadableStream, signal: AbortSignal) {
   return new ReadableStream({
     async start(controller) {
       const reader = src.getReader()
 
-      abortSignal.addEventListener('abort', () => {
+      signal.addEventListener('abort', () => {
         reader.cancel()
       })
 
-      while (true) {
+      while (!signal.aborted) {
         try {
           const { done, value } = await reader.read()
-          if (done || abortSignal.aborted) {
+          if (done || signal.aborted) {
             controller.close()
             return
           }

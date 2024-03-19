@@ -1,14 +1,8 @@
-import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { useMemo, createContext, FC } from 'react'
 import WebClient from '../api/web-client.ts'
 import { Cradle } from '../api/web-client.types.ts'
 import { deserializeError as toError } from 'serialize-error'
-
-export const toEvents = (stream: ReadableStream) => {
-  return stream
-    .pipeThrough(new TextDecoderStream())
-    .pipeThrough(new EventSourceParserStream())
-}
+import { toEvents } from './utils.ts'
 
 interface ContextType {
   artifact: Cradle

@@ -11,6 +11,7 @@ const useAPI = (): Cradle => {
   return artifact
 }
 export const useArtifactPatches = (pid: PID, path: string) => {
+  log('useArtifactPatches', pid, path)
   // gets the stream of patches for an object
   // must be a json object
   // could stream directories too ?
@@ -19,6 +20,7 @@ export const useArtifact = (pid: PID, path: string) => {
   if (!posix.isAbsolute(path)) {
     throw new Error(`path must be absolute: ${path}`)
   }
+  log('useArtifact', pid, path)
   /**
    * This is a json object.
    * It returns a patch object with the full contents of the file.
@@ -33,6 +35,7 @@ export const useArtifact = (pid: PID, path: string) => {
 
 export const useRawArtifact = (pid: PID, path: string) => {
   // used to access raw Uint8Array data
+  log('useRawArtifact', pid, path)
 }
 
 export const usePing = () => {
@@ -189,7 +192,7 @@ export const useHelp = (help: string, pid?: PID) => {
       log('result', result)
       return result
     },
-    [actions]
+    [actions, help]
   )
   if (!actions || !actions.engage) {
     return
@@ -198,6 +201,7 @@ export const useHelp = (help: string, pid?: PID) => {
 }
 
 export const useCommits = (depth = 1, path = '/') => {
+  log('useCommits', depth, path)
   // should be able to trace it to always get the latest ones
   // the format should be in a stream of splices
   // assert(Number.isInteger(depth), `depth must be an integer: ${depth}`)
@@ -228,10 +232,11 @@ export const useCommits = (depth = 1, path = '/') => {
 }
 
 export const useLatestCommit = (path = '/') => {
+  log('useLatestCommit', path)
   // const commits = useCommits(1, path)
   // return commits[0]
 }
-const useError = () => {
+export const useError = () => {
   const [error, setError] = useState()
   if (error) {
     throw error

@@ -2,7 +2,8 @@
 // provide a top level component to wrap any other components so they will
 // receive the mock api
 // BUT pass thru to the real one if it is set in the env
-import { deserializeError } from 'serialize-error'
+import { toEvents } from '../react/utils.ts'
+import { deserializeError as toError } from 'serialize-error'
 import { useMemo, FC } from 'react'
 import WebClient from '../api/web-client.ts'
 import Debug from 'debug'
@@ -97,12 +98,12 @@ class Mock implements Cradle {
 
 export const Provider: FC<Props> = ({ children, mock, url }) => {
   const artifact = useMemo(() => {
-    url = url || import.meta.env.VITE_API_URL
-    if (mock || !url) {
+    const usable = url || import.meta.env.VITE_API_URL
+    if (mock || !usable) {
       return new Mock()
     }
-    return new WebClient(url, deserializeError)
-  }, [mock])
+    return new WebClient(usable, toError, toEvents)
+  }, [mock, url])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

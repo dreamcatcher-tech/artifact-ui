@@ -1,6 +1,6 @@
 # Artifact UI
 
-The web UI of the Dreamcatcher
+The interface to the Dreamcatcher
 
 ## https://hal.dreamcatcher.land
 

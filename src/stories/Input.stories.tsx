@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react'
 import Input from './Input.tsx'
 import Provider from './MockProvider.tsx'
 import Session from './Session.tsx'
-import Debug from 'debug'
 
 const meta: Meta<typeof Input> = {
   title: 'Input',
