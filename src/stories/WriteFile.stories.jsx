@@ -1,5 +1,5 @@
 import ThreeBox from './ThreeBox'
-import { Provider } from './Provider'
+import { Provider } from './MockProvider.tsx'
 import Debug from 'debug'
 
 export default {
@@ -21,4 +21,3 @@ export const Fake = Template.bind({})
 Fake.args = { preload }
 export const Presubmit = Template.bind({})
 Presubmit.args = { preload, presubmit: true }
-

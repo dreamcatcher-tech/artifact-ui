@@ -20,9 +20,13 @@ const log = Debug('AI:MockAPI')
 interface Props {
   children: React.ReactNode
   /**
-   * When provided, the mock will be bypassed and the real API will be used
+   * Provide an alternate url for the api
    */
   url?: string
+  /**
+   * Should a mock api be used instead of a real url ?
+   */
+  mock?: boolean
 }
 class Mock implements Cradle {
   // TODO have controls for delays
@@ -58,7 +62,6 @@ class Mock implements Cradle {
     const pierces: DispatchFunctions = {}
     if (isolate === 'engage-help') {
       pierces.engageInBand = async (params?: Params) => {
-        // Update the type of 'params' parameter
         const { help, text } = params || { help: '', text: '' }
         log('engageInBand', help, text)
         return 'TODO'
@@ -69,28 +72,37 @@ class Mock implements Cradle {
   stop() {
     throw new Error('Not implemented')
   }
+  probe(params: { repo: string }) {
+    log('params', params)
+    return Promise.resolve({
+      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      head: 'testCommitHash',
+    })
+  }
   init(params: { repo: string }) {
     log('params', params)
     return Promise.resolve({
       pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      head: 'testCommitHash',
     })
   }
   clone(params: { repo: string }) {
     log('params', params)
     return Promise.resolve({
       pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      head: 'testCommitHash',
     })
   }
 }
 
-const Provider: FC<Props> = ({ children, url }) => {
+export const Provider: FC<Props> = ({ children, mock, url }) => {
   const artifact = useMemo(() => {
-    if (url) {
-      return new WebClient(url, deserializeError)
+    url = url || import.meta.env.VITE_API_URL
+    if (mock || !url) {
+      return new Mock()
     }
-    return new Mock()
-  }, [url])
-
+    return new WebClient(url, deserializeError)
+  }, [mock])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

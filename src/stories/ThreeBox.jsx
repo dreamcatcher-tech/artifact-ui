@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import Debug from 'debug'
 import Messages from './Messages'
-import { useArtifactJSON } from '../react/hooks'
+import { useArtifact } from '../react/hooks'
 import Git from './Git'
 
 // TODO put the git commit hash under the input box, along with date, time,
@@ -16,18 +16,11 @@ import Git from './Git'
 const debug = Debug('AI:ThreeBox')
 
 const ThreeBox = ({ preload, presubmit }) => {
-  // useEffect(() => {
-  //   const id = setInterval(() => {
-  //     window.scrollTo(0, document.body.scrollHeight)
-  //   }, 100)
-  //   return () => clearInterval(id)
-  // }, [])
   const [isTranscribing, setIsTranscribing] = useState(false)
   const onTranscription = useCallback((isTranscribing) => {
     setIsTranscribing(isTranscribing)
   }, [])
-
-  const messages = useArtifactJSON('/chat-1.session.json')
+  const messages = useArtifact('/chat-1.session.json')
   debug('messages', messages)
   return (
     <Box
@@ -59,13 +52,11 @@ const ThreeBox = ({ preload, presubmit }) => {
         />
         <Git />
       </Stack>
-      {
-        /* <Box sx={{ flexGrow: 1, p: 1 }}>
+      {/* <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
           <StateBoard />
         </Paper>
-      </Box> */
-      }
+      </Box> */}
     </Box>
   )
 }

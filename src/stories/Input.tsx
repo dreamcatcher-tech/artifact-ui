@@ -1,4 +1,4 @@
-import { useGoalie } from '../react/hooks.ts'
+import { useSession, useGoalie } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
@@ -10,7 +10,6 @@ import IconButton from '@mui/material/IconButton'
 import MicIcon from '@mui/icons-material/Mic'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
-
 const debug = Debug('AI:Input')
 
 interface SendProps {
@@ -32,15 +31,17 @@ const Mic: FC<MicProps> = ({ onEvent }) => (
 )
 
 interface InputProps {
-  preload: string
-  presubmit: boolean
-  onTranscription: (arg0: boolean) => void
+  preload?: string
+  presubmit?: boolean
+  onTranscribe?: (isTranscribing: boolean) => void
 }
-const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
+const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   const [error, setError] = useState()
   if (error) {
     throw error
   }
+  const session = useSession()
+  const { pid } = session
 
   const [value, setValue] = useState(preload || '')
   const [disabled, setDisabled] = useState(false)
@@ -50,10 +51,10 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     useAudioRecorder()
   const start = useCallback(() => {
     startRecording()
-    onTranscription && onTranscription(true)
+    onTranscribe && onTranscribe(true)
     setDisabled(true)
-  }, [startRecording, onTranscription])
-  const pid = { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] }
+  }, [startRecording, onTranscribe])
+
   const prompt = useGoalie(pid)
   useEffect(() => {
     if (!prompt) {
@@ -74,7 +75,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     prompt(value)
       .catch(setError)
       .finally(() => setDisabled(false))
-      .then((result) => debug('result', result?.content))
+      .then((result) => debug('result', result))
   }, [prompt, value])
 
   useEffect(() => {
@@ -96,7 +97,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     //     onTranscription && onTranscription(false)
     //     setDisabled(false)
     //   })
-  }, [recordingBlob, onTranscription])
+  }, [recordingBlob, onTranscribe])
   useEffect(() => {
     if (!isTransReady) {
       return
@@ -149,7 +150,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
     [send]
   )
   useEffect(() => {
-    const listener = (e) => {
+    const listener = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.ctrlKey) {
         if (disabled && !mediaRecorder) {
           return
@@ -169,12 +170,12 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscription }) => {
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
-    if (!doPreSubmit) {
+    if (!prompt || !doPreSubmit) {
       return
     }
     setDoPreSubmit(false) // Pass an argument to setDoPreSubmit
     send() // Remove the argument passed to the send function
-  }, [doPreSubmit, send, value])
+  }, [prompt, doPreSubmit, send, value])
 
   return (
     <TextField

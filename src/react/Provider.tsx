@@ -1,7 +1,14 @@
+import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { useMemo, createContext, FC } from 'react'
 import WebClient from '../api/web-client.ts'
 import { Cradle } from '../api/web-client.types.ts'
-import { deserializeError } from 'serialize-error'
+import { deserializeError as toError } from 'serialize-error'
+
+export const toEvents = (stream: ReadableStream) => {
+  return stream
+    .pipeThrough(new TextDecoderStream())
+    .pipeThrough(new EventSourceParserStream())
+}
 
 interface ContextType {
   artifact: Cradle
@@ -19,7 +26,7 @@ const Provider: FC<Props> = ({ children, url }) => {
   if (!url) {
     throw new Error('API URL not set')
   }
-  const artifact = useMemo(() => new WebClient(url!, deserializeError), [url])
+  const artifact = useMemo(() => new WebClient(url!, toError, toEvents), [url])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

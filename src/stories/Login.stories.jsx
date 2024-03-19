@@ -1,5 +1,5 @@
 import ThreeBox from './ThreeBox'
-import { Provider } from './Provider'
+import { Provider } from './MockProvider.tsx'
 import Debug from 'debug'
 
 export default {

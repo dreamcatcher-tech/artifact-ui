@@ -1,9 +1,10 @@
-import { deserializeError } from 'serialize-error'
+import { deserializeError as toError } from 'serialize-error'
 import '../examples/button.css'
-import MockAPI from './MockAPI'
+import { toEvents } from '../react/Provider.tsx'
+import MockAPI from './MockProvider.tsx'
 import WebClient from '../api/web-client.ts'
 import type { Meta, StoryObj } from '@storybook/react'
-import { within } from '@storybook/testing-library'
+import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
 import { usePing } from '../react/hooks.ts'
@@ -42,7 +43,6 @@ const PingButton = () => {
   )
 }
 const APIHarness = () => {
-  Debug.enable('*')
   return (
     <MockAPI url={url}>
       <div>
@@ -67,17 +67,15 @@ type Story = StoryObj<typeof APIHarness>
 export const Harness: Story = {
   play: async ({ canvasElement, step }) => {
     within(canvasElement)
-    const api = new WebClient(url, deserializeError)
-    // const { hostname } = globalThis.location
-    // const api = new API(`http://${hostname}:8000`)
+    const api = new WebClient(url, toError, toEvents)
     await step('ping ' + url, async () => {
       log('ping')
       const result = await api.ping()
       log('done', result)
     })
-    await step('clone ' + url, async () => {
-      log('clone')
-      const result = await api.clone({ repo: 'dreamcatcher-tech/HAL' })
+    await step('probe ' + url, async () => {
+      log('probe')
+      const result = await api.probe({ repo: 'dreamcatcher-tech/HAL' })
       log('done', result)
     })
   },

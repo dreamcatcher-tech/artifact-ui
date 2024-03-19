@@ -7,7 +7,6 @@ import Debug from 'debug'
 const log = Debug('AI:App')
 
 function App() {
-  Debug.enable('*')
   const ping = usePing()
   const [latency, setLatency] = useState(0)
 

@@ -3,28 +3,42 @@
 import {
   Cradle,
   DispatchFunctions,
+  EventSourceMessage,
+  getProcType,
   Params,
   PID,
   PierceRequest,
-  PROCTYPE,
+  ProcessOptions,
+  Splice,
 } from './web-client.types.ts'
 
-type toError = (object: object) => Error
+type ToError = (object: object) => Error
+type ToEvents = (stream: ReadableStream) => ReadableStream<EventSourceMessage>
 export default class WebClient implements Cradle {
   private readonly fetcher: (
     input: URL | RequestInfo,
     init?: RequestInit,
   ) => Promise<Response>
+  private readonly toEvents: ToEvents
   private readonly url: string
-  private readonly toError: toError
-  constructor(url: string, toError: toError, fetcher?: typeof fetch) {
+  private readonly toError: ToError
+  constructor(
+    url: string,
+    toError: ToError,
+    toEvents: ToEvents,
+    fetcher?: typeof fetch,
+  ) {
+    if (url.endsWith('/')) {
+      throw new Error('url should not end with "/": ' + url)
+    }
     this.url = url
+    this.toError = toError
+    this.toEvents = toEvents
     if (fetcher) {
       this.fetcher = fetcher
     } else {
       this.fetcher = (path, opts) => fetch(`${url}${path}`, opts)
     }
-    this.toError = toError
   }
   ping(params = {}) {
     return this.request('ping', params)
@@ -57,9 +71,9 @@ export default class WebClient implements Cradle {
     for (const functionName of Object.keys(apiSchema)) {
       pierces[functionName] = (
         params: Params = {},
-        options?: { branch?: boolean },
+        options?: ProcessOptions,
       ) => {
-        const proctype = options?.branch ? PROCTYPE.BRANCH : PROCTYPE.SERIAL
+        const proctype = getProcType(options)
         const pierce: PierceRequest = {
           target,
           ulid: 'calculated-server-side',
@@ -73,14 +87,59 @@ export default class WebClient implements Cradle {
     }
     return pierces
   }
+  probe(params: { repo: string }) {
+    return this.request('probe', params)
+  }
   init(params: { repo: string }) {
     return this.request('init', params)
   }
   clone(params: { repo: string }) {
     return this.request('clone', params)
   }
+  rm(params: { repo: string }) {
+    return this.request('rm', params)
+  }
   stop() {
-    throw new Error('WebClient does not stop')
+    for (const abort of this.#aborts) {
+      abort.abort()
+    }
+  }
+  #aborts = new Set<AbortController>()
+  read(params: { pid: PID; path: string }): ReadableStream<Splice> {
+    const abort = new AbortController()
+    this.#aborts.add(abort)
+
+    return new ReadableStream<Splice>({
+      start: async (controller) => {
+        try {
+          const response = await this.fetcher(`/api/read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(params),
+          })
+          if (!response.ok) {
+            throw new Error('response not ok')
+          }
+          if (!response.body) {
+            throw new Error('response body is missing')
+          }
+          const stream = createAbortableStream(response.body, abort.signal)
+
+          for await (const event of this.toEvents(stream)) {
+            if (event.event === 'splice') {
+              const splice: Splice = JSON.parse(event.data)
+              controller.enqueue(splice)
+            } else {
+              console.error('unexpected event', event.event)
+            }
+          }
+          controller.close()
+        } catch (error) {
+          controller.error(error)
+        }
+        this.#aborts.delete(abort)
+      },
+    })
   }
   private async request(path: string, params: Params) {
     const response = await this.fetcher(`/api/${path}?pretty`, {
@@ -89,7 +148,11 @@ export default class WebClient implements Cradle {
       body: JSON.stringify(params),
     })
     if (!response.ok) {
-      throw new Error(path + ' ' + response.status + ' ' + response.statusText)
+      await response.body?.cancel()
+      throw new Error(
+        path + ' ' + JSON.stringify(params) + ' ' + response.status + ' ' +
+          response.statusText,
+      )
     }
     const outcome = await response.json()
     if (outcome.error) {
@@ -97,4 +160,30 @@ export default class WebClient implements Cradle {
     }
     return outcome.result
   }
+}
+
+function createAbortableStream(src: ReadableStream, abortSignal: AbortSignal) {
+  return new ReadableStream({
+    async start(controller) {
+      const reader = src.getReader()
+
+      abortSignal.addEventListener('abort', () => {
+        reader.cancel()
+      })
+
+      while (true) {
+        try {
+          const { done, value } = await reader.read()
+          if (done || abortSignal.aborted) {
+            controller.close()
+            return
+          }
+          controller.enqueue(value)
+        } catch (error) {
+          controller.error(error)
+          return
+        }
+      }
+    },
+  })
 }
