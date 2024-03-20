@@ -2,7 +2,12 @@ import { SessionContext } from '../stories/Session.tsx'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
-import { Cradle, DispatchFunctions, PID } from '../api/web-client.types.ts'
+import {
+  Splice,
+  Cradle,
+  DispatchFunctions,
+  PID,
+} from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 const log = Debug('AI:hooks')
 
@@ -16,11 +21,14 @@ export const useArtifactPatches = (pid: PID, path: string) => {
   // must be a json object
   // could stream directories too ?
 }
-export const useArtifact = (pid: PID, path: string) => {
-  if (!posix.isAbsolute(path)) {
-    throw new Error(`path must be absolute: ${path}`)
+export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
+  if (posix.isAbsolute(path)) {
+    throw new Error(`path must be relative: ${path}`)
   }
   log('useArtifact', pid, path)
+  if (!pid) {
+    return
+  }
   /**
    * This is a json object.
    * It returns a patch object with the full contents of the file.
@@ -231,10 +239,13 @@ export const useCommits = (depth = 1, path = '/') => {
   // return commits
 }
 
-export const useLatestCommit = (path = '/') => {
-  log('useLatestCommit', path)
+export const useLatestCommit = (pid: PID): Splice | undefined => {
+  log('useLatestCommit', pid)
+  // get a splice, and then return the latest thing
+
   // const commits = useCommits(1, path)
   // return commits[0]
+  return
 }
 export const useError = () => {
   const [error, setError] = useState()

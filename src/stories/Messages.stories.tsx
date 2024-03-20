@@ -1,15 +1,28 @@
+import { MessageParam } from '../constants'
+import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
-import Debug from 'debug'
 import Box from '@mui/material/Box'
-const debug = Debug('Messages')
-const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
-
-export default {
+const meta: Meta<typeof Messages> = {
   title: 'Messages',
-  // component: Messages,
+  component: Messages,
 }
+export default meta
 
-const messages = [
+type Story = StoryObj<typeof Messages>
+
+export const Chat: Story = {}
+export const Narrow: Story = {
+  render: () => {
+    return (
+      <Box sx={{ background: 'red', maxWidth: '400px' }}>
+        <Messages messages={messages} />
+      </Box>
+    )
+  },
+}
+export const NarrowParams: Story = { parameters: { layout: 'centered' } }
+
+const messages: MessageParam[] = [
   {
     role: 'system',
     content:
@@ -91,17 +104,3 @@ const messages = [
       'You now have the instructions on how to create a blank Markdown file. If you have any additional questions or need further assistance, feel free to ask.',
   },
 ]
-
-const Template = () => {
-  return <Messages messages={messages} />
-}
-
-export const Chat = Template.bind({})
-export const Narrow = () => {
-  return (
-    <Box sx={{ background: 'red', maxWidth: '400px' }}>
-      <Messages messages={messages} />
-    </Box>
-  )
-}
-// Narrow.parameters = { layout: 'centered' }

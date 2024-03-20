@@ -1,27 +1,35 @@
 import Input from './Input'
 import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
-import { StateBoard } from './StateBoard'
-import { useCallback, useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
+import { FC, useCallback, useState } from 'react'
 import Debug from 'debug'
-import Messages from './Messages'
-import { useArtifact } from '../react/hooks'
-import Git from './Git'
+import Messages from './Messages.tsx'
+import { useArtifact, useSession } from '../react/hooks'
+import Git from './Git.tsx'
+import { MessageParam } from '../constants.ts'
 
 // TODO put the git commit hash under the input box, along with date, time,
 // who the current user is, size, latency, etc.
 
 const debug = Debug('AI:ThreeBox')
-
-const ThreeBox = ({ preload, presubmit }) => {
+interface ThreeBox {
+  preload: string
+  presubmit: boolean
+}
+const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
   const [isTranscribing, setIsTranscribing] = useState(false)
-  const onTranscription = useCallback((isTranscribing) => {
+  const onTranscribe = useCallback((isTranscribing: boolean) => {
     setIsTranscribing(isTranscribing)
   }, [])
-  const messages = useArtifact('/chat-1.session.json')
+  const { pid } = useSession()
+  const messages = useArtifact<MessageParam[]>('session.json', pid)
   debug('messages', messages)
+  if (!pid) {
+    return null
+  }
+  if (!messages) {
+    return null
+  }
   return (
     <Box
       sx={{
@@ -48,9 +56,9 @@ const ThreeBox = ({ preload, presubmit }) => {
         <Input
           preload={preload}
           presubmit={presubmit}
-          onTranscription={onTranscription}
+          onTranscribe={onTranscribe}
         />
-        <Git />
+        <Git pid={pid} />
       </Stack>
       {/* <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
@@ -59,10 +67,6 @@ const ThreeBox = ({ preload, presubmit }) => {
       </Box> */}
     </Box>
   )
-}
-ThreeBox.propTypes = {
-  preload: PropTypes.string,
-  presubmit: PropTypes.bool,
 }
 
 export default ThreeBox

@@ -105,6 +105,7 @@ class Mock implements Cradle {
       start: async (controller) => {
         const mockSplice: Splice = {
           pid: params.pid,
+          oid: 'mockOid',
           commit: {
             message: 'test commit message',
             tree: 'mockTreeHash',

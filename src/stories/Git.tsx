@@ -1,14 +1,15 @@
 import { Typography } from '@mui/material'
 import { useLatestCommit } from '../react/hooks'
-import { useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
+import { FC, useEffect, useState } from 'react'
+import { PID, CommitObject } from '../api/web-client.types'
 
-const Info = ({ commit }) => {
-  const {
-    oid,
-    commit: { committer, message, parent },
-  } = commit
-  const { name, timestamp, timezoneOffset } = committer
+interface Info {
+  commit: CommitObject
+  oid: string
+}
+const Info: FC<Info> = ({ commit, oid }) => {
+  const { committer, message } = commit
+  const { name, timestamp } = committer
 
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -35,22 +36,25 @@ const Info = ({ commit }) => {
     </>
   )
 }
-Info.propTypes = { commit: PropTypes.object.isRequired }
 
-const Git = () => {
-  const commit = useLatestCommit()
-  if (!commit) {
+interface Git {
+  pid: PID
+}
+const Git: FC<Git> = ({ pid }) => {
+  const splice = useLatestCommit(pid)
+  if (!splice) {
     return (
       <Typography mt={1} variant='caption'>
         loading...
       </Typography>
     )
   }
-  return <Info commit={commit} />
+  const { commit, oid } = splice
+  return <Info commit={commit} oid={oid} />
 }
 export default Git
 
-function formatElapsedTime(secondsElapsed) {
+function formatElapsedTime(secondsElapsed: number) {
   const days = Math.floor(secondsElapsed / 86400)
   const hours = Math.floor(secondsElapsed / 3600)
   const minutes = Math.floor((secondsElapsed % 3600) / 60)

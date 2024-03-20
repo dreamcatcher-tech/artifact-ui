@@ -1,3 +1,4 @@
+import { FC } from 'react'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
 import { ObjectInspector } from 'react-inspector'
@@ -5,13 +6,12 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Terminal from '@mui/icons-material/Terminal'
 import Debug from 'debug'
-import PropTypes from 'prop-types'
 // import { createTheme, ThemeProvider } from '@mui/material/styles'
 import CardHeader from '@mui/material/CardHeader'
 
 const debug = Debug('AI:ToolAction')
 
-export const ToolAction = ({ tool_calls, messages }) => {
+export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
   // const noDisabled = createTheme({ palette: { text: { disabled: '0 0 0' } }
   // })
 
@@ -40,25 +40,31 @@ export const ToolAction = ({ tool_calls, messages }) => {
           avatar={<Terminal />}
         />
         <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
-          {typeof output === 'string'
-            ? <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
-            : <ObjectInspector data={output} expandLevel={999} />}
+          {typeof output === 'string' ? (
+            <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
+          ) : (
+            <ObjectInspector data={output} expandLevel={999} />
+          )}
         </CardContent>
       </Card>
     )
   })
 }
-ToolAction.propTypes = {
-  tool_calls: PropTypes.arrayOf(PropTypes.object),
-  messages: PropTypes.arrayOf(PropTypes.object),
+interface ToolAction {
+  tool_calls: { id: string; function: { name: string; arguments: string } }[]
+  messages: Message[]
 }
-const findOutput = (messages, id) => {
+interface Message {
+  tool_call_id: string
+  content: string
+}
+const findOutput = (messages: Message[], id: string) => {
   const message = messages.find((message) => message.tool_call_id === id)
   if (message) {
     return tryParse(message.content)
   }
 }
-const tryParse = (value) => {
+const tryParse = (value: string) => {
   try {
     return JSON.parse(value)
   } catch (e) {

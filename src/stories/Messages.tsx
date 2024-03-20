@@ -1,8 +1,10 @@
+import { MessageParam } from '../constants.ts'
+import { Help } from '../api/web-client.types'
+import { FC } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
 import Chip from '@mui/material/Chip'
-import PropTypes from 'prop-types'
 import Debug from 'debug'
 import DaveIcon from '@mui/icons-material/SentimentDissatisfied'
 import ToolIcon from '@mui/icons-material/Construction'
@@ -28,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip'
 import { ToolAction } from './ToolAction'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
+import { assertString } from '@sindresorhus/is'
 
 const debug = Debug('AI:ThreeBox')
 const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
@@ -45,49 +48,58 @@ const Progress = () => (
   />
 )
 
-const Chat = ({ content, type }) => (
+interface ChatType {
+  content: string
+  type: 'user' | 'goalie' | 'runner'
+}
+const ChatType: FC<ChatType> = ({ content, type }) => (
   <TimelineItem>
     <TimelineSeparator>
-      <TimelineDot color={chatColors[type]} sx={{ position: 'relative' }}>
+      <TimelineDot color={ChatColors[type]} sx={{ position: 'relative' }}>
         {chatIcons[type]}
         {!content && <Progress />}
       </TimelineDot>
     </TimelineSeparator>
     <TimelineContent className='parent'>
       <Typography variant='h6' component='span'>
-        {chatTitles[type]}
+        {ChatTitles[type]}
       </Typography>
       <br />
       <Markdown remarkPlugins={[remarkGfm]}>{content || ''}</Markdown>
     </TimelineContent>
   </TimelineItem>
 )
-Chat.propTypes = {
-  type: PropTypes.oneOf(['user', 'goalie', 'runner']),
-  content: PropTypes.string,
+enum ChatColors {
+  user = 'primary',
+  goalie = 'warning',
+  runner = 'secondary',
 }
-const chatColors = { user: 'primary', goalie: 'warning', runner: 'secondary' }
-const chatTitles = { user: 'Dave', goalie: 'HAL', runner: 'HAL' }
+enum ChatTitles {
+  user = 'Dave',
+  goalie = 'HAL',
+  runner = 'HAL',
+}
 const chatIcons = {
   user: <DaveIcon />,
   goalie: <GoalIcon />,
   runner: <ToolIcon />,
 }
 
-const Dave = ({ content }) => <Chat content={content} type='user' />
-Dave.propTypes = {
-  content: PropTypes.string,
+interface Chat {
+  content: string
 }
-const Assistant = ({ content }) => <Chat content={content} type='goalie' />
-Assistant.propTypes = {
-  content: PropTypes.string,
+const Dave: FC<Chat> = ({ content }) => (
+  <ChatType content={content} type='user' />
+)
+const Assistant: FC<Chat> = ({ content }) => (
+  <ChatType content={content} type='goalie' />
+)
+interface Goal {
+  text: string
+  status: string
+  helps: Help[]
 }
-const Runner = ({ content }) => <Chat content={content} type='runner' />
-Runner.propTypes = {
-  content: PropTypes.string,
-}
-
-const Goal = ({ text, status, helps }) => {
+const Goal: FC<Goal> = ({ text, status, helps }) => {
   return (
     <TimelineItem>
       <TimelineSeparator>
@@ -105,7 +117,7 @@ const Goal = ({ text, status, helps }) => {
             {text}
           </Alert>
         </Tooltip>
-        {helps.map(({ instructions, done, tld, cmds }, key) => (
+        {helps.map(({ instructions, done, commands }, key) => (
           <Card sx={{ m: 1 }} key={key}>
             <List>
               <Tooltip title='Directory' arrow placement='left'>
@@ -113,7 +125,7 @@ const Goal = ({ text, status, helps }) => {
                   <ListItemIcon>
                     <FolderIcon />
                   </ListItemIcon>
-                  <ListItemText primary={tld} />
+                  <ListItemText primary={'TODO'} />
                 </ListItem>
               </Tooltip>
               <Tooltip title='Commands' arrow placement='left'>
@@ -122,7 +134,7 @@ const Goal = ({ text, status, helps }) => {
                     <Terminal />
                   </ListItemIcon>
                   <ListItemText
-                    primary={cmds.map((cmd, key) => (
+                    primary={commands?.map((cmd, key) => (
                       <Chip
                         label={cmd}
                         key={key}
@@ -142,7 +154,7 @@ const Goal = ({ text, status, helps }) => {
                   <ListItemText
                     primary={
                       <Markdown remarkPlugins={[remarkGfm]}>
-                        {instructions}
+                        {instructions.join('\n')}
                       </Markdown>
                     }
                   />
@@ -167,17 +179,11 @@ const Goal = ({ text, status, helps }) => {
     </TimelineItem>
   )
 }
-Goal.propTypes = {
-  text: PropTypes.string.isRequired,
-  status: PropTypes.oneOf(Object.values(STATUS)).isRequired,
-  helps: PropTypes.arrayOf(
-    PropTypes.shape({
-      type: PropTypes.string,
-    })
-  ).isRequired,
+interface Tool {
+  tool_calls: any[]
+  messages: any[]
 }
-
-const Tool = ({ tool_calls, messages }) => (
+const Tool: FC<Tool> = ({ tool_calls, messages }) => (
   <TimelineItem>
     <TimelineSeparator>
       <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
@@ -191,12 +197,12 @@ const Tool = ({ tool_calls, messages }) => (
     </TimelineContent>
   </TimelineItem>
 )
-Tool.propTypes = {
-  tool_calls: PropTypes.arrayOf(PropTypes.object),
-  messages: PropTypes.arrayOf(PropTypes.object),
-}
 
-const Messages = ({ messages = [], isTranscribing }) => {
+interface Messages {
+  messages: MessageParam[]
+  isTranscribing?: boolean
+}
+const Messages: FC<Messages> = ({ messages, isTranscribing = false }) => {
   return (
     <Timeline
       sx={{
@@ -206,15 +212,21 @@ const Messages = ({ messages = [], isTranscribing }) => {
         },
       }}
     >
-      {messages.map(({ role, content, tool_calls }, key) => {
+      {messages.map((message, key) => {
+        const { role, content } = message
         debug('role', role, 'content', content)
+        assertString(content)
         switch (role) {
           case 'user':
             return <Dave key={key} content={content} />
           case 'assistant':
-            if (tool_calls) {
+            if (message.tool_calls) {
               return (
-                <Tool key={key} tool_calls={tool_calls} messages={messages} />
+                <Tool
+                  key={key}
+                  tool_calls={message.tool_calls}
+                  messages={messages}
+                />
               )
             } else {
               return <Assistant key={key} content={content} />
@@ -231,15 +243,6 @@ const Messages = ({ messages = [], isTranscribing }) => {
       {isTranscribing && <Dave content='(transcribing...)' />}
     </Timeline>
   )
-}
-Messages.propTypes = {
-  isTranscribing: PropTypes.bool,
-  messages: PropTypes.arrayOf(
-    PropTypes.shape({
-      role: PropTypes.string,
-      content: PropTypes.string,
-    })
-  ),
 }
 
 export default Messages
