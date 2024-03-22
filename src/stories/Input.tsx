@@ -1,4 +1,4 @@
-import { useSession, useGoalie } from '../react/hooks.ts'
+import { useTranscribe, useSession, useGoalie } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
@@ -78,6 +78,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       .then((result) => debug('result', result))
   }, [prompt, value])
 
+  const transcribe = useTranscribe()
   useEffect(() => {
     if (!recordingBlob) {
       return
@@ -86,24 +87,23 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       type: recordingBlob.type,
     })
     debug('transcribe', file)
-    // openai.audio.transcriptions
-    //   .create({ file, model: 'whisper-1' })
-    //   .then((transcription) => {
-    //     setValue(transcription.text)
-    //     setIsTransReady(true)
-    //   })
-    //   .catch(console.error)
-    //   .finally(() => {
-    //     onTranscription && onTranscription(false)
-    //     setDisabled(false)
-    //   })
+    transcribe(file)
+      .then((text) => {
+        setValue(text)
+        setIsTransReady(true)
+      })
+      .catch(console.error)
+      .finally(() => {
+        onTranscribe && onTranscribe(false)
+        setDisabled(false)
+      })
   }, [recordingBlob, onTranscribe])
   useEffect(() => {
     if (!isTransReady) {
       return
     }
     setIsTransReady(false)
-    send()
+    // send() // uncomment to auto send once transcription is received
   }, [isTransReady, send])
 
   const { openFilePicker, filesContent, loading } = useFilePicker({

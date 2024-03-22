@@ -2,11 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react'
 import Input from './Input.tsx'
 import Provider from './MockProvider.tsx'
 import Session from './Session.tsx'
+import Debug from 'debug'
 
 const meta: Meta<typeof Input> = {
   title: 'Input',
   component: Input,
   render: (args) => {
+    Debug.enable('AI:Input')
     return (
       <Provider>
         <Session repo='dreamcatcher-tech/HAL'>

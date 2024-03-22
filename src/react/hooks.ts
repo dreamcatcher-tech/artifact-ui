@@ -283,3 +283,14 @@ export const useError = () => {
   }
   return setError
 }
+export const useTranscribe = () => {
+  const api = useAPI()
+  const transcribe = useCallback(
+    async (audio: File) => {
+      const transcription = await api.transcribe({ audio })
+      return transcription.text
+    },
+    [api]
+  )
+  return transcribe
+}
