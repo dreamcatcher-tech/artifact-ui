@@ -5,9 +5,11 @@ import { ObjectInspector } from 'react-inspector'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Terminal from '@mui/icons-material/Terminal'
+import { MessageParam } from '../constants.ts'
 import Debug from 'debug'
 // import { createTheme, ThemeProvider } from '@mui/material/styles'
 import CardHeader from '@mui/material/CardHeader'
+import { assertString } from '@sindresorhus/is'
 
 const debug = Debug('AI:ToolAction')
 
@@ -50,18 +52,21 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
     )
   })
 }
-interface ToolAction {
+export interface ToolAction {
   tool_calls: { id: string; function: { name: string; arguments: string } }[]
-  messages: Message[]
+  messages: MessageParam[]
 }
-interface Message {
-  tool_call_id: string
-  content: string
-}
-const findOutput = (messages: Message[], id: string) => {
-  const message = messages.find((message) => message.tool_call_id === id)
+const findOutput = (messages: MessageParam[], id: string) => {
+  const message = messages.find((message) => {
+    if ('tool_call_id' in message) {
+      return message.tool_call_id === id
+    }
+  })
   if (message) {
-    return tryParse(message.content)
+    if ('content' in message) {
+      assertString(message.content)
+      return tryParse(message.content)
+    }
   }
 }
 const tryParse = (value: string) => {

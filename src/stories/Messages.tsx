@@ -27,7 +27,7 @@ import DraftsIcon from '@mui/icons-material/Drafts'
 import FolderIcon from '@mui/icons-material/Folder'
 import RuleIcon from '@mui/icons-material/Rule'
 import Tooltip from '@mui/material/Tooltip'
-import { ToolAction } from './ToolAction'
+import { ToolAction } from './ToolAction.tsx'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
 import { assertString } from '@sindresorhus/is'
@@ -62,7 +62,7 @@ const ChatType: FC<ChatType> = ({ content, type }) => (
     </TimelineSeparator>
     <TimelineContent className='parent'>
       <Typography variant='h6' component='span'>
-        {ChatTitles[type]}
+        {chatTitles[type]}
       </Typography>
       <br />
       <Markdown remarkPlugins={[remarkGfm]}>{content || ''}</Markdown>
@@ -74,10 +74,10 @@ enum ChatColors {
   goalie = 'warning',
   runner = 'secondary',
 }
-enum ChatTitles {
-  user = 'Dave',
-  goalie = 'HAL',
-  runner = 'HAL',
+const chatTitles = {
+  user: 'Dave',
+  goalie: 'HAL',
+  runner: 'HAL',
 }
 const chatIcons = {
   user: <DaveIcon />,
@@ -179,11 +179,7 @@ const Goal: FC<Goal> = ({ text, status, helps }) => {
     </TimelineItem>
   )
 }
-interface Tool {
-  tool_calls: any[]
-  messages: any[]
-}
-const Tool: FC<Tool> = ({ tool_calls, messages }) => (
+const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
   <TimelineItem>
     <TimelineSeparator>
       <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
