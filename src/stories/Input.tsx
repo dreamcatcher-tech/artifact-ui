@@ -97,7 +97,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         onTranscribe && onTranscribe(false)
         setDisabled(false)
       })
-  }, [recordingBlob, onTranscribe])
+  }, [transcribe, recordingBlob, onTranscribe])
   useEffect(() => {
     if (!isTransReady) {
       return
