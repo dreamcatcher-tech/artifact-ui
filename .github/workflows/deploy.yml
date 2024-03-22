@@ -29,6 +29,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: https://healthy-seal-74.deno.dev
 
       - name: Publish to Chromatic
         uses: chromaui/action@latest
