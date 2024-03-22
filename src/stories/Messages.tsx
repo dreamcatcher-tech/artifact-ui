@@ -215,9 +215,9 @@ const Messages: FC<Messages> = ({ messages, isTranscribing = false }) => {
       {messages.map((message, key) => {
         const { role, content } = message
         debug('role', role, 'content', content)
-        assertString(content)
         switch (role) {
           case 'user':
+            assertString(content)
             return <Dave key={key} content={content} />
           case 'assistant':
             if (message.tool_calls) {
@@ -229,6 +229,7 @@ const Messages: FC<Messages> = ({ messages, isTranscribing = false }) => {
                 />
               )
             } else {
+              assertString(content)
               return <Assistant key={key} content={content} />
             }
           case 'system':

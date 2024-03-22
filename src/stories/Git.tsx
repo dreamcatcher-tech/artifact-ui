@@ -20,6 +20,7 @@ const Info: FC<Info> = ({ commit, oid }) => {
       const elapsedSeconds = Math.floor((now - date.getTime()) / 1000)
       setSecondsElapsed(elapsedSeconds)
     }
+    updateElapsedTime()
     const interval = setInterval(updateElapsedTime, 1000)
     return () => clearInterval(interval)
   }, [timestamp])

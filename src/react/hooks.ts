@@ -1,3 +1,4 @@
+import { applyPatches, applyPatch } from 'diff'
 import { SessionContext } from '../stories/Session.tsx'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
@@ -9,36 +10,67 @@ import {
   PID,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
+import { assertArray } from '@sindresorhus/is'
 const log = Debug('AI:hooks')
 
 const useAPI = (): Cradle => {
   const { artifact } = useContext(ArtifactContext)
   return artifact
 }
-export const useArtifactPatches = (pid: PID, path: string) => {
+export const useArtifactSplices = (pid?: PID, path?: string) => {
   log('useArtifactPatches', pid, path)
-  // gets the stream of patches for an object
-  // must be a json object
-  // could stream directories too ?
 }
 export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   if (posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
   log('useArtifact', pid, path)
+  const api = useAPI()
+  const [artifact, setArtifact] = useState<T>()
+  useEffect(() => {
+    if (!pid) {
+      return
+    }
+    const stream = api.read({ pid, path })
+    const reader = stream.getReader()
+    let latest: string
+    const consume = async () => {
+      while (stream.locked) {
+        const { done, value } = await reader.read()
+        // TODO retry on disconnection
+        if (done) {
+          return
+        }
+        log('consume', value)
+        assertArray(value.changes)
+        let patched = ''
+        for (const diff of value.changes) {
+          if (diff.added) {
+            patched += diff.value
+          } else if (diff.removed) {
+            const count = diff.count ?? 0
+            patched = patched.substring(0, -count)
+          } else {
+            patched += diff.value
+          }
+        }
+        log('patched', patched)
+        if (latest !== patched) {
+          latest = patched
+          setArtifact(JSON.parse(patched))
+        }
+      }
+    }
+    consume()
+    return () => {
+      reader.cancel()
+    }
+  }, [api, pid, path])
   if (!pid) {
     return
   }
-  /**
-   * This is a json object.
-   * It returns a patch object with the full contents of the file.
-   * Large files might be sent as multiple patches
-   * If the file changes, patches will be streamed down
-   * A local fully patched object is stored, so that future callers will get
-   * that full object then the patches which come after.
-   *
-   * Consumers always get the full object ?
-   */
+  log('artifact', artifact)
+  return artifact
 }
 
 export const useRawArtifact = (pid: PID, path: string) => {
@@ -89,7 +121,6 @@ enum RepoStatus {
 }
 export const useRepo = (repo: string, init = false) => {
   const artifact = useAPI()
-  log('artifact', artifact)
   const [status, setStatus] = useState<RepoStatus>(RepoStatus.probing)
   const [pid, setPID] = useState<PID>()
   const [error, setErrorObj] = useState<Error>()
@@ -208,44 +239,42 @@ export const useHelp = (help: string, pid?: PID) => {
   return prompt
 }
 
-export const useCommits = (depth = 1, path = '/') => {
-  log('useCommits', depth, path)
-  // should be able to trace it to always get the latest ones
-  // the format should be in a stream of splices
-  // assert(Number.isInteger(depth), `depth must be an integer: ${depth}`)
-  // assert(depth > 0, `depth must be greater than 0: ${depth}`)
-  // // TODO fix pathing
-  // //   assert(posix.isAbsolute(path), `path must be absolute: ${path}`)
-  // const { artifact } = useContext(ArtifactContext)
-  // const [commits, setCommits] = useState([])
-  // useEffect(() => {
-  //   if (!artifact) {
-  //     return
-  //   }
-  //   let active = true
-  //   const subscriptionPromise = artifact.subscribeCommits(path, () => {
-  //     if (!active) {
-  //       return
-  //     }
-  //     // TODO get the root
-  //     artifact.log({ filepath: path, depth }).then(setCommits)
-  //   })
-  //   return () => {
-  //     debug('useCommits unmount', path)
-  //     active = false
-  //     subscriptionPromise.then((unsubscribe) => unsubscribe())
-  //   }
-  // }, [depth, artifact, path])
-  // return commits
-}
-
 export const useLatestCommit = (pid: PID): Splice | undefined => {
   log('useLatestCommit', pid)
   // get a splice, and then return the latest thing
 
-  // const commits = useCommits(1, path)
-  // return commits[0]
-  return
+  const api = useAPI()
+  const [splice, setSplice] = useState<Splice>()
+  const [error, setError] = useState()
+  useEffect(() => {
+    if (!pid) {
+      return
+    }
+    let active = true
+    const stream = api.read({ pid })
+    const reader = stream.getReader()
+    const read = async () => {
+      while (stream.locked) {
+        const { done, value } = await reader.read()
+        if (done) {
+          break
+        }
+        if (active) {
+          setSplice(value)
+        }
+      }
+    }
+    read().catch(setError)
+    return () => {
+      active = false
+      reader.releaseLock()
+      stream.cancel()
+    }
+  }, [api, pid])
+  if (error) {
+    throw error
+  }
+  return splice
 }
 export const useError = () => {
   const [error, setError] = useState()

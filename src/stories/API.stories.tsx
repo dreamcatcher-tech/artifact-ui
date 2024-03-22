@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react'
 import { usePing } from '../react/hooks.ts'
 const log = Debug('AI:API')
 
-const url = 'https://healthy-seal-74.deno.dev'
+const url = import.meta.env.VITE_API_URL
 
 const PingButton = () => {
   const ping = usePing()

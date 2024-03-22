@@ -2,25 +2,26 @@ import { MessageParam } from '../constants'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
 import Box from '@mui/material/Box'
-const meta: Meta<typeof Messages> = {
-  title: 'Messages',
-  component: Messages,
-}
-export default meta
 
 type Story = StoryObj<typeof Messages>
 
 export const Chat: Story = {}
 export const Narrow: Story = {
-  render: () => {
-    return (
-      <Box sx={{ background: 'red', maxWidth: '400px' }}>
-        <Messages messages={messages} />
-      </Box>
-    )
+  parameters: {
+    viewport: {
+      viewports: {
+        narrow: {
+          name: 'Narrow',
+          styles: {
+            width: '400px',
+            height: '100%',
+          },
+        },
+      },
+      defaultViewport: 'narrow',
+    },
   },
 }
-export const NarrowParams: Story = { parameters: { layout: 'centered' } }
 
 const messages: MessageParam[] = [
   {
@@ -104,3 +105,9 @@ const messages: MessageParam[] = [
       'You now have the instructions on how to create a blank Markdown file. If you have any additional questions or need further assistance, feel free to ask.',
   },
 ]
+const meta: Meta<typeof Messages> = {
+  title: 'Messages',
+  component: Messages,
+  args: { messages },
+}
+export default meta

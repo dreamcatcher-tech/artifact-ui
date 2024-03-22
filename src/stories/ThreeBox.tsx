@@ -22,12 +22,9 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
     setIsTranscribing(isTranscribing)
   }, [])
   const { pid } = useSession()
-  const messages = useArtifact<MessageParam[]>('session.json', pid)
-  debug('messages', messages)
+  const messages = useArtifact<MessageParam[]>('session.json', pid) || []
+  debug('messages', messages, 'pid', pid)
   if (!pid) {
-    return null
-  }
-  if (!messages) {
     return null
   }
   return (
