@@ -34,6 +34,8 @@ jobs:
 
       - name: Publish to Chromatic
         uses: chromaui/action@latest
+        env:
+          VITE_API_URL: https://healthy-seal-74.deno.dev
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
