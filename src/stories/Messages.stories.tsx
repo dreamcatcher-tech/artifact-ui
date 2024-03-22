@@ -1,7 +1,6 @@
 import { MessageParam } from '../constants'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
-import Box from '@mui/material/Box'
 
 type Story = StoryObj<typeof Messages>
 
