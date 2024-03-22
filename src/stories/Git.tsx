@@ -18,7 +18,11 @@ const Info: FC<Info> = ({ commit, oid }) => {
     const updateElapsedTime = () => {
       const now = Date.now()
       const elapsedSeconds = Math.floor((now - date.getTime()) / 1000)
-      setSecondsElapsed(elapsedSeconds)
+      if (elapsedSeconds < 0) {
+        setSecondsElapsed(0)
+      } else {
+        setSecondsElapsed(elapsedSeconds)
+      }
     }
     updateElapsedTime()
     const interval = setInterval(updateElapsedTime, 1000)
@@ -31,7 +35,7 @@ const Info: FC<Info> = ({ commit, oid }) => {
       <Typography mt={1} variant='caption' component='span'>
         <i>commit:</i>
         <b>{oid.slice(0, 8)}</b> <i>by:</i> {name} <i>message:</i>
-        {message} <i>when:</i>
+        {message} <i>when: </i>
         {since}
       </Typography>
     </>
@@ -64,13 +68,13 @@ function formatElapsedTime(secondsElapsed: number) {
   let formattedString = ''
 
   if (days > 0) {
-    formattedString += `${days} day${days > 1 ? 's' : ''}, `
+    formattedString += `${days} day${days > 1 ? 's' : ''} `
   }
   if (hours > 0) {
-    formattedString += `${hours} hr${hours > 1 ? 's' : ''}, `
+    formattedString += `${hours} hr${hours > 1 ? 's' : ''} `
   }
   if (minutes > 0) {
-    formattedString += `${minutes} min${minutes > 1 ? 's' : ''}, `
+    formattedString += `${minutes} min${minutes > 1 ? 's' : ''} `
   }
   formattedString += `${seconds} sec${seconds > 1 ? 's' : ''} ago`
 

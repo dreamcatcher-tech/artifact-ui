@@ -1,4 +1,3 @@
-import { applyPatches, applyPatch } from 'diff'
 import { SessionContext } from '../stories/Session.tsx'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
@@ -31,6 +30,7 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
     if (!pid) {
       return
     }
+    let active = true
     const stream = api.read({ pid, path })
     const reader = stream.getReader()
     let latest: string
@@ -38,7 +38,7 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
       while (stream.locked) {
         const { done, value } = await reader.read()
         // TODO retry on disconnection
-        if (done) {
+        if (done || !active) {
           return
         }
         log('consume', value)
@@ -63,6 +63,7 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
     }
     consume()
     return () => {
+      active = false
       reader.cancel()
     }
   }, [api, pid, path])
@@ -267,8 +268,7 @@ export const useLatestCommit = (pid: PID): Splice | undefined => {
     read().catch(setError)
     return () => {
       active = false
-      reader.releaseLock()
-      stream.cancel()
+      reader.cancel()
     }
   }, [api, pid])
   if (error) {

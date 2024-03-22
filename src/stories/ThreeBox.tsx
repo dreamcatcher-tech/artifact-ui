@@ -13,8 +13,8 @@ import { MessageParam } from '../constants.ts'
 
 const debug = Debug('AI:ThreeBox')
 interface ThreeBox {
-  preload: string
-  presubmit: boolean
+  preload?: string
+  presubmit?: boolean
 }
 const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
   const [isTranscribing, setIsTranscribing] = useState(false)
