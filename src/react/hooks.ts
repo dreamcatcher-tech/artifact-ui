@@ -125,6 +125,9 @@ export const useRepo = (repo: string, init = false) => {
   const [status, setStatus] = useState<RepoStatus>(RepoStatus.probing)
   const [pid, setPID] = useState<PID>()
   const [error, setErrorObj] = useState<Error>()
+  if (error) {
+    throw error
+  }
   const setError = (error: Error) => {
     setErrorObj(error)
     setStatus(RepoStatus.error)
@@ -181,8 +184,19 @@ export const useNewSession = (basePID?: PID) => {
   const [pid, setPID] = useState<PID>()
   const [error, setError] = useState<Error>()
   const [status, setStatus] = useState<SessionStatus>(SessionStatus.probing)
+  const existing = sessionStorage.getItem('session')
+  if (existing && !pid) {
+    const session = JSON.parse(existing) as PID
+    log('existing session', session)
+    // TODO assert this is a derivative of basePID
+    setPID(session)
+    setStatus(SessionStatus.ready)
+  }
   useEffect(() => {
     if (!basePID) {
+      return
+    }
+    if (pid) {
       return
     }
     let active = true
@@ -202,6 +216,7 @@ export const useNewSession = (basePID?: PID) => {
       }
       setPID(session)
       setStatus(SessionStatus.ready)
+      sessionStorage.setItem('session', JSON.stringify(session, null, 2))
     }
     load().catch((error: Error) => {
       setError(error)
@@ -210,7 +225,7 @@ export const useNewSession = (basePID?: PID) => {
     return () => {
       active = false
     }
-  }, [artifact, basePID])
+  }, [artifact, basePID, pid])
   return { status, pid, error }
 }
 export const useSession = () => {
