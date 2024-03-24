@@ -31,40 +31,51 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
       return
     }
     let active = true
-    const stream = api.read({ pid, path })
-    const reader = stream.getReader()
-    let latest: string
+    let stream: ReadableStream<Splice>
+    let reader: ReadableStreamDefaultReader<Splice>
+
+    stream = api.read({ pid, path })
+    reader = stream.getReader()
     const consume = async () => {
-      while (stream.locked) {
-        const { done, value } = await reader.read()
-        // TODO retry on disconnection
-        if (done || !active) {
-          return
-        }
-        log('consume', value)
-        assertArray(value.changes)
-        let patched = ''
-        for (const diff of value.changes) {
-          if (diff.added) {
-            patched += diff.value
-          } else if (diff.removed) {
-            const count = diff.count ?? 0
-            patched = patched.substring(0, -count)
-          } else {
-            patched += diff.value
+      while (active) {
+        try {
+          while (stream.locked) {
+            let latest: string = ''
+            const { done, value } = await reader.read()
+            // TODO retry on disconnection
+            if (done || !active) {
+              return
+            }
+            log('consume', value)
+            assertArray(value.changes)
+            let patched = ''
+            for (const diff of value.changes) {
+              if (diff.added) {
+                patched += diff.value
+              } else if (diff.removed) {
+                const count = diff.count ?? 0
+                patched = patched.substring(0, -count)
+              } else {
+                patched += diff.value
+              }
+            }
+            log('patched', patched)
+            if (latest !== patched) {
+              latest = patched
+              setArtifact(JSON.parse(patched))
+            }
           }
-        }
-        log('patched', patched)
-        if (latest !== patched) {
-          latest = patched
-          setArtifact(JSON.parse(patched))
+        } catch (error) {
+          log('error', error, stream, reader)
         }
       }
     }
     consume()
     return () => {
       active = false
-      reader.cancel()
+      if (stream.locked) {
+        reader.cancel()
+      }
     }
   }, [api, pid, path])
   if (!pid) {
@@ -192,6 +203,7 @@ export const useNewSession = (basePID?: PID) => {
     setPID(session)
     setStatus(SessionStatus.ready)
   }
+  // TODO probe to see if the session is still valid
   useEffect(() => {
     if (!basePID) {
       return
