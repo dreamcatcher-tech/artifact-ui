@@ -34,10 +34,10 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
     let stream: ReadableStream<Splice>
     let reader: ReadableStreamDefaultReader<Splice>
 
-    stream = api.read({ pid, path })
-    reader = stream.getReader()
     const consume = async () => {
       while (active) {
+        stream = api.read({ pid, path })
+        reader = stream.getReader()
         try {
           while (stream.locked) {
             let latest: string = ''
