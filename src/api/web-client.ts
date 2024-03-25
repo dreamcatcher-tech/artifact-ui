@@ -171,6 +171,7 @@ export default class WebClient implements Cradle {
                 }
               } catch (error) {
                 console.error('inner stream error:', error)
+                break
               }
             }
           } catch (error) {
