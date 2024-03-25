@@ -17,8 +17,8 @@ export type JsonValue =
   | null
   | JsonValue[]
   | {
-      [key: string]: JsonValue
-    }
+    [key: string]: JsonValue
+  }
 export type IsolateReturn = JsonValue | void
 export type ProcessOptions = {
   /**
@@ -51,7 +51,7 @@ export type ProcessOptions = {
 export type DispatchFunctions = {
   [key: string]: (
     params?: Params,
-    options?: ProcessOptions
+    options?: ProcessOptions,
   ) => Promise<unknown> | unknown
 }
 export type Params = Record<string, unknown>
@@ -230,10 +230,9 @@ export interface Cradle {
   // TODO should move these git functions elsewhere ?
   init(params: { repo: string }): Promise<{ pid: PID; head: string }>
   clone(params: { repo: string }): Promise<{ pid: PID; head: string }>
-  probe(params: {
-    repo?: string
-    pid?: PID
-  }): Promise<{ pid: PID; head: string } | void>
+  probe(
+    params: { repo?: string; pid?: PID },
+  ): Promise<{ pid: PID; head: string } | void>
   rm(params: { repo: string }): Promise<void>
   read(pid: PID, path?: string, signal?: AbortSignal): ReadableStream<Splice>
 }

@@ -10,7 +10,6 @@ import {
   PID,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
-import { assertError } from '@sindresorhus/is'
 import { NullSplice } from '../constants.ts'
 const log = Debug('AI:hooks')
 
@@ -71,27 +70,17 @@ export const useSplice = (pid?: PID, path?: string) => {
       const stream = api.read(pid, path, abort.signal)
       const reader = stream.getReader()
       while (!abort.signal.aborted) {
-        try {
-          const { done, value } = await reader.read()
-          if (done || abort.signal.aborted) {
-            return
-          }
-          log('consume', value)
-          setSplice((existing) => {
-            if (!equal(existing, value)) {
-              return value
-            }
-            return existing
-          })
-        } catch (error) {
-          assertError(error)
-          if (error.message === 'No PID found') {
-            setSplice(null)
-            return
-          } else {
-            throw error
-          }
+        const { done, value } = await reader.read()
+        if (done || abort.signal.aborted) {
+          return
         }
+        log('consumed', value)
+        setSplice((existing) => {
+          if (!equal(existing, value)) {
+            return value
+          }
+          return existing
+        })
       }
     }
     consume()
@@ -195,6 +184,7 @@ export const useRepo = (repo: string, init = false) => {
 
 enum SessionStatus {
   probing = 'probing',
+  restoring = 'restoring',
   creating = 'creating',
   ready = 'ready',
   error = 'error',
@@ -205,16 +195,10 @@ export type Session = {
   error?: Error
 }
 export const useNewSession = (basePID?: PID) => {
-  // start a new session if we don't have one, or use current session
-  // returns undefined until the new session has been acquired
-  // Ensures on page reload the session stays the same
-  // sets the session url params
-
   const artifact = useAPI()
   const [pid, setPID] = useState<PID>()
   const [error, setError] = useState<Error>()
   const [status, setStatus] = useState<SessionStatus>(SessionStatus.probing)
-  const existing = sessionStorage.getItem('session')
 
   useEffect(() => {
     if (!basePID) {
@@ -225,7 +209,9 @@ export const useNewSession = (basePID?: PID) => {
     }
     let active = true
     const createSession = async () => {
+      const existing = sessionStorage.getItem('session')
       if (existing) {
+        setStatus(SessionStatus.restoring)
         const session = JSON.parse(existing) as PID
         log('existing session', session)
         // TODO assert this is a derivative of basePID
@@ -241,11 +227,11 @@ export const useNewSession = (basePID?: PID) => {
       }
 
       log('createSession', basePID)
+      setStatus(SessionStatus.creating)
       const { create } = await artifact.pierces('session', basePID)
       if (!active) {
         return
       }
-      setStatus(SessionStatus.creating)
       // TODO add prefix to the session
       // TODO do not require any process options
       const session = (await create()) as PID
