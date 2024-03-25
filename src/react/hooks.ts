@@ -10,6 +10,8 @@ import {
   PID,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
+import { assertError } from '@sindresorhus/is'
+import { NullSplice } from '../constants.ts'
 const log = Debug('AI:hooks')
 
 const useAPI = (): Cradle => {
@@ -56,35 +58,44 @@ export const useSplice = (pid?: PID, path?: string) => {
   if (path && posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
-  log('useSplice', pid, path)
-  const [splice, setSplice] = useState<Splice>()
+  const [splice, setSplice] = useState<Splice | NullSplice>()
+  log('useSplice', pid, path, splice)
   const api = useAPI()
 
   useEffect(() => {
     if (!pid) {
       return
     }
-    let active = true
-
-    const stream = api.read({ pid, path })
-    const reader = stream.getReader()
+    const abort = new AbortController()
     const consume = async () => {
-      while (active) {
-        const { done, value } = await reader.read()
-        if (done || !active) {
-          return
+      const stream = api.read(pid, path, abort.signal)
+      const reader = stream.getReader()
+      while (!abort.signal.aborted) {
+        try {
+          const { done, value } = await reader.read()
+          if (done || abort.signal.aborted) {
+            return
+          }
+          log('consume', value)
+          setSplice((existing) => {
+            if (!equal(existing, value)) {
+              return value
+            }
+            return existing
+          })
+        } catch (error) {
+          assertError(error)
+          if (error.message === 'No PID found') {
+            setSplice(null)
+            return
+          } else {
+            throw error
+          }
         }
-        log('consume', value)
-        setSplice(value)
       }
     }
     consume()
-    return () => {
-      active = false
-      if (stream.locked) {
-        reader.cancel()
-      }
-    }
+    return () => abort.abort()
   }, [api, pid, path])
   if (!pid) {
     return
@@ -204,14 +215,7 @@ export const useNewSession = (basePID?: PID) => {
   const [error, setError] = useState<Error>()
   const [status, setStatus] = useState<SessionStatus>(SessionStatus.probing)
   const existing = sessionStorage.getItem('session')
-  if (existing && !pid) {
-    const session = JSON.parse(existing) as PID
-    log('existing session', session)
-    // TODO assert this is a derivative of basePID
-    setPID(session)
-    setStatus(SessionStatus.ready)
-  }
-  // TODO probe to see if the session is still valid
+
   useEffect(() => {
     if (!basePID) {
       return
@@ -220,9 +224,23 @@ export const useNewSession = (basePID?: PID) => {
       return
     }
     let active = true
-    const load = async () => {
-      // TODO if we might be resuming a session, try find it in the children
+    const createSession = async () => {
+      if (existing) {
+        const session = JSON.parse(existing) as PID
+        log('existing session', session)
+        // TODO assert this is a derivative of basePID
+        const result = await artifact.probe({ pid: session })
+        if (!active) {
+          return
+        }
+        if (result) {
+          setPID(session)
+          setStatus(SessionStatus.ready)
+          return
+        }
+      }
 
+      log('createSession', basePID)
       const { create } = await artifact.pierces('session', basePID)
       if (!active) {
         return
@@ -238,7 +256,7 @@ export const useNewSession = (basePID?: PID) => {
       setStatus(SessionStatus.ready)
       sessionStorage.setItem('session', JSON.stringify(session, null, 2))
     }
-    load().catch((error: Error) => {
+    createSession().catch((error: Error) => {
       setError(error)
       setStatus(SessionStatus.error)
     })
@@ -278,10 +296,9 @@ export const useHelp = (help: string, pid?: PID) => {
   return prompt
 }
 
-export const useLatestCommit = (pid: PID): Splice | undefined => {
-  log('useLatestCommit', pid)
-  // get a splice, and then return the latest thing
+export const useLatestCommit = (pid: PID): Splice | undefined | NullSplice => {
   const splice = useSplice(pid)
+  log('useLatestCommit', pid, splice)
   return splice
 }
 export const useError = () => {

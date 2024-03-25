@@ -99,12 +99,12 @@ class Mock implements Cradle {
     log('params', params)
     return Promise.resolve()
   }
-  read(params: { pid: PID; path?: string }): ReadableStream<Splice> {
-    log('params', params)
+  read(pid: PID, path?: string, signal?: AbortSignal): ReadableStream<Splice> {
+    log('read', pid, path, signal)
     return new ReadableStream<Splice>({
       start: async (controller) => {
         const mockSplice: Splice = {
-          pid: params.pid,
+          pid,
           oid: 'mockOid',
           commit: {
             message: 'test commit message',
@@ -124,7 +124,7 @@ class Mock implements Cradle {
             },
           },
           timestamp: Date.now(),
-          path: params.path,
+          path,
           changes: [],
         }
         controller.enqueue(mockSplice)

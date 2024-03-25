@@ -17,7 +17,7 @@ type ToEvents = (stream: ReadableStream) => ReadableStream<EventSourceMessage>
 export default class WebClient implements Cradle {
   private readonly fetcher: (
     input: URL | RequestInfo,
-    init?: RequestInit
+    init?: RequestInit,
   ) => Promise<Response>
   private readonly toEvents: ToEvents
   private readonly url: string
@@ -26,7 +26,7 @@ export default class WebClient implements Cradle {
     url: string,
     toError: ToError,
     toEvents: ToEvents,
-    fetcher?: typeof fetch
+    fetcher?: typeof fetch,
   ) {
     if (url.endsWith('/')) {
       throw new Error('url should not end with "/": ' + url)
@@ -70,7 +70,7 @@ export default class WebClient implements Cradle {
     for (const functionName of Object.keys(apiSchema)) {
       pierces[functionName] = (
         params: Params = {},
-        options?: ProcessOptions
+        options?: ProcessOptions,
       ) => {
         const proctype = getProcType(options)
         const pierce: PierceRequest = {
@@ -104,9 +104,17 @@ export default class WebClient implements Cradle {
     }
   }
   #aborts = new Set<AbortController>()
-  read(params: { pid: PID; path: string }): ReadableStream<Splice> {
+  read(pid: PID, path?: string, signal?: AbortSignal): ReadableStream<Splice> {
     const abort = new AbortController()
     this.#aborts.add(abort)
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        abort.abort()
+      })
+    }
+
+    // TODO retry on fail should be handled here
+    // cache the last response, and skip if receive the exact same object
 
     return new ReadableStream<Splice>({
       start: async (controller) => {
@@ -114,7 +122,7 @@ export default class WebClient implements Cradle {
           const response = await this.fetcher(`/api/read`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(params),
+            body: JSON.stringify({ pid, path }),
           })
           if (!response.ok) {
             throw new Error('response not ok')
@@ -127,7 +135,6 @@ export default class WebClient implements Cradle {
           abort.signal.addEventListener('abort', () => {
             reader.cancel()
           })
-
           while (!abort.signal.aborted) {
             try {
               const { done, value } = await reader.read()
@@ -138,8 +145,10 @@ export default class WebClient implements Cradle {
               if (value.event === 'splice') {
                 const splice: Splice = JSON.parse(value.data)
                 controller.enqueue(splice)
+              } else if (value.event === 'error') {
+                throw new Error(value.data)
               } else {
-                console.error('unexpected event', value.event)
+                console.error('unexpected event', value.event, value)
               }
             } catch (error) {
               controller.error(error)
@@ -163,13 +172,8 @@ export default class WebClient implements Cradle {
     if (!response.ok) {
       await response.body?.cancel()
       throw new Error(
-        path +
-          ' ' +
-          JSON.stringify(params) +
-          ' ' +
-          response.status +
-          ' ' +
-          response.statusText
+        path + ' ' + JSON.stringify(params) + ' ' + response.status + ' ' +
+          response.statusText,
       )
     }
     const outcome = await response.json()
