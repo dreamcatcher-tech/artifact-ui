@@ -43,11 +43,10 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
       }
     }
     // TODO make use of the prior string
-    if (string === patched) {
-      throw new Error('string is the same: ' + string)
+    if (string !== patched) {
+      setString(patched)
+      setArtifact(JSON.parse(patched))
     }
-    setString(patched)
-    setArtifact(JSON.parse(patched))
   }
   log('artifact', artifact)
   return artifact
