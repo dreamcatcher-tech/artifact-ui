@@ -1,3 +1,4 @@
+import equal from 'fast-deep-equal'
 import { SessionContext } from '../stories/Session.tsx'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
@@ -9,7 +10,6 @@ import {
   PID,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
-import { assertArray } from '@sindresorhus/is'
 const log = Debug('AI:hooks')
 
 const useAPI = (): Cradle => {
@@ -20,54 +20,62 @@ export const useArtifactSplices = (pid?: PID, path?: string) => {
   log('useArtifactPatches', pid, path)
 }
 export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
-  if (posix.isAbsolute(path)) {
+  log('useArtifact', pid, path)
+  const splice = useSplice(pid, path)
+  const [lastSplice, setLastSplice] = useState<Splice>()
+  const [string, setString] = useState('')
+  const [artifact, setArtifact] = useState<T>()
+  if (!pid) {
+    return
+  }
+  if (splice && splice.changes && !equal(lastSplice, splice)) {
+    setLastSplice(splice)
+    let patched = ''
+    for (const diff of splice.changes) {
+      if (diff.added) {
+        patched += diff.value
+      } else if (diff.removed) {
+        const count = diff.count ?? 0
+        patched = patched.substring(0, -count)
+      } else {
+        patched += diff.value
+      }
+    }
+    // TODO make use of the prior string
+    if (string === patched) {
+      throw new Error('string is the same: ' + string)
+    }
+    setString(patched)
+    setArtifact(JSON.parse(patched))
+  }
+  log('artifact', artifact)
+  return artifact
+}
+
+export const useSplice = (pid?: PID, path?: string) => {
+  if (path && posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
-  log('useArtifact', pid, path)
+  log('useSplice', pid, path)
+  const [splice, setSplice] = useState<Splice>()
   const api = useAPI()
-  const [artifact, setArtifact] = useState<T>()
+
   useEffect(() => {
     if (!pid) {
       return
     }
     let active = true
-    let stream: ReadableStream<Splice>
-    let reader: ReadableStreamDefaultReader<Splice>
 
+    const stream = api.read({ pid, path })
+    const reader = stream.getReader()
     const consume = async () => {
       while (active) {
-        stream = api.read({ pid, path })
-        reader = stream.getReader()
-        try {
-          while (stream.locked) {
-            let latest: string = ''
-            const { done, value } = await reader.read()
-            // TODO retry on disconnection
-            if (done || !active) {
-              return
-            }
-            log('consume', value)
-            assertArray(value.changes)
-            let patched = ''
-            for (const diff of value.changes) {
-              if (diff.added) {
-                patched += diff.value
-              } else if (diff.removed) {
-                const count = diff.count ?? 0
-                patched = patched.substring(0, -count)
-              } else {
-                patched += diff.value
-              }
-            }
-            log('patched', patched)
-            if (latest !== patched) {
-              latest = patched
-              setArtifact(JSON.parse(patched))
-            }
-          }
-        } catch (error) {
-          log('error', error, stream, reader)
+        const { done, value } = await reader.read()
+        if (done || !active) {
+          return
         }
+        log('consume', value)
+        setSplice(value)
       }
     }
     consume()
@@ -81,8 +89,7 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   if (!pid) {
     return
   }
-  log('artifact', artifact)
-  return artifact
+  return splice
 }
 
 export const useRawArtifact = (pid: PID, path: string) => {
@@ -105,6 +112,7 @@ export const useActions = (isolate: string, pid?: PID) => {
     if (!pid) {
       return
     }
+    // TODO listen to changes in the available actions
     artifact
       .pierces(isolate, pid)
       .then((actions) => {
@@ -238,6 +246,9 @@ export const useNewSession = (basePID?: PID) => {
       active = false
     }
   }, [artifact, basePID, pid])
+  if (error) {
+    throw error
+  }
   return { status, pid, error }
 }
 export const useSession = () => {
@@ -270,37 +281,7 @@ export const useHelp = (help: string, pid?: PID) => {
 export const useLatestCommit = (pid: PID): Splice | undefined => {
   log('useLatestCommit', pid)
   // get a splice, and then return the latest thing
-
-  const api = useAPI()
-  const [splice, setSplice] = useState<Splice>()
-  const [error, setError] = useState()
-  useEffect(() => {
-    if (!pid) {
-      return
-    }
-    let active = true
-    const stream = api.read({ pid })
-    const reader = stream.getReader()
-    const read = async () => {
-      while (stream.locked) {
-        const { done, value } = await reader.read()
-        if (done) {
-          break
-        }
-        if (active) {
-          setSplice(value)
-        }
-      }
-    }
-    read().catch(setError)
-    return () => {
-      active = false
-      reader.cancel()
-    }
-  }, [api, pid])
-  if (error) {
-    throw error
-  }
+  const splice = useSplice(pid)
   return splice
 }
 export const useError = () => {

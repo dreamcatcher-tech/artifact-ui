@@ -17,7 +17,7 @@ type ToEvents = (stream: ReadableStream) => ReadableStream<EventSourceMessage>
 export default class WebClient implements Cradle {
   private readonly fetcher: (
     input: URL | RequestInfo,
-    init?: RequestInit,
+    init?: RequestInit
   ) => Promise<Response>
   private readonly toEvents: ToEvents
   private readonly url: string
@@ -26,7 +26,7 @@ export default class WebClient implements Cradle {
     url: string,
     toError: ToError,
     toEvents: ToEvents,
-    fetcher?: typeof fetch,
+    fetcher?: typeof fetch
   ) {
     if (url.endsWith('/')) {
       throw new Error('url should not end with "/": ' + url)
@@ -70,7 +70,7 @@ export default class WebClient implements Cradle {
     for (const functionName of Object.keys(apiSchema)) {
       pierces[functionName] = (
         params: Params = {},
-        options?: ProcessOptions,
+        options?: ProcessOptions
       ) => {
         const proctype = getProcType(options)
         const pierce: PierceRequest = {
@@ -127,6 +127,7 @@ export default class WebClient implements Cradle {
           abort.signal.addEventListener('abort', () => {
             reader.cancel()
           })
+
           while (!abort.signal.aborted) {
             try {
               const { done, value } = await reader.read()
@@ -162,8 +163,13 @@ export default class WebClient implements Cradle {
     if (!response.ok) {
       await response.body?.cancel()
       throw new Error(
-        path + ' ' + JSON.stringify(params) + ' ' + response.status + ' ' +
-          response.statusText,
+        path +
+          ' ' +
+          JSON.stringify(params) +
+          ' ' +
+          response.status +
+          ' ' +
+          response.statusText
       )
     }
     const outcome = await response.json()
