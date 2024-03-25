@@ -38,6 +38,7 @@ jobs:
           VITE_API_URL: https://healthy-seal-74.deno.dev
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitOnceUploaded: true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
