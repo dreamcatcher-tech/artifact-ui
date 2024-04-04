@@ -9,8 +9,9 @@ import WebClient from '../api/web-client.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
 import {
-  Cradle,
+  Artifact,
   DispatchFunctions,
+  JSONSchemaType,
   PID,
   Params,
   PierceRequest,
@@ -30,7 +31,7 @@ interface Props {
    */
   mock?: boolean
 }
-class Mock implements Cradle {
+class Mock implements Artifact {
   // TODO have controls for delays
   // TODO select different mock responses for different tests
   constructor() {
@@ -40,12 +41,14 @@ class Mock implements Cradle {
     await Promise.resolve()
     return params
   }
-  async apiSchema(params: { isolate: string }) {
+  async apiSchema(params: {
+    isolate: string
+  }): Promise<Record<string, JSONSchemaType<object>>> {
     log('params', params)
     await Promise.resolve()
-    return { isolate: {} }
+    return { isolate: { type: 'object' } }
   }
-  async pierce(params: PierceRequest) {
+  async pierce(params: { pierce: PierceRequest }) {
     log('params', params)
     await Promise.resolve()
     return 'TODO'
@@ -94,6 +97,12 @@ class Mock implements Cradle {
       pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
       head: 'testCommitHash',
     })
+  }
+  pull(): Promise<{ pid: PID; head: string }> {
+    throw new Error('not implemented')
+  }
+  push() {
+    return Promise.reject(new Error('not implemented'))
   }
   rm(params: { repo: string }) {
     log('params', params)

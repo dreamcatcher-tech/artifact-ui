@@ -1,11 +1,11 @@
 import { useMemo, createContext, FC } from 'react'
 import WebClient from '../api/web-client.ts'
-import { Cradle } from '../api/web-client.types.ts'
+import { Artifact } from '../api/web-client.types.ts'
 import { deserializeError as toError } from 'serialize-error'
 import { toEvents } from './utils.ts'
 
 interface ContextType {
-  artifact: Cradle
+  artifact: Artifact
 }
 export const ArtifactContext = createContext<ContextType>({
   artifact: {} as WebClient,
