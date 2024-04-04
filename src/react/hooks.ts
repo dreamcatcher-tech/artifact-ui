@@ -5,7 +5,7 @@ import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
-  Cradle,
+  Artifact,
   DispatchFunctions,
   PID,
 } from '../api/web-client.types.ts'
@@ -13,7 +13,7 @@ import posix from 'path-browserify'
 import { NullSplice } from '../constants.ts'
 const log = Debug('AI:hooks')
 
-const useAPI = (): Cradle => {
+const useAPI = (): Artifact => {
   const { artifact } = useContext(ArtifactContext)
   return artifact
 }
