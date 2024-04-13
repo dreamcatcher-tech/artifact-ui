@@ -1,20 +1,14 @@
-// import the context from the real provider
-// provide a top level component to wrap any other components so they will
-// receive the mock api
-// BUT pass thru to the real one if it is set in the env
-import { toEvents } from '../react/utils.ts'
-import { deserializeError as toError } from 'serialize-error'
-import { useMemo, FC } from 'react'
-import WebClient from '../api/web-client.ts'
+import { useMemo, FC, useEffect } from 'react'
+import { Shell } from '../api/web-client.ts'
+import { WebClientEngine } from '../api/web-client-engine.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
 import {
   Artifact,
   DispatchFunctions,
-  JSONSchemaType,
+  IsolateApiSchema,
   PID,
   Params,
-  PierceRequest,
   Splice,
 } from '../api/web-client.types.ts'
 
@@ -37,21 +31,21 @@ class Mock implements Artifact {
   constructor() {
     log('MockAPI loaded')
   }
+  get pid() {
+    return {
+      id: 'mock',
+      account: 'dreamcatcher',
+      repository: 'gpt',
+      branches: ['main'],
+    }
+  }
   async ping(params = {}) {
     await Promise.resolve()
     return params
   }
-  async apiSchema(params: {
-    isolate: string
-  }): Promise<Record<string, JSONSchemaType<object>>> {
-    log('params', params)
+  async apiSchema(_isolate: string): Promise<IsolateApiSchema> {
     await Promise.resolve()
     return { isolate: { type: 'object' } }
-  }
-  async pierce(params: { pierce: PierceRequest }) {
-    log('params', params)
-    await Promise.resolve()
-    return 'TODO'
   }
   transcribe(params: { audio: File }) {
     log('params', params)
@@ -61,7 +55,7 @@ class Mock implements Artifact {
     log('params', params)
     return Promise.resolve([])
   }
-  async pierces(isolate: string, target: PID) {
+  async actions(isolate: string, target: PID) {
     log('isolate', isolate, 'target', target)
     await Promise.resolve()
     const pierces: DispatchFunctions = {}
@@ -77,24 +71,39 @@ class Mock implements Artifact {
   stop() {
     throw new Error('Not implemented')
   }
-  probe(params: { repo: string }) {
+  probe(params: { pid: PID }) {
     log('params', params)
     return Promise.resolve({
-      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      pid: {
+        id: 'mock',
+        account: 'dreamcatcher',
+        repository: 'gpt',
+        branches: ['main'],
+      },
       head: 'testCommitHash',
     })
   }
   init(params: { repo: string }) {
     log('params', params)
     return Promise.resolve({
-      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      pid: {
+        id: 'mock',
+        account: 'dreamcatcher',
+        repository: 'gpt',
+        branches: ['main'],
+      },
       head: 'testCommitHash',
     })
   }
   clone(params: { repo: string }) {
     log('params', params)
     return Promise.resolve({
-      pid: { account: 'dreamcatcher', repository: 'gpt', branches: ['main'] },
+      pid: {
+        id: 'mock',
+        account: 'dreamcatcher',
+        repository: 'gpt',
+        branches: ['main'],
+      },
       head: 'testCommitHash',
     })
   }
@@ -106,7 +115,7 @@ class Mock implements Artifact {
   }
   rm(params: { repo: string }) {
     log('params', params)
-    return Promise.resolve()
+    return Promise.resolve(true)
   }
   read(pid: PID, path?: string, signal?: AbortSignal): ReadableStream<Splice> {
     log('read', pid, path, signal)
@@ -148,8 +157,20 @@ export const Provider: FC<Props> = ({ children, mock, url }) => {
     if (mock || !usable) {
       return new Mock()
     }
-    return new WebClient(usable, toError, toEvents)
+    const engine = WebClientEngine.create(usable)
+    const superuser = {
+      id: '__system',
+      account: 'system',
+      repository: 'system',
+      branches: ['main'],
+    }
+    return Shell.create(engine, superuser)
   }, [mock, url])
+  useEffect(() => {
+    return () => {
+      artifact.stop()
+    }
+  }, [artifact])
   return (
     <ArtifactContext.Provider value={{ artifact }}>
       {children}

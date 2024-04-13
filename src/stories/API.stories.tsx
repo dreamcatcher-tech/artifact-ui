@@ -1,13 +1,13 @@
-import { deserializeError as toError } from 'serialize-error'
 import '../examples/button.css'
-import { toEvents } from '../react/utils.ts'
 import MockAPI from './MockProvider.tsx'
-import WebClient from '../api/web-client.ts'
+import { Shell } from '../api/web-client.ts'
+import { WebClientEngine } from '../api/web-client-engine.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
 import { usePing } from '../react/hooks.ts'
+import { pidFromRepo } from '../constants.ts'
 const log = Debug('AI:API')
 
 const url = import.meta.env.VITE_API_URL
@@ -67,15 +67,23 @@ type Story = StoryObj<typeof APIHarness>
 export const Harness: Story = {
   play: async ({ canvasElement, step }) => {
     within(canvasElement)
-    const api = new WebClient(url, toError, toEvents)
+    const engine = WebClientEngine.create(url)
+    const superuser = {
+      id: '__system',
+      account: 'system',
+      repository: 'system',
+      branches: ['main'],
+    }
+    const shell = Shell.create(engine, superuser)
     await step('ping ' + url, async () => {
       log('ping')
-      const result = await api.ping()
+      const result = await shell.ping()
       log('done', result)
     })
     await step('probe ' + url, async () => {
       log('probe')
-      const result = await api.probe({ repo: 'dreamcatcher-tech/HAL' })
+      const pid = pidFromRepo(superuser.id, 'dreamcatcher-tech/HAL')
+      const result = await shell.probe({ pid })
       log('done', result)
     })
   },

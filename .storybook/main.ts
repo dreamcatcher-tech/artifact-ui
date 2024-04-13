@@ -8,9 +8,14 @@ const config: StorybookConfig = {
     '@storybook/addon-essentials',
     '@storybook/addon-interactions',
   ],
+
   framework: {
     name: '@storybook/react-vite',
     options: {},
+  },
+
+  docs: {
+    autodocs: false,
   },
 }
 export default config

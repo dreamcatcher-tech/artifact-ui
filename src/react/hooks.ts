@@ -8,9 +8,9 @@ import {
   Artifact,
   DispatchFunctions,
   PID,
+  pidFromRepo,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
-import { NullSplice } from '../constants.ts'
 const log = Debug('AI:hooks')
 
 const useAPI = (): Artifact => {
@@ -56,7 +56,7 @@ export const useSplice = (pid?: PID, path?: string) => {
   if (path && posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
-  const [splice, setSplice] = useState<Splice | NullSplice>()
+  const [splice, setSplice] = useState<Splice>()
   log('useSplice', pid, path, splice)
   const api = useAPI()
 
@@ -113,7 +113,7 @@ export const useActions = (isolate: string, pid?: PID) => {
     }
     // TODO listen to changes in the available actions
     artifact
-      .pierces(isolate, pid)
+      .actions(isolate, pid)
       .then((actions) => {
         if (active) {
           setActions(actions)
@@ -153,7 +153,8 @@ export const useRepo = (repo: string, init = false) => {
   useEffect(() => {
     let active = true
     const load = async () => {
-      let probe = await artifact.probe({ repo })
+      const pid = pidFromRepo(artifact.pid.id, repo)
+      let probe = await artifact.probe({ pid })
       if (!probe && active) {
         if (init) {
           setStatus(RepoStatus.initializing)
@@ -227,7 +228,7 @@ export const useNewSession = (basePID?: PID) => {
 
       log('createSession', basePID)
       setStatus(SessionStatus.creating)
-      const { create } = await artifact.pierces('session', basePID)
+      const { create } = await artifact.actions('session', basePID)
       if (!active) {
         return
       }
@@ -281,7 +282,7 @@ export const useHelp = (help: string, pid?: PID) => {
   return prompt
 }
 
-export const useLatestCommit = (pid: PID): Splice | undefined | NullSplice => {
+export const useLatestCommit = (pid: PID): Splice | undefined => {
   const splice = useSplice(pid)
   log('useLatestCommit', pid, splice)
   return splice
