@@ -43,9 +43,9 @@ class Mock implements Artifact {
     await Promise.resolve()
     return params
   }
-  async apiSchema(_isolate: string): Promise<IsolateApiSchema> {
+  async apiSchema(isolate: string): Promise<IsolateApiSchema> {
     await Promise.resolve()
-    return { isolate: { type: 'object' } }
+    return { isolate: { type: 'object', description: isolate } }
   }
   transcribe(params: { audio: File }) {
     log('params', params)
