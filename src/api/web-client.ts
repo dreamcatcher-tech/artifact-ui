@@ -54,41 +54,28 @@ export class Shell implements Artifact {
     return this.#engine.stop()
   }
   async #watchPierces() {
-    const watchIo = this.#engine.read(this.#pid, '.io.json', this.#abort.signal)
-
-    let patched = ''
     let lastSplice
-    const reader = watchIo.getReader()
-    while (watchIo.locked) {
-      const { value: splice, done } = await reader.read()
-      if (done) {
-        console.error('splice stream ended')
-        break
-      }
+    const { signal } = this.#abort
+    const after = undefined
+    const splices = this.#engine.read(this.#pid, '.io.json', after, signal)
+    for await (const splice of splices) {
+      // move these checks to the engine side
       if (lastSplice && splice.commit.parent[0] !== lastSplice.oid) {
+        console.dir(splice, { depth: Infinity })
+        console.dir(lastSplice, { depth: Infinity })
         throw new Error('parent mismatch: ' + splice.oid)
       }
       lastSplice = splice
-      if (!splice.changes) {
-        continue
-      }
-      let cursor = 0
-      for (const diff of splice.changes) {
-        if (diff.added) {
-          patched = patched.substring(0, cursor) + diff.value +
-            patched.substring(cursor)
-          cursor += diff.value.length
-        } else if (diff.removed) {
-          const count = diff.count ?? 0
-          patched = patched.substring(0, cursor) +
-            patched.substring(cursor + count)
-        } else {
-          const count = diff.count ?? 0
-          cursor += count
+
+      if (splice.changes['.io.json']) {
+        const { patch } = splice.changes['.io.json']
+        // TODO move to unified diff patches
+        if (!patch) {
+          throw new Error('io.json patch not found')
         }
+        const io = JSON.parse(patch)
+        this.#resolvePierces(io)
       }
-      const io = JSON.parse(patched)
-      this.#resolvePierces(io)
     }
   }
   async actions<T>(isolate: string, target: PID) {
@@ -165,8 +152,11 @@ export class Shell implements Artifact {
     const actions = await this.#repoActions()
     return actions.rm({ pid })
   }
-  read(pid: PID, path?: string, signal?: AbortSignal) {
-    return this.#engine.read(pid, path, signal)
+  read(pid: PID, path?: string, after?: string, signal?: AbortSignal) {
+    if (after) {
+      throw new Error('after not implemented')
+    }
+    return this.#engine.read(pid, path, after, signal)
   }
   #resolvePierces(io: IoStruct) {
     for (const [, value] of Object.entries(io.requests)) {

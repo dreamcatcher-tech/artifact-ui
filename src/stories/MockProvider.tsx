@@ -1,9 +1,11 @@
+import { pushable } from 'it-pushable'
 import { useMemo, FC, useEffect } from 'react'
 import { Shell } from '../api/web-client.ts'
 import { WebClientEngine } from '../api/web-client-engine.ts'
 import Debug from 'debug'
 import { ArtifactContext } from '../react/Provider.tsx'
 import {
+  SUPERUSER,
   Artifact,
   DispatchFunctions,
   IsolateApiSchema,
@@ -117,37 +119,41 @@ class Mock implements Artifact {
     log('params', params)
     return Promise.resolve(true)
   }
-  read(pid: PID, path?: string, signal?: AbortSignal): ReadableStream<Splice> {
-    log('read', pid, path, signal)
-    return new ReadableStream<Splice>({
-      start: async (controller) => {
-        const mockSplice: Splice = {
-          pid,
-          oid: 'mockOid',
-          commit: {
-            message: 'test commit message',
-            tree: 'mockTreeHash',
-            parent: ['mockParentHash'],
-            author: {
-              name: 'mockAuthorName',
-              email: '',
-              timestamp: 0,
-              timezoneOffset: 0,
-            },
-            committer: {
-              name: 'mockCommitterName',
-              email: '',
-              timestamp: 0,
-              timezoneOffset: 0,
-            },
-          },
-          timestamp: Date.now(),
-          path,
-          changes: [],
-        }
-        controller.enqueue(mockSplice)
+  read(
+    pid: PID,
+    path?: string,
+    after?: string,
+    signal?: AbortSignal
+  ): AsyncIterable<Splice> {
+    log('read', pid, path, after, signal)
+    const mockSplice: Splice = {
+      pid,
+      oid: 'mockOid',
+      commit: {
+        message: 'test commit message',
+        tree: 'mockTreeHash',
+        parent: ['mockParentHash'],
+        author: {
+          name: 'mockAuthorName',
+          email: '',
+          timestamp: 0,
+          timezoneOffset: 0,
+        },
+        committer: {
+          name: 'mockCommitterName',
+          email: '',
+          timestamp: 0,
+          timezoneOffset: 0,
+        },
       },
-    })
+      timestamp: Date.now(),
+      changes: {
+        mockPath: { oid: 'mock' },
+      },
+    }
+    const pushableSplice = pushable<Splice>({ objectMode: true })
+    pushableSplice.push(mockSplice)
+    return pushableSplice
   }
 }
 
@@ -158,13 +164,8 @@ export const Provider: FC<Props> = ({ children, mock, url }) => {
       return new Mock()
     }
     const engine = WebClientEngine.create(usable)
-    const superuser = {
-      id: '__system',
-      account: 'system',
-      repository: 'system',
-      branches: ['main'],
-    }
-    return Shell.create(engine, superuser)
+
+    return Shell.create(engine, SUPERUSER)
   }, [mock, url])
   useEffect(() => {
     return () => {

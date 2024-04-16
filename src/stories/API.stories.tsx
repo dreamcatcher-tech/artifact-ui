@@ -7,7 +7,7 @@ import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
 import { usePing } from '../react/hooks.ts'
-import { pidFromRepo } from '../constants.ts'
+import { SUPERUSER, pidFromRepo } from '../constants.ts'
 const log = Debug('AI:API')
 
 const url = import.meta.env.VITE_API_URL
@@ -68,13 +68,8 @@ export const Harness: Story = {
   play: async ({ canvasElement, step }) => {
     within(canvasElement)
     const engine = WebClientEngine.create(url)
-    const superuser = {
-      id: '__system',
-      account: 'system',
-      repository: 'system',
-      branches: ['main'],
-    }
-    const shell = Shell.create(engine, superuser)
+
+    const shell = Shell.create(engine, SUPERUSER)
     await step('ping ' + url, async () => {
       log('ping')
       const result = await shell.ping()
@@ -82,7 +77,7 @@ export const Harness: Story = {
     })
     await step('probe ' + url, async () => {
       log('probe')
-      const pid = pidFromRepo(superuser.id, 'dreamcatcher-tech/HAL')
+      const pid = pidFromRepo(SUPERUSER.id, 'dreamcatcher-tech/HAL')
       const result = await shell.probe({ pid })
       log('done', result)
     })

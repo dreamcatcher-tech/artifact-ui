@@ -1,7 +1,7 @@
 import { useMemo, createContext, FC } from 'react'
 import { Shell } from '../api/web-client.ts'
 import { WebClientEngine } from '../api/web-client-engine.ts'
-import { Artifact } from '../api/web-client.types.ts'
+import { Artifact, SUPERUSER } from '../api/web-client.types.ts'
 
 interface ContextType {
   artifact: Artifact
@@ -21,13 +21,7 @@ const Provider: FC<Props> = ({ children, url }) => {
       throw new Error('API URL not set')
     }
     const engine = WebClientEngine.create(url)
-    const superuser = {
-      id: '__system',
-      account: 'system',
-      repository: 'system',
-      branches: ['main'],
-    }
-    return Shell.create(engine, superuser)
+    return Shell.create(engine, SUPERUSER)
   }, [url])
   return (
     <ArtifactContext.Provider value={{ artifact }}>

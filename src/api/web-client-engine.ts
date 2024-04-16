@@ -1,3 +1,4 @@
+import { pushable } from 'it-pushable'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { deserializeError } from 'serialize-error'
 import {
@@ -12,7 +13,6 @@ import {
 
 export class WebClientEngine implements EngineInterface {
   readonly #aborts = new Set<AbortController>()
-  readonly #readPromises = new Set<Promise<void>>()
   readonly #fetcher: (
     input: URL | RequestInfo,
     init?: RequestInit,
@@ -32,11 +32,17 @@ export class WebClientEngine implements EngineInterface {
   static create(url: string, fetcher?: typeof fetch) {
     return new WebClientEngine(url, fetcher)
   }
-  async stop() {
+  async initialize() {
+    const response = await this.#fetcher(`/api`)
+    if (!response.ok) {
+      throw new Error('response not ok')
+    }
+    return await response.json()
+  }
+  stop() {
     for (const abort of this.#aborts) {
       abort.abort()
     }
-    await Promise.all([...this.#readPromises])
   }
   async ping(data?: JsonValue) {
     const payload: { data?: JsonValue } = { data }
@@ -70,80 +76,59 @@ export class WebClientEngine implements EngineInterface {
   }
 
   // #region: Splice Reading
-  read(pid: PID, path?: string, signal?: AbortSignal) {
+  read(pid: PID, path?: string, after?: string, signal?: AbortSignal) {
     const abort = new AbortController()
+    this.#aborts.add(abort)
     if (signal) {
       signal.addEventListener('abort', () => {
         abort.abort()
       })
     }
-    const finished = this.#waiter(abort)
 
-    return new ReadableStream<Splice>({
-      start: async (controller) => {
-        let repeat = 0
-        while (!abort.signal.aborted) {
-          // TODO cache last response to skip if receive duplicate on resume
-          if (repeat++ > 0) {
-            await new Promise((r) => setTimeout(r, 500))
-            console.log('repeat', repeat)
+    const source = pushable<Splice>({ objectMode: true })
+    abort.signal.addEventListener('abort', () => source.return())
+
+    const pipe = async () => {
+      let lastSplice: Splice | undefined
+      while (!abort.signal.aborted) {
+        try {
+          const response = await this.#fetcher(`/api/read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pid,
+              path,
+              after: lastSplice?.oid || after,
+            }),
+            signal: abort.signal,
+            keepalive: true,
+          })
+          if (!response.ok) {
+            throw new Error('response not ok')
           }
-          try {
-            const response = await this.#fetcher(`/api/read`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pid, path }),
-              signal: abort.signal,
-              keepalive: true,
-            })
-            if (!response.ok) {
-              throw new Error('response not ok')
-            }
-            if (!response.body) {
-              throw new Error('response body is missing')
-            }
-            const splices = toEvents(response.body)
-            const reader = splices.getReader()
-            abort.signal.addEventListener('abort', () => {
-              reader.cancel()
-            })
-            while (!abort.signal.aborted) {
-              try {
-                const { done, value } = await reader.read()
-                if (done || abort.signal.aborted) {
-                  break
-                }
-                if (value.event === 'splice') {
-                  const splice: Splice = JSON.parse(value.data)
-                  controller.enqueue(splice)
-                } else {
-                  console.error('unexpected event', value.event, value)
-                }
-              } catch (error) {
-                console.error('inner stream error:', error)
-                break
-              }
-            }
-          } catch (error) {
-            console.log('stream error:', error)
+          if (!response.body) {
+            throw new Error('response body is missing')
           }
+          const spliceStream = toEvents(response.body)
+          for await (const value of toIterable(spliceStream, abort.signal)) {
+            if (value.event === 'splice') {
+              const splice: Splice = JSON.parse(value.data)
+              lastSplice = splice
+              source.push(splice)
+            } else {
+              console.error('unexpected event', value.event, value)
+            }
+          }
+        } catch (error) {
+          console.log('stream error:', error)
         }
-        finished()
-      },
-    })
-  }
-  #waiter(abort: AbortController) {
-    let resolve: () => void
-    const readPromise = new Promise<void>((_resolve) => {
-      resolve = _resolve
-    })
-    this.#readPromises.add(readPromise)
-    this.#aborts.add(abort)
-    return () => {
-      resolve()
-      this.#readPromises.delete(readPromise)
-      this.#aborts.delete(abort)
+        if (!abort.signal.aborted) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      }
     }
+    pipe().catch(source.throw)
+    return source
   }
   async #request(path: string, params: Params) {
     const response = await this.#fetcher(`/api/${path}?pretty`, {
@@ -167,3 +152,19 @@ export class WebClientEngine implements EngineInterface {
 const toEvents = (stream: ReadableStream) =>
   stream.pipeThrough(new TextDecoderStream())
     .pipeThrough(new EventSourceParserStream())
+
+async function* toIterable(stream: ReadableStream, signal: AbortSignal) {
+  const reader = stream.getReader()
+  signal.addEventListener('abort', () => reader.cancel())
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+      yield value
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}

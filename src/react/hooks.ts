@@ -31,21 +31,12 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   }
   if (splice && splice.changes && !equal(lastSplice, splice)) {
     setLastSplice(splice)
-    let patched = ''
-    for (const diff of splice.changes) {
-      if (diff.added) {
-        patched += diff.value
-      } else if (diff.removed) {
-        const count = diff.count ?? 0
-        patched = patched.substring(0, -count)
-      } else {
-        patched += diff.value
+    if (splice.changes[path]) {
+      const { patch } = splice.changes[path]
+      if (patch && string !== patch) {
+        setString(patch)
+        setArtifact(JSON.parse(patch))
       }
-    }
-    // TODO make use of the prior string
-    if (string !== patched) {
-      setString(patched)
-      setArtifact(JSON.parse(patched))
     }
   }
   log('artifact', artifact)
@@ -66,20 +57,10 @@ export const useSplice = (pid?: PID, path?: string) => {
     }
     const abort = new AbortController()
     const consume = async () => {
-      const stream = api.read(pid, path, abort.signal)
-      const reader = stream.getReader()
-      while (!abort.signal.aborted) {
-        const { done, value } = await reader.read()
-        if (done || abort.signal.aborted) {
-          return
-        }
-        log('consumed', value)
-        setSplice((existing) => {
-          if (!equal(existing, value)) {
-            return value
-          }
-          return existing
-        })
+      const after = undefined
+      for await (const splice of api.read(pid, path, after, abort.signal)) {
+        log('consumed', splice)
+        setSplice(splice)
       }
     }
     consume()
