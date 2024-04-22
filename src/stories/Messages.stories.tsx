@@ -67,7 +67,7 @@ const messages: MessageParam[] = [
     role: 'tool',
     tool_call_id: 'call_kShQuzYlpAQenLDbZIcwCgF2',
     content:
-      '{\n  "config": {},\n  "runner": "runner-chat",\n  "commands": [],\n  "prerequisites": [],\n  "instructions": [\n    "\\nGive it the format of a blank file.\\nTeach it how to write these files out.\\nOnce written, it is automatically picked up by the help-finder.\\nWe should guide the user thru how to run some tests, and show the default tests that are automatically running on it, with the examples being used to test its outputs and expectations.\\n"\n  ],\n  "done": "",\n  "examples": [],\n  "tests": []\n}',
+      '{\n  "config": {},\n  "runner": "ai-prompt",\n  "commands": [],\n  "prerequisites": [],\n  "instructions": [\n    "\\nGive it the format of a blank file.\\nTeach it how to write these files out.\\nOnce written, it is automatically picked up by the help-finder.\\nWe should guide the user thru how to run some tests, and show the default tests that are automatically running on it, with the examples being used to test its outputs and expectations.\\n"\n  ],\n  "done": "",\n  "examples": [],\n  "tests": []\n}',
   },
   {
     role: 'assistant',
