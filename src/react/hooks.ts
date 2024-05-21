@@ -107,7 +107,7 @@ export const useDNS = (repo: string) => {
     return () => {
       active = false
     }
-  }, [terminal, repo])
+  }, [terminal, repo, setError])
   return pid
 }
 
@@ -135,7 +135,7 @@ export const useHAL = (createNew = false) => {
     return () => {
       active = false
     }
-  }, [terminal, halPid, createNew])
+  }, [terminal, halPid, createNew, setError])
   return halSessionPid
 }
 

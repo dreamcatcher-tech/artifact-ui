@@ -7,7 +7,6 @@ import Messages from './Messages.tsx'
 import { useArtifact, useHAL, useTerminal } from '../react/hooks'
 import Git from './Git.tsx'
 import { MessageParam } from '../constants.ts'
-import { print } from '../api/web-client.types.ts'
 
 // TODO put the git commit hash under the input box, along with date, time,
 // who the current user is, size, latency, etc.
