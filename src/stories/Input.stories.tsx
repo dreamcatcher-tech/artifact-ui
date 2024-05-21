@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import Input from './Input.tsx'
-import Provider from './MockProvider.tsx'
-import Session from './Session.tsx'
+import Provider from '../react/Provider.tsx'
 import Debug from 'debug'
 
 const meta: Meta<typeof Input> = {
@@ -11,9 +10,7 @@ const meta: Meta<typeof Input> = {
     Debug.enable('AI:Input')
     return (
       <Provider>
-        <Session repo='dreamcatcher-tech/HAL'>
-          <Input {...args} />
-        </Session>
+        <Input {...args} />
       </Provider>
     )
   },

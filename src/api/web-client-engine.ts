@@ -3,6 +3,7 @@ import { EventSourceParserStream } from 'eventsource-parser/stream'
 import { deserializeError } from 'serialize-error'
 import {
   EngineInterface,
+  freezePid,
   JSONSchemaType,
   JsonValue,
   Params,
@@ -13,40 +14,55 @@ import {
 
 export class WebClientEngine implements EngineInterface {
   readonly #aborts = new Set<AbortController>()
+  readonly #abort = new AbortController()
   readonly #fetcher: (
     input: URL | RequestInfo,
     init?: RequestInit,
   ) => Promise<Response>
+  readonly #homeAddress: PID
   readonly #schemas = new Map<string, JSONSchemaType<object>>()
-
-  private constructor(url: string, fetcher?: typeof fetch) {
+  private constructor(url: string, fetcher: typeof fetch, homeAddress: PID) {
     if (url.endsWith('/')) {
       throw new Error('url should not end with "/": ' + url)
     }
-    if (fetcher) {
-      this.#fetcher = fetcher
-    } else {
-      this.#fetcher = (path, opts) => fetch(`${url}${path}`, opts)
+    this.#fetcher = fetcher
+    this.#homeAddress = homeAddress
+  }
+  static async start(url: string, fetcher?: typeof fetch) {
+    if (!fetcher) {
+      fetcher = (path, opts) => fetch(`${url}${path}`, opts)
     }
+
+    const homeAddress = await request(fetcher, 'homeAddress', {})
+    freezePid(homeAddress)
+    return new WebClientEngine(url, fetcher, homeAddress)
   }
-  static create(url: string, fetcher?: typeof fetch) {
-    return new WebClientEngine(url, fetcher)
+  get homeAddress() {
+    return this.#homeAddress
   }
-  async initialize() {
-    const response = await this.#fetcher(`/api`)
-    if (!response.ok) {
-      throw new Error('response not ok')
-    }
-    return await response.json()
+  ensureMachineTerminal(pid: PID) {
+    return this.#request('ensureMachineTerminal', { pid })
   }
+  get abortSignal() {
+    return this.#abort.signal
+  }
+
   stop() {
+    this.#abort.abort()
     for (const abort of this.#aborts) {
-      abort.abort()
+      abort.abort('Engine stop')
     }
   }
   async ping(data?: JsonValue) {
-    const payload: { data?: JsonValue } = { data }
-    return await this.#request('ping', payload)
+    // TODO move back to everything being params rather than args
+    let params = {}
+    if (data) {
+      params = { data }
+    }
+    const result = await this.#request('ping', params)
+    if ('data' in result) {
+      return result.data
+    }
   }
   async pierce(pierce: PierceRequest) {
     await this.#request('pierce', pierce)
@@ -66,16 +82,21 @@ export class WebClientEngine implements EngineInterface {
   async transcribe(audio: File) {
     const formData = new FormData()
     formData.append('audio', audio)
-
+    const abort = new AbortController()
+    this.#aborts.add(abort)
     const response = await this.#fetcher(`/api/transcribe`, {
       method: 'POST',
       body: formData,
+      signal: abort.signal,
     })
 
-    return await response.json()
+    const outcome = await response.json()
+    if (outcome.error) {
+      throw deserializeError(outcome.error)
+    }
+    return outcome.result
   }
 
-  // #region: Splice Reading
   read(pid: PID, path?: string, after?: string, signal?: AbortSignal) {
     const abort = new AbortController()
     this.#aborts.add(abort)
@@ -122,32 +143,65 @@ export class WebClientEngine implements EngineInterface {
         } catch (error) {
           console.log('stream error:', error)
         }
+        // TODO implement backoff before retrying
         if (!abort.signal.aborted) {
-          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const wait = 1000
+          console.log(`retrying read in ${wait}ms`)
+          await new Promise((resolve) => setTimeout(resolve, wait))
         }
       }
     }
     pipe().catch(source.throw)
     return source
   }
-  async #request(path: string, params: Params) {
-    const response = await this.#fetcher(`/api/${path}?pretty`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    })
-    if (!response.ok) {
-      await response.body?.cancel()
-      const { status, statusText } = response
-      const msg = `${path} ${JSON.stringify(params)} ${status} ${statusText}`
-      throw new Error(msg)
-    }
-    const outcome = await response.json()
-    if (outcome.error) {
-      throw deserializeError(outcome.error)
-    }
-    return outcome.result
+  async readJSON<T>(path: string, pid: PID) {
+    const result = await this.#request('readJSON', { path, pid })
+    return result as T
   }
+  async exists(path: string, pid: PID) {
+    const result = await this.#request('exists', { path, pid })
+    return result as boolean
+  }
+  async isTerminalAvailable(pid: PID): Promise<boolean> {
+    const result = await this.#request('isTerminalAvailable', { pid })
+    return result as boolean
+  }
+  async ensureBranch(pierce: PierceRequest): Promise<void> {
+    await this.#request('ensureBranch', pierce)
+  }
+  async #request(path: string, params: Params) {
+    const abort = new AbortController()
+    this.#aborts.add(abort)
+    try {
+      return await request(this.#fetcher, path, params, abort.signal)
+    } finally {
+      this.#aborts.delete(abort)
+    }
+  }
+}
+const request = async (
+  fetcher: typeof fetch,
+  path: string,
+  params: Params,
+  signal?: AbortSignal,
+) => {
+  const response = await fetcher(`/api/${path}?pretty`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+    signal,
+  })
+  if (!response.ok) {
+    await response.body?.cancel()
+    const { status, statusText } = response
+    const msg = `${path} ${JSON.stringify(params)} ${status} ${statusText}`
+    throw new Error(msg)
+  }
+  const outcome = await response.json()
+  if (outcome.error) {
+    throw deserializeError(outcome.error)
+  }
+  return outcome.result
 }
 const toEvents = (stream: ReadableStream) =>
   stream.pipeThrough(new TextDecoderStream())
@@ -155,7 +209,7 @@ const toEvents = (stream: ReadableStream) =>
 
 async function* toIterable(stream: ReadableStream, signal: AbortSignal) {
   const reader = stream.getReader()
-  signal.addEventListener('abort', () => reader.cancel())
+  signal.addEventListener('abort', () => stream.locked && reader.cancel())
   try {
     while (true) {
       const { done, value } = await reader.read()

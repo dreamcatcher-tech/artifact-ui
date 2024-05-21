@@ -1,4 +1,4 @@
-import { useTranscribe, useSession, useGoalie } from '../react/hooks.ts'
+import { useTranscribe, useGoalie, useHAL } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
@@ -40,8 +40,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   if (error) {
     throw error
   }
-  const session = useSession()
-  const { pid } = session
+  const sessionPid = useHAL()
 
   const [value, setValue] = useState(preload || '')
   const [disabled, setDisabled] = useState(false)
@@ -55,7 +54,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     setDisabled(true)
   }, [startRecording, onTranscribe])
 
-  const prompt = useGoalie(pid)
+  const prompt = useGoalie(sessionPid)
   useEffect(() => {
     if (!prompt) {
       setDisabled(true)
@@ -75,7 +74,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     prompt(value)
       .catch(setError)
       .finally(() => setDisabled(false))
-      .then((result) => debug('result', result))
   }, [prompt, value])
 
   const transcribe = useTranscribe()

@@ -1,27 +1,30 @@
 import equal from 'fast-deep-equal'
-import { SessionContext } from '../stories/Session.tsx'
 import { ArtifactContext } from '../react/Provider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
-  Artifact,
+  ArtifactSession,
   DispatchFunctions,
   PID,
-  pidFromRepo,
+  print,
+  getActorId,
+  freezePid,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
+import { ulid } from 'ulid'
 const log = Debug('AI:hooks')
 
-const useAPI = (): Artifact => {
-  const { artifact } = useContext(ArtifactContext)
-  return artifact
+export const useTerminal = (): ArtifactSession => {
+  const { session } = useContext(ArtifactContext)
+  return session
 }
+
 export const useArtifactSplices = (pid?: PID, path?: string) => {
-  log('useArtifactPatches', pid, path)
+  log('useArtifactSplices', pid, path)
+  throw new Error('not implemented')
 }
 export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
-  log('useArtifact', pid, path)
   const splice = useSplice(pid, path)
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState('')
@@ -29,6 +32,7 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   if (!pid) {
     return
   }
+  log('useArtifact %s %s', path, print(pid))
   if (splice && splice.changes && !equal(lastSplice, splice)) {
     setLastSplice(splice)
     if (splice.changes[path]) {
@@ -48,8 +52,7 @@ export const useSplice = (pid?: PID, path?: string) => {
     throw new Error(`path must be relative: ${path}`)
   }
   const [splice, setSplice] = useState<Splice>()
-  log('useSplice', pid, path, splice)
-  const api = useAPI()
+  const api = useTerminal()
 
   useEffect(() => {
     if (!pid) {
@@ -69,29 +72,83 @@ export const useSplice = (pid?: PID, path?: string) => {
   if (!pid) {
     return
   }
+  log('useSplice %s', print(pid), path)
   return splice
 }
 
-export const useRawArtifact = (pid: PID, path: string) => {
+export const useArtifactBytes = (pid: PID, path: string) => {
   // used to access raw Uint8Array data
-  log('useRawArtifact', pid, path)
+  log('useRawArtifact %s', print(pid), path)
+  throw new Error('not implemented')
 }
 
 export const usePing = () => {
-  const artifact = useAPI()
-  return (...args: Parameters<typeof artifact.ping>) => artifact.ping(...args)
+  const terminal = useTerminal()
+  return (...args: Parameters<typeof terminal.ping>) => terminal.ping(...args)
+}
+
+export const useDNS = (repo: string) => {
+  const terminal = useTerminal()
+  const [pid, setPid] = useState<PID>()
+  const setError = useError()
+  useEffect(() => {
+    let active = true
+    if (!terminal) {
+      return
+    }
+    terminal
+      .dns(repo)
+      .then((pid) => {
+        if (active) {
+          setPid(pid)
+        }
+      })
+      .catch(setError)
+    return () => {
+      active = false
+    }
+  }, [terminal, repo])
+  return pid
+}
+
+export const useHAL = (createNew = false) => {
+  const halPid = useDNS('dreamcatcher-tech/HAL')
+  const terminal = useTerminal()
+  const [halSessionPid, setHalSessionPid] = useState<PID>()
+  const setError = useError()
+  useEffect(() => {
+    let active = true
+    if (!halPid || !terminal) {
+      return
+    }
+    const session = recoverHal(halPid, terminal.pid, createNew)
+
+    terminal
+      .ensureBranch(session, halPid)
+      .then(() => {
+        if (active) {
+          log('hal session %s', print(session))
+          setHalSessionPid(session)
+        }
+      })
+      .catch(setError)
+    return () => {
+      active = false
+    }
+  }, [terminal, halPid, createNew])
+  return halSessionPid
 }
 
 export const useActions = (isolate: string, pid?: PID) => {
-  const artifact = useAPI()
+  const artifact = useTerminal()
   const [actions, setActions] = useState<DispatchFunctions>()
   const [error, setError] = useState()
   useEffect(() => {
     log('useActions', isolate, artifact)
-    let active = true
     if (!pid) {
       return
     }
+    let active = true
     // TODO listen to changes in the available actions
     artifact
       .actions(isolate, pid)
@@ -112,134 +169,6 @@ export const useActions = (isolate: string, pid?: PID) => {
   return actions
 }
 
-enum RepoStatus {
-  probing = 'probing',
-  cloning = 'cloning',
-  initializing = 'initializing',
-  ready = 'ready',
-  error = 'error',
-}
-export const useRepo = (repo: string, init = false) => {
-  const artifact = useAPI()
-  const [status, setStatus] = useState<RepoStatus>(RepoStatus.probing)
-  const [pid, setPID] = useState<PID>()
-  const [error, setErrorObj] = useState<Error>()
-  if (error) {
-    throw error
-  }
-  const setError = (error: Error) => {
-    setErrorObj(error)
-    setStatus(RepoStatus.error)
-  }
-  useEffect(() => {
-    let active = true
-    const load = async () => {
-      const pid = pidFromRepo(artifact.pid.id, repo)
-      let probe = await artifact.probe({ pid })
-      if (!probe && active) {
-        if (init) {
-          setStatus(RepoStatus.initializing)
-          probe = await artifact.init({ repo })
-        } else {
-          setStatus(RepoStatus.cloning)
-          probe = await artifact.clone({ repo })
-        }
-      }
-      if (!active) {
-        return
-      }
-      if (!probe) {
-        setError(new Error('probe is not defined: ' + repo))
-      } else {
-        setStatus(RepoStatus.ready)
-        setPID(probe.pid)
-      }
-    }
-    load().catch(setError)
-    return () => {
-      active = false
-    }
-  }, [artifact, init, repo])
-  return { status, pid, error }
-}
-
-enum SessionStatus {
-  probing = 'probing',
-  restoring = 'restoring',
-  creating = 'creating',
-  ready = 'ready',
-  error = 'error',
-}
-export type Session = {
-  status?: SessionStatus
-  pid?: PID
-  error?: Error
-}
-export const useNewSession = (basePID?: PID) => {
-  const artifact = useAPI()
-  const [pid, setPID] = useState<PID>()
-  const [error, setError] = useState<Error>()
-  const [status, setStatus] = useState<SessionStatus>(SessionStatus.probing)
-
-  useEffect(() => {
-    if (!basePID) {
-      return
-    }
-    if (pid) {
-      return
-    }
-    let active = true
-    const createSession = async () => {
-      const existing = sessionStorage.getItem('session')
-      if (existing) {
-        setStatus(SessionStatus.restoring)
-        const session = JSON.parse(existing) as PID
-        log('existing session', session)
-        // TODO assert this is a derivative of basePID
-        const result = await artifact.probe({ pid: session })
-        if (!active) {
-          return
-        }
-        if (result) {
-          setPID(session)
-          setStatus(SessionStatus.ready)
-          return
-        }
-      }
-
-      log('createSession', basePID)
-      setStatus(SessionStatus.creating)
-      const { create } = await artifact.actions('session', basePID)
-      if (!active) {
-        return
-      }
-      // TODO add prefix to the session
-      // TODO do not require any process options
-      const session = (await create()) as PID
-      if (!active) {
-        return
-      }
-      setPID(session)
-      setStatus(SessionStatus.ready)
-      sessionStorage.setItem('session', JSON.stringify(session, null, 2))
-    }
-    createSession().catch((error: Error) => {
-      setError(error)
-      setStatus(SessionStatus.error)
-    })
-    return () => {
-      active = false
-    }
-  }, [artifact, basePID, pid])
-  if (error) {
-    throw error
-  }
-  return { status, pid, error }
-}
-export const useSession = () => {
-  // should look higher and get the session somehow ?
-  return useContext(SessionContext).session
-}
 export const useGoalie = (pid?: PID) => {
   return useHelp('goalie', pid)
 }
@@ -251,9 +180,7 @@ export const useHelp = (help: string, pid?: PID) => {
       if (!actions || !actions.engage) {
         throw new Error('actions.engage is not defined')
       }
-      const result = await actions.engage({ help, text })
-      log('result', result)
-      return result
+      await actions.engage({ help, text })
     },
     [actions, help]
   )
@@ -265,18 +192,18 @@ export const useHelp = (help: string, pid?: PID) => {
 
 export const useLatestCommit = (pid: PID): Splice | undefined => {
   const splice = useSplice(pid)
-  log('useLatestCommit', pid, splice)
+  log('useLatestCommit %s', print(pid), splice)
   return splice
 }
 export const useError = () => {
-  const [error, setError] = useState()
+  const [error, setError] = useState<Error>()
   if (error) {
     throw error
   }
   return setError
 }
 export const useTranscribe = () => {
-  const api = useAPI()
+  const api = useTerminal()
   const transcribe = useCallback(
     async (audio: File) => {
       const transcription = await api.transcribe({ audio })
@@ -285,4 +212,22 @@ export const useTranscribe = () => {
     [api]
   )
   return transcribe
+}
+const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
+  let sessionId = sessionStorage.getItem('hal-session')
+  if (create) {
+    sessionId = null
+  }
+  if (!sessionId) {
+    sessionId = ulid()
+    sessionStorage.setItem('hal-session', sessionId)
+    log('new hal sessionId', sessionId)
+  } else {
+    log('recovered hal sessionId', sessionId)
+  }
+  const actorId = getActorId(terminalPid)
+  const branches = [...halPid.branches, actorId, sessionId]
+  const session = { ...halPid, branches }
+  freezePid(session)
+  return session
 }

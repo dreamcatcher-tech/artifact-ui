@@ -1,18 +1,22 @@
 import '../examples/button.css'
-import MockAPI from './MockProvider.tsx'
-import { Shell } from '../api/web-client.ts'
 import { WebClientEngine } from '../api/web-client-engine.ts'
+import Provider from '../react/Provider.tsx'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
-import { usePing } from '../react/hooks.ts'
-import { SUPERUSER, pidFromRepo } from '../constants.ts'
+import { usePing, useTerminal } from '../react/hooks.ts'
+import { Machine } from '../api/web-client-machine.ts'
+import { print } from '../api/web-client.types.ts'
+
 const log = Debug('AI:API')
 
 const url = import.meta.env.VITE_API_URL
 
 const PingButton = () => {
+  const session = useTerminal()
+  log('session', session)
+  log('session %s', print(session.pid))
   const ping = usePing()
   const [latency, setLatency] = useState(0)
 
@@ -44,14 +48,14 @@ const PingButton = () => {
 }
 const APIHarness = () => {
   return (
-    <MockAPI url={url}>
+    <Provider>
       <div>
         <h1>API</h1>
         <p>url: {url}</p>
         <p>import.meta.env.VITE_API_URL: {import.meta.env.VITE_API_URL}</p>
       </div>
       <PingButton />
-    </MockAPI>
+    </Provider>
   )
 }
 
@@ -63,22 +67,30 @@ const meta: Meta<typeof APIHarness> = {
 export default meta
 
 type Story = StoryObj<typeof APIHarness>
+Debug.enable('AI:*')
 
 export const Harness: Story = {
   play: async ({ canvasElement, step }) => {
+    log('play')
     within(canvasElement)
-    const engine = WebClientEngine.create(url)
-
-    const shell = Shell.create(engine, SUPERUSER)
+    const engine = await WebClientEngine.start(url)
+    const machine = Machine.load(engine, Machine.generatePrivateKey())
+    log('machineId %s', print(machine.pid))
+    const session = machine.openSession()
     await step('ping ' + url, async () => {
       log('ping')
-      const result = await shell.ping()
+      const result = await session.ping()
       log('done', result)
     })
-    await step('probe ' + url, async () => {
-      log('probe')
-      const pid = pidFromRepo(SUPERUSER.id, 'dreamcatcher-tech/HAL')
-      const result = await shell.probe({ pid })
+    const repo = 'dreamcatcher-tech/HAL'
+    await step(`remove ${repo}`, async () => {
+      log('remove')
+      const result = await session.rm({ repo })
+      log('done', result)
+    })
+    await step(`clone ${url} with ${repo}`, async () => {
+      log('clone')
+      const result = await session.clone({ repo })
       log('done', result)
     })
   },

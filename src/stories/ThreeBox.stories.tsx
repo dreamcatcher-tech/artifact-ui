@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import Session from './Session.tsx'
 import ThreeBox from './ThreeBox.tsx'
-import { Provider } from './MockProvider.tsx'
+import Provider from '../react/Provider.tsx'
 import Debug from 'debug'
 
 const meta: Meta<typeof ThreeBox> = {
@@ -12,9 +11,7 @@ const meta: Meta<typeof ThreeBox> = {
 
     return (
       <Provider>
-        <Session repo='dreamcatcher-tech/HAL'>
-          <ThreeBox {...args} />
-        </Session>
+        <ThreeBox {...args} />
       </Provider>
     )
   },

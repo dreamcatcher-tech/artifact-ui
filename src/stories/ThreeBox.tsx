@@ -4,9 +4,10 @@ import Stack from '@mui/material/Stack'
 import { FC, useCallback, useState } from 'react'
 import Debug from 'debug'
 import Messages from './Messages.tsx'
-import { useArtifact, useSession } from '../react/hooks'
+import { useArtifact, useHAL, useTerminal } from '../react/hooks'
 import Git from './Git.tsx'
 import { MessageParam } from '../constants.ts'
+import { print } from '../api/web-client.types.ts'
 
 // TODO put the git commit hash under the input box, along with date, time,
 // who the current user is, size, latency, etc.
@@ -21,8 +22,9 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
   const onTranscribe = useCallback((isTranscribing: boolean) => {
     setIsTranscribing(isTranscribing)
   }, [])
-  const { pid } = useSession()
-  const messages = useArtifact<MessageParam[]>('session.json', pid) || []
+  const { pid } = useTerminal()
+  const halPid = useHAL()
+  const messages = useArtifact<MessageParam[]>('session.json', halPid) || []
   debug('messages', messages, 'pid', pid)
   if (!pid) {
     return null
