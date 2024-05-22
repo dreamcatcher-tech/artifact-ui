@@ -13,6 +13,7 @@ import {
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
+import { assertObject } from '@sindresorhus/is'
 const log = Debug('AI:hooks')
 
 export const useTerminal = (): ArtifactSession => {
@@ -214,20 +215,38 @@ export const useTranscribe = () => {
   return transcribe
 }
 const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
-  let sessionId = sessionStorage.getItem('hal-session')
+  let fragment = parseHashFragment()
   if (create) {
-    sessionId = null
+    fragment = undefined
   }
-  if (!sessionId) {
-    sessionId = ulid()
-    sessionStorage.setItem('hal-session', sessionId)
-    log('new hal sessionId', sessionId)
+  if (!fragment) {
+    const sessionId = ulid()
+    const actorId = getActorId(terminalPid)
+    fragment = setFragment(actorId, sessionId)
+    log('new hal sessionId set')
   } else {
-    log('recovered hal sessionId', sessionId)
+    log('recovered hal fragment')
   }
-  const actorId = getActorId(terminalPid)
+  assertObject(fragment, 'fragment error')
+  const { actorId, sessionId } = fragment
   const branches = [...halPid.branches, actorId, sessionId]
   const session = { ...halPid, branches }
   freezePid(session)
   return session
+}
+
+const parseHashFragment = () => {
+  const hash = window.location.hash.substring(1)
+  const params = new URLSearchParams(hash)
+  const actorId = params.get('actorId')
+  const sessionId = params.get('sessionId')
+  if (actorId && sessionId) {
+    return { actorId, sessionId }
+  }
+}
+
+const setFragment = (actorId: string, sessionId: string) => {
+  const params = new URLSearchParams({ actorId, sessionId })
+  window.location.hash = params.toString()
+  return { actorId, sessionId }
 }

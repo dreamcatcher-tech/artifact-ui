@@ -26,3 +26,6 @@ export const Preload: Story = {
 export const Presubmit: Story = {
   args: { preload: 'Add a customer to the CRM', presubmit: true },
 }
+export const SubmitBlankText: Story = {
+  args: { preload: '', presubmit: true },
+}

@@ -76,21 +76,21 @@ export const Harness: Story = {
     const engine = await WebClientEngine.start(url)
     const machine = Machine.load(engine, Machine.generatePrivateKey())
     log('machineId %s', print(machine.pid))
-    const session = machine.openSession()
+    const terminal = machine.openTerminal()
     await step('ping ' + url, async () => {
       log('ping')
-      const result = await session.ping()
+      const result = await terminal.ping()
       log('done', result)
     })
     const repo = 'dreamcatcher-tech/HAL'
     await step(`remove ${repo}`, async () => {
       log('remove')
-      const result = await session.rm({ repo })
+      const result = await terminal.rm({ repo })
       log('done', result)
     })
     await step(`clone ${url} with ${repo}`, async () => {
       log('clone')
-      const result = await session.clone({ repo })
+      const result = await terminal.clone({ repo })
       log('done', result)
     })
   },

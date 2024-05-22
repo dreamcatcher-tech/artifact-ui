@@ -65,6 +65,9 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     }
   }, [prompt])
   const send = useCallback(() => {
+    if (!value) {
+      return
+    }
     debug('send', value)
     setValue('')
     setDisabled(true)

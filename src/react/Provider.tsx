@@ -44,17 +44,18 @@ const Provider: FC<Props> = ({ children, url }) => {
         const machine = Machine.load(engine, privateKey)
         log('machine PID: %s', print(machine.pid))
 
-        const retry = maybeExistingSession(machine.pid)
-        let session
+        const retry = maybeExistingTerminal(machine.pid)
+        let terminal
         try {
-          session = machine.openSession(retry)
+          terminal = machine.openTerminal(retry)
         } catch (error) {
           console.error('error opening session %s', error)
-          session = machine.openSession()
+          terminal = machine.openTerminal()
         }
-        sessionStorage.setItem('session', JSON.stringify(session.pid, null, 2))
-        setSession(session)
-        toStop = session
+        const string = JSON.stringify(terminal.pid, null, 2)
+        sessionStorage.setItem('terminal', string)
+        setSession(terminal)
+        toStop = terminal
       })
       .catch((error) => active && setError(error))
     return () => {
@@ -83,21 +84,21 @@ const Provider: FC<Props> = ({ children, url }) => {
   )
 }
 
-const maybeExistingSession = (machinePid: PID) => {
+const maybeExistingTerminal = (machinePid: PID) => {
   try {
-    const existing = sessionStorage.getItem('session')
+    const existing = sessionStorage.getItem('terminal')
     if (!existing) {
       return
     }
-    const session = JSON.parse(existing)
-    if (!isValidForMachine(session, machinePid)) {
-      throw new Error('Invalid session pid: ' + print(session))
+    const terminal = JSON.parse(existing)
+    if (!isValidForMachine(terminal, machinePid)) {
+      throw new Error('Invalid terminal pid: ' + print(terminal))
     }
-    freezePid(session)
-    return session
+    freezePid(terminal)
+    return terminal
   } catch (error) {
-    console.error('error restoring session', error)
-    sessionStorage.removeItem('session')
+    console.error('error restoring terminal', error)
+    sessionStorage.removeItem('terminal')
   }
 }
 
