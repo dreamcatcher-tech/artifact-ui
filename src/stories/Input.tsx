@@ -147,10 +147,23 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         e.preventDefault()
         setValue('')
       }
+      if (e.key.toLowerCase() === 'y' && e.ctrlKey) {
+        e.preventDefault()
+        // ctrl + y for a new tab / window without the hash
+        // ctrl + shift + y to get a new session in the current window
+        const urlWithoutHash = window.location.href.split('#')[0]
+        if (e.shiftKey) {
+          window.history.pushState({}, '', window.location.href)
+          window.location.replace(urlWithoutHash)
+        } else {
+          window.open(urlWithoutHash, '_blank')
+        }
+      }
     },
     [send]
   )
   useEffect(() => {
+    // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.ctrlKey) {
         if (disabled && !mediaRecorder) {
