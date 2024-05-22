@@ -112,7 +112,7 @@ export const useDNS = (repo: string) => {
   return pid
 }
 
-export const useHAL = (createNew = false) => {
+const useHalSession = (createNew = false) => {
   const halPid = useDNS('dreamcatcher-tech/HAL')
   const terminal = useTerminal()
   const [halSessionPid, setHalSessionPid] = useState<PID>()
@@ -141,17 +141,17 @@ export const useHAL = (createNew = false) => {
 }
 
 export const useActions = (isolate: string, pid?: PID) => {
-  const artifact = useTerminal()
+  const terminal = useTerminal()
   const [actions, setActions] = useState<DispatchFunctions>()
   const [error, setError] = useState()
   useEffect(() => {
-    log('useActions', isolate, artifact)
+    log('useActions', isolate, terminal)
     if (!pid) {
       return
     }
     let active = true
     // TODO listen to changes in the available actions
-    artifact
+    terminal
       .actions(isolate, pid)
       .then((actions) => {
         if (active) {
@@ -163,32 +163,29 @@ export const useActions = (isolate: string, pid?: PID) => {
     return () => {
       active = false
     }
-  }, [pid, artifact, isolate])
+  }, [pid, terminal, isolate])
   if (error) {
     throw error
   }
   return actions
 }
-
-export const useGoalie = (pid?: PID) => {
-  return useHelp('goalie', pid)
-}
-export const useHelp = (help: string, pid?: PID) => {
-  const actions = useActions('engage-help', pid)
+export const useHAL = () => {
+  const session = useHalSession()
+  const actions = useActions('hal', session)
   const prompt = useCallback(
     async (text: string) => {
-      log('prompt', text)
-      if (!actions || !actions.engage) {
-        throw new Error('actions.engage is not defined')
+      log('prompt', text, actions)
+      if (!actions || !actions.prompt) {
+        throw new Error('actions.prompt is not defined')
       }
-      await actions.engage({ help, text })
+      await actions.prompt({ text })
     },
-    [actions, help]
+    [actions]
   )
-  if (!actions || !actions.engage) {
-    return
+  if (!actions || !actions.prompt) {
+    return {}
   }
-  return prompt
+  return { prompt, session }
 }
 
 export const useLatestCommit = (pid: PID): Splice | undefined => {

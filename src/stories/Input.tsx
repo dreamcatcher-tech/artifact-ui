@@ -1,4 +1,4 @@
-import { useTranscribe, useGoalie, useHAL } from '../react/hooks.ts'
+import { useTranscribe, useHAL } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
@@ -40,7 +40,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   if (error) {
     throw error
   }
-  const sessionPid = useHAL()
 
   const [value, setValue] = useState(preload || '')
   const [disabled, setDisabled] = useState(false)
@@ -54,7 +53,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     setDisabled(true)
   }, [startRecording, onTranscribe])
 
-  const prompt = useGoalie(sessionPid)
+  const { prompt } = useHAL()
   useEffect(() => {
     if (!prompt) {
       setDisabled(true)
@@ -71,7 +70,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     debug('send', value)
     setValue('')
     setDisabled(true)
-    if (!prompt) {
+    if (typeof prompt !== 'function') {
       throw new Error('prompt is not defined')
     }
     prompt(value)

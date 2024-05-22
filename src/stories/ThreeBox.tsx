@@ -22,8 +22,8 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
     setIsTranscribing(isTranscribing)
   }, [])
   const { pid } = useTerminal()
-  const halPid = useHAL()
-  const messages = useArtifact<MessageParam[]>('session.json', halPid) || []
+  const { session } = useHAL()
+  const messages = useArtifact<MessageParam[]>('session.json', session) || []
   debug('messages', messages, 'pid', pid)
   if (!pid) {
     return null
