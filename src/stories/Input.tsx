@@ -153,8 +153,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         // ctrl + shift + y to get a new session in the current window
         const urlWithoutHash = window.location.href.split('#')[0]
         if (e.shiftKey) {
-          window.history.pushState({}, '', window.location.href)
-          window.location.replace(urlWithoutHash)
+          window.location.assign(urlWithoutHash)
         } else {
           window.open(urlWithoutHash, '_blank')
         }
