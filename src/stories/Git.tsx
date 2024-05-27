@@ -42,7 +42,7 @@ const Display: FC<Display> = ({ commit, oid, helpName, help }) => {
   }, [timestamp])
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
-  const label = helpName ? helpName : '(loading...)'
+  const label = helpName ? helpName : <i>'loading...'</i>
   const path = helpName && `helps/${helpName}.md`
   const [open, setOpen] = useState(false)
   const openDialog = useCallback(() => setOpen(true), [setOpen])

@@ -1,7 +1,7 @@
 import Input from './Input'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
-import { FC, useCallback, useState } from 'react'
+import { FC } from 'react'
 import Debug from 'debug'
 import Messages from './Messages.tsx'
 import { useArtifact, useHAL, useTerminal } from '../react/hooks'
@@ -17,10 +17,6 @@ interface ThreeBox {
   presubmit?: boolean
 }
 const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const onTranscribe = useCallback((isTranscribing: boolean) => {
-    setIsTranscribing(isTranscribing)
-  }, [])
   const { pid } = useTerminal()
   const { session } = useHAL()
   const messages = useArtifact<MessageParam[]>('session.json', session) || []
@@ -50,12 +46,8 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
           maxWidth: '800px',
         }}
       >
-        <Messages messages={messages} isTranscribing={isTranscribing} />
-        <Input
-          preload={preload}
-          presubmit={presubmit}
-          onTranscribe={onTranscribe}
-        />
+        <Messages messages={messages} />
+        <Input preload={preload} presubmit={presubmit} />
         <HALInfo pid={session} />
       </Stack>
       {/* <Box sx={{ flexGrow: 1, p: 1 }}>

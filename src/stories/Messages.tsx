@@ -196,9 +196,8 @@ const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
 
 interface Messages {
   messages: MessageParam[]
-  isTranscribing?: boolean
 }
-const Messages: FC<Messages> = ({ messages, isTranscribing = false }) => {
+const Messages: FC<Messages> = ({ messages }) => {
   return (
     <Timeline
       sx={{
@@ -237,7 +236,6 @@ const Messages: FC<Messages> = ({ messages, isTranscribing = false }) => {
             throw new Error(`unknown type ${role}`)
         }
       })}
-      {isTranscribing && <Dave content='(transcribing...)' />}
     </Timeline>
   )
 }
