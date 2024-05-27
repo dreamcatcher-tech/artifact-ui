@@ -154,7 +154,7 @@ const Goal: FC<Goal> = ({ text, status, helps }) => {
                   <ListItemText
                     primary={
                       <Markdown remarkPlugins={[remarkGfm]}>
-                        {instructions.join('\n')}
+                        {instructions}
                       </Markdown>
                     }
                   />

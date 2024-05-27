@@ -4,7 +4,7 @@ import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
-  ArtifactSession,
+  ArtifactTerminal,
   DispatchFunctions,
   PID,
   print,
@@ -16,23 +16,33 @@ import { ulid } from 'ulid'
 import { assertObject } from '@sindresorhus/is'
 const log = Debug('AI:hooks')
 
-export const useTerminal = (): ArtifactSession => {
+export const useTerminal = (): ArtifactTerminal => {
   const { session } = useContext(ArtifactContext)
   return session
 }
-
-export const useArtifactSplices = (pid?: PID, path?: string) => {
-  log('useArtifactSplices', pid, path)
-  throw new Error('not implemented')
+export const useArtifactString = (
+  path?: string,
+  pid?: PID
+): string | undefined => {
+  const splice = useSplice(pid, path)
+  const [lastSplice, setLastSplice] = useState<Splice>()
+  const [string, setString] = useState<string>()
+  if (path && splice && splice.changes && !equal(lastSplice, splice)) {
+    setLastSplice(splice)
+    if (splice.changes[path]) {
+      const { patch } = splice.changes[path]
+      if (patch && string !== patch) {
+        setString(patch)
+      }
+    }
+  }
+  return string
 }
 export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   const splice = useSplice(pid, path)
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState('')
   const [artifact, setArtifact] = useState<T>()
-  if (!pid) {
-    return
-  }
   log('useArtifact %s %s', path, print(pid))
   if (splice && splice.changes && !equal(lastSplice, splice)) {
     setLastSplice(splice)
@@ -63,7 +73,7 @@ export const useSplice = (pid?: PID, path?: string) => {
     const consume = async () => {
       const after = undefined
       for await (const splice of api.read(pid, path, after, abort.signal)) {
-        log('consumed', splice)
+        log('splice', splice)
         setSplice(splice)
       }
     }
@@ -188,7 +198,7 @@ export const useHAL = () => {
   return { prompt, session }
 }
 
-export const useLatestCommit = (pid: PID): Splice | undefined => {
+export const useLatestCommit = (pid?: PID): Splice | undefined => {
   const splice = useSplice(pid)
   log('useLatestCommit %s', print(pid), splice)
   return splice

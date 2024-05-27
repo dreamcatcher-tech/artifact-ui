@@ -2,7 +2,7 @@ import { createContext, FC, useState, useEffect } from 'react'
 import { WebClientEngine } from '../api/web-client-engine.ts'
 import { Machine } from '../api/web-client-machine.ts'
 import {
-  ArtifactSession,
+  ArtifactTerminal,
   PID,
   freezePid,
   isValidForMachine,
@@ -13,10 +13,10 @@ import Debug from 'debug'
 const log = Debug('AI:Provider')
 
 interface ContextType {
-  session: ArtifactSession
+  session: ArtifactTerminal
 }
 export const ArtifactContext = createContext<ContextType>({
-  session: {} as ArtifactSession,
+  session: {} as ArtifactTerminal,
 })
 interface Props {
   children: React.ReactNode
@@ -28,12 +28,12 @@ const Provider: FC<Props> = ({ children, url }) => {
   if (!url) {
     throw new Error('API URL not set')
   }
-  const [session, setSession] = useState<ArtifactSession>()
+  const [session, setSession] = useState<ArtifactTerminal>()
   const [error, setError] = useState<Error>()
 
   useEffect(() => {
     let active = true
-    let toStop: ArtifactSession
+    let toStop: ArtifactTerminal
     WebClientEngine.start(url)
       .then((engine) => {
         log('engine home: %s', print(engine.homeAddress))

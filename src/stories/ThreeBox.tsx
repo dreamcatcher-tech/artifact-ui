@@ -5,13 +5,13 @@ import { FC, useCallback, useState } from 'react'
 import Debug from 'debug'
 import Messages from './Messages.tsx'
 import { useArtifact, useHAL, useTerminal } from '../react/hooks'
-import Git from './Git.tsx'
+import HALInfo from './Git.tsx'
 import { MessageParam } from '../constants.ts'
 
 // TODO put the git commit hash under the input box, along with date, time,
 // who the current user is, size, latency, etc.
 
-const debug = Debug('AI:ThreeBox')
+const log = Debug('AI:ThreeBox')
 interface ThreeBox {
   preload?: string
   presubmit?: boolean
@@ -24,7 +24,7 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
   const { pid } = useTerminal()
   const { session } = useHAL()
   const messages = useArtifact<MessageParam[]>('session.json', session) || []
-  debug('messages', messages, 'pid', pid)
+  log('messages', messages, 'session', session)
   if (!pid) {
     return null
   }
@@ -56,7 +56,7 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
           presubmit={presubmit}
           onTranscribe={onTranscribe}
         />
-        <Git pid={pid} />
+        <HALInfo pid={session} />
       </Stack>
       {/* <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
