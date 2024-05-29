@@ -22,8 +22,15 @@ type Story = StoryObj<typeof ThreeBox>
 
 export const Blank: Story = {}
 export const Preload: Story = {
-  args: { preload: 'Hello' },
+  args: {
+    preload:
+      'Update HAL to the latest version by using the engage-help function with "hal-system" as the help name and "Update HAL" as the prompt.  Dont ask me any questions, just do it using your best guess.',
+  },
 }
 export const Presubmit: Story = {
-  args: { preload: 'Hello', presubmit: true },
+  args: {
+    preload:
+      'Update HAL to the latest version by using the engage-help function with "hal-system" as the help name and "Update HAL" as the prompt.  Dont ask me any questions, just do it using your best guess.',
+    presubmit: true,
+  },
 }

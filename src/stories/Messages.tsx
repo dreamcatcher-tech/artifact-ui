@@ -1,6 +1,6 @@
 import { MessageParam } from '../constants.ts'
 import { Help } from '../api/web-client.types'
-import { FC } from 'react'
+import { FC, useState } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
@@ -9,6 +9,7 @@ import Debug from 'debug'
 import DaveIcon from '@mui/icons-material/SentimentDissatisfied'
 import ToolIcon from '@mui/icons-material/Construction'
 import GoalIcon from '@mui/icons-material/GpsFixed'
+import SystemIcon from '@mui/icons-material/Settings'
 import Timeline from '@mui/lab/Timeline'
 import TimelineItem, { timelineItemClasses } from '@mui/lab/TimelineItem'
 import TimelineSeparator from '@mui/lab/TimelineSeparator'
@@ -31,6 +32,26 @@ import { ToolAction } from './ToolAction.tsx'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
 import { assertString } from '@sindresorhus/is'
+import Box from '@mui/material/Box'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { styled } from '@mui/material/styles'
+import IconButton, { IconButtonProps } from '@mui/material/IconButton'
+import Collapse from '@mui/material/Collapse'
+
+interface ExpandMoreProps extends IconButtonProps {
+  expand: boolean
+}
+
+const ExpandMore = styled((props: ExpandMoreProps) => {
+  const { expand, ...other } = props
+  return <IconButton {...other} />
+})(({ theme, expand }) => ({
+  transform: !expand ? 'rotate(0deg)' : 'rotate(180deg)',
+  marginLeft: 'auto',
+  transition: theme.transitions.create('transform', {
+    duration: theme.transitions.duration.shortest,
+  }),
+}))
 
 const debug = Debug('AI:ThreeBox')
 const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
@@ -50,39 +71,64 @@ const Progress = () => (
 
 interface ChatType {
   content: string
-  type: 'user' | 'goalie' | 'runner'
+  type: 'user' | 'goalie' | 'runner' | 'system'
 }
-const ChatType: FC<ChatType> = ({ content, type }) => (
-  <TimelineItem>
-    <TimelineSeparator>
-      <TimelineDot color={ChatColors[type]} sx={{ position: 'relative' }}>
-        {chatIcons[type]}
-        {!content && <Progress />}
-      </TimelineDot>
-    </TimelineSeparator>
-    <TimelineContent className='parent'>
-      <Typography variant='h6' component='span'>
-        {chatTitles[type]}
-      </Typography>
-      <br />
-      <Markdown remarkPlugins={[remarkGfm]}>{content || ''}</Markdown>
-    </TimelineContent>
-  </TimelineItem>
-)
+const ChatType: FC<ChatType> = ({ content, type }) => {
+  const defaultExpanded = type === 'system' ? false : true
+  const [expanded, setExpanded] = useState(defaultExpanded)
+
+  const handleExpandClick = () => {
+    setExpanded(!expanded)
+  }
+
+  return (
+    <TimelineItem>
+      <TimelineSeparator>
+        <TimelineDot
+          color={ChatColors[type]}
+          sx={{ position: 'relative' }}
+          onClick={handleExpandClick}
+        >
+          {chatIcons[type]}
+          {!content && <Progress />}
+        </TimelineDot>
+      </TimelineSeparator>
+      <TimelineContent className='parent'>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center' }}
+          onClick={handleExpandClick}
+        >
+          <Typography variant='h6' component='span' sx={{ width: 100 }}>
+            {chatTitles[type]}
+          </Typography>
+          <ExpandMore expand={expanded}>
+            <ExpandMoreIcon />
+          </ExpandMore>
+        </Box>
+        <Collapse in={expanded} timeout='auto'>
+          <Markdown remarkPlugins={[remarkGfm]}>{content || ''}</Markdown>
+        </Collapse>
+      </TimelineContent>
+    </TimelineItem>
+  )
+}
 enum ChatColors {
   user = 'primary',
   goalie = 'warning',
   runner = 'secondary',
+  system = 'error',
 }
 const chatTitles = {
   user: 'Dave',
   goalie: 'HAL',
   runner: 'HAL',
+  system: 'SYSTEM',
 }
 const chatIcons = {
   user: <DaveIcon />,
   goalie: <GoalIcon />,
   runner: <ToolIcon />,
+  system: <SystemIcon />,
 }
 
 interface Chat {
@@ -93,6 +139,9 @@ const Dave: FC<Chat> = ({ content }) => (
 )
 const Assistant: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='goalie' />
+)
+const System: FC<Chat> = ({ content }) => (
+  <ChatType content={content} type='system' />
 )
 interface Goal {
   text: string
@@ -228,8 +277,8 @@ const Messages: FC<Messages> = ({ messages }) => {
               return <Assistant key={key} content={content} />
             }
           case 'system':
-            // TODO list the sysprompt, or the help file if it started from help
-            return null
+            // TODO BUT this should be a help file, with front matter
+            return <System key={key} content={content} />
           case 'tool':
             return null
           default:

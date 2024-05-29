@@ -2,7 +2,7 @@ import { useTranscribe, useHAL } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
-import { FC, useCallback, useEffect, useState } from 'react'
+import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
@@ -98,6 +98,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         setDisabled(false)
       })
   }, [transcribe, recordingBlob, onTranscribe])
+
   useEffect(() => {
     if (!isTransReady) {
       return
@@ -149,6 +150,16 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     },
     [send]
   )
+
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!ref.current) {
+      return
+    }
+    ref.current.focus()
+  }, [ref.current, disabled])
+
   useEffect(() => {
     // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
@@ -175,10 +186,13 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
           window.open(urlWithoutHash, '_blank')
         }
       }
+      if (ref.current) {
+        ref.current.focus()
+      }
     }
     globalThis.addEventListener('keydown', listener)
     return () => globalThis.removeEventListener('keydown', listener)
-  }, [start, disabled, mediaRecorder, stopRecording])
+  }, [start, disabled, mediaRecorder, stopRecording, ref.current])
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
@@ -191,14 +205,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
 
   return (
     <TextField
-      inputRef={(ref) => {
-        if (!ref) {
-          return
-        }
-        if (!disabled) {
-          ref.focus()
-        }
-      }}
+      inputRef={ref}
       value={disabled ? ' ' : value}
       multiline
       fullWidth
