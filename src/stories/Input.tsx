@@ -158,7 +158,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       return
     }
     ref.current.focus()
-  }, [ref.current, disabled])
+  }, [disabled])
 
   useEffect(() => {
     // hold ctrl + space to toggle recording
@@ -192,7 +192,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     }
     globalThis.addEventListener('keydown', listener)
     return () => globalThis.removeEventListener('keydown', listener)
-  }, [start, disabled, mediaRecorder, stopRecording, ref.current])
+  }, [start, disabled, mediaRecorder, stopRecording])
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
