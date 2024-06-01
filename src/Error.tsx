@@ -13,7 +13,7 @@ export const FallbackRender: FC<FallbackRender> = ({ error }) => {
     <div role='alert'>
       <p>Something went wong:</p>
       <pre style={{ color: 'red' }}>{error.name}</pre>
-      <pre style={{ color: 'red' }}>{ansiHTML(error.message)}</pre>
+      <pre dangerouslySetInnerHTML={{ __html: ansiHTML(error.message) }} />
       <pre style={{ color: 'red' }}>{error.stack}</pre>
     </div>
   )
