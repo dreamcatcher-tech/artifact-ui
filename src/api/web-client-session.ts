@@ -14,6 +14,7 @@ import {
   PID,
   PierceRequest,
   print,
+  ProcessOptions,
   PROCTYPE,
   ROOT_SESSION,
   toActions,
@@ -21,7 +22,6 @@ import {
 } from './web-client.types.ts'
 import { ulid } from 'ulid'
 import { PierceWatcher } from './web-client-watcher.ts'
-import { ProcessOptions } from '@/api/web-client.types.ts'
 type Init = {
   repo: string
   isolate?: string
