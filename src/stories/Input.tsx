@@ -87,16 +87,26 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       type: recordingBlob.type,
     })
     debug('transcribe', file)
+    let active = true
     transcribe(file)
       .then((text) => {
+        if (!active) {
+          return
+        }
         setValue(text)
         setIsTransReady(true)
       })
       .catch(console.error)
       .finally(() => {
+        if (!active) {
+          return
+        }
         onTranscribe && onTranscribe(false)
         setDisabled(false)
       })
+    return () => {
+      active = false
+    }
   }, [transcribe, recordingBlob, onTranscribe])
 
   useEffect(() => {
@@ -104,8 +114,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       return
     }
     setIsTransReady(false)
-    // send() // uncomment to auto send once transcription is received
-  }, [isTransReady, send])
+  }, [isTransReady])
 
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
@@ -154,13 +163,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   const ref = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (!ref.current) {
-      return
-    }
-    ref.current.focus()
-  }, [disabled])
-
-  useEffect(() => {
     // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.ctrlKey) {
@@ -185,9 +187,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         } else {
           window.open(urlWithoutHash, '_blank')
         }
-      }
-      if (ref.current) {
-        ref.current.focus()
       }
     }
     globalThis.addEventListener('keydown', listener)
