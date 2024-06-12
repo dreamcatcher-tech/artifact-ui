@@ -42,8 +42,8 @@ const ThreeBox: FC<ThreeBox> = ({ preload, presubmit }) => {
         pr={1}
         sx={{
           minHeight: '100%',
-          minWidth: '800px',
           maxWidth: '800px',
+          width: '100%',
         }}
       >
         <Messages messages={messages} />

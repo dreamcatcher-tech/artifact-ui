@@ -20,6 +20,22 @@ export default meta
 type Story = StoryObj<typeof Input>
 
 export const Blank: Story = {}
+export const Narrow: Story = {
+  parameters: {
+    viewport: {
+      viewports: {
+        narrow: {
+          name: 'Narrow',
+          styles: {
+            width: '400px',
+            height: '100%',
+          },
+        },
+      },
+      defaultViewport: 'narrow',
+    },
+  },
+}
 export const Preload: Story = {
   args: { preload: 'Hello' },
 }
