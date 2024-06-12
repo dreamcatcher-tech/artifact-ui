@@ -1,15 +1,24 @@
+import SpeedDial from '@mui/material/SpeedDial'
+import SpeedDialIcon from '@mui/material/SpeedDialIcon'
+import SpeedDialAction from '@mui/material/SpeedDialAction'
+import FileIcon from '@mui/icons-material/FileCopyOutlined'
 import { useTranscribe, useHAL } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
-import { FC, useCallback, useEffect, useRef, useState } from 'react'
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import MicIcon from '@mui/icons-material/Mic'
+import Link from '@mui/icons-material/Link'
+import Terminal from '@mui/icons-material/Terminal'
+import Image from '@mui/icons-material/Image'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
+import Text from '@mui/icons-material/TextSnippet'
+import { Box } from '@mui/material'
 const debug = Debug('AI:Input')
 
 interface SendProps {
@@ -29,6 +38,52 @@ const Mic: FC<MicProps> = ({ onEvent }) => (
     <MicIcon />
   </IconButton>
 )
+
+const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
+  const { openFilePicker, filesContent, loading } = useFilePicker({
+    accept: '.txt',
+  })
+  debug('filesContent', filesContent, loading)
+
+  const [open, setOpen] = useState(false)
+  const handleOpen = () => setOpen(true)
+  const handleClose = () => setOpen(false)
+
+  const actions = [
+    { icon: <FileIcon />, name: 'File(s)', onClick: openFilePicker },
+    { icon: <Text />, name: 'Text', onClick: handleClose },
+    { icon: <Image />, name: 'Image', onClick: handleClose },
+    { icon: <Link />, name: 'Webpage', onClick: handleClose },
+    { icon: <Terminal />, name: 'Backchat', onClick: handleClose },
+  ]
+
+  return (
+    <Box sx={{ position: 'relative', width: 40 }}>
+      <SpeedDial
+        sx={{ position: 'absolute', top: -28, left: -5 }}
+        ariaLabel='SpeedDial tooltip example'
+        icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
+        onClose={handleClose}
+        onOpen={handleOpen}
+        open={open}
+        FabProps={{ size: 'small', color: 'default', disabled }}
+        direction='right'
+      >
+        {actions.map((action) => (
+          <SpeedDialAction
+            key={action.name}
+            icon={action.icon}
+            onClick={() => {
+              handleClose()
+              action.onClick()
+            }}
+            tooltipTitle={action.name}
+          />
+        ))}
+      </SpeedDial>
+    </Box>
+  )
+}
 
 interface InputProps {
   preload?: string
@@ -116,33 +171,34 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     setIsTransReady(false)
   }, [isTransReady])
 
-  const { openFilePicker, filesContent, loading } = useFilePicker({
-    accept: '.txt',
-  })
-  debug('filesContent', filesContent, loading)
-  const inputProps = {
-    endAdornment: (
-      <InputAdornment position='end'>
-        {value ? (
-          <Send send={send} />
-        ) : (
-          <>
-            {mediaRecorder && (
-              <LiveAudioVisualizer height={50} mediaRecorder={mediaRecorder} />
-            )}
-            <Mic onEvent={mediaRecorder ? stopRecording : start} />
-          </>
-        )}
-      </InputAdornment>
-    ),
-    startAdornment: !disabled && (
-      <InputAdornment position='start'>
-        <IconButton onClick={openFilePicker}>
-          <Attach fontSize='medium' />
-        </IconButton>
-      </InputAdornment>
-    ),
-  }
+  // TODO fix why the component rerenders whenever things change
+  const inputProps = useMemo(
+    () => ({
+      endAdornment: (
+        <InputAdornment position='end'>
+          {value ? (
+            <Send send={send} />
+          ) : (
+            <>
+              {mediaRecorder && (
+                <LiveAudioVisualizer
+                  height={50}
+                  mediaRecorder={mediaRecorder}
+                />
+              )}
+              <Mic onEvent={mediaRecorder ? stopRecording : start} />
+            </>
+          )}
+        </InputAdornment>
+      ),
+      startAdornment: (
+        <InputAdornment position='start'>
+          <AttachMenu disabled={disabled} />
+        </InputAdornment>
+      ),
+    }),
+    [send, mediaRecorder, stopRecording, start, disabled, value]
+  )
   // TODO if a file is uploaded, store on fs, then sample it, then goal it
 
   const onKeyDown = useCallback(
@@ -209,7 +265,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       multiline
       fullWidth
       variant='outlined'
-      label='Input'
       placeholder={placeholder}
       InputProps={inputProps}
       onChange={(e) => setValue(e.target.value)}
