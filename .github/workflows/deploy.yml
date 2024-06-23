@@ -30,12 +30,12 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_URL: https://healthy-seal-74.deno.dev
+          VITE_API_URL: ${{ secrets.VITE_API_URL}}
 
       - name: Publish to Chromatic
         uses: chromaui/action@latest
         env:
-          VITE_API_URL: https://healthy-seal-74.deno.dev
+          VITE_API_URL: ${{ secrets.VITE_API_URL}}
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           exitOnceUploaded: true
@@ -45,4 +45,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: dist
-          cname: hal.dreamcatcher.land
+          cname: hal3.dreamcatcher.land
