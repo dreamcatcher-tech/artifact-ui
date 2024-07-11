@@ -9,9 +9,9 @@ import { Splice, Thread } from '../constants.ts'
 
 const log = Debug('AI:ThreeBox')
 export interface ThreeBoxProps {
-  threadId: string
-  thread: Thread
-  splice: Splice
+  threadId?: string
+  thread?: Thread
+  splice?: Splice
   md?: string
   inputProps?: InputProps
   handleBackchat?: () => void

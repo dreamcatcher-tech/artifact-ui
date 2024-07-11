@@ -1,4 +1,14 @@
-import ThreeBox, { type ThreeBoxProps } from './stories/ThreeBox.tsx'
+import { useBackchatThread, useThread } from './react/hooks.ts'
+import Container from './stories/Container.tsx'
+
+// export interface ThreeBoxProps {
+//   threadId: string
+//   thread: Thread
+//   splice: Splice
+//   md?: string
+//   inputProps?: InputProps
+//   handleBackchat?: () => void
+// }
 
 function App() {
   // here we would assemble the state prop and drop it in
@@ -11,12 +21,12 @@ function App() {
 
   // we can use the props interfaces to describe slices on the top level prop
 
-  const threeBox: ThreeBoxProps = {} as ThreeBoxProps
+  const { focusId, ...backchat } = useBackchatThread()
+  const focus = useThread(focusId)
+  const showBackchat = focusId === backchat.threadId
 
   return (
-    <>
-      <ThreeBox {...threeBox} />
-    </>
+    <Container focus={focus} backchat={backchat} showBackchat={showBackchat} />
   )
 }
 

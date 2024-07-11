@@ -71,7 +71,7 @@ export class Backchat {
   get pid() {
     return this.#pid
   }
-  get id() {
+  get threadId() {
     return this.pid.branches[2]
   }
   get machineId() {
@@ -127,7 +127,7 @@ export class Backchat {
     return 'todo'
   }
   get isSelfFocused() {
-    return this.focus === this.id
+    return this.focus === this.threadId
   }
 
   stop() {

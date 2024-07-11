@@ -13,12 +13,13 @@ import {
   Thread,
   Triad,
   PathTriad,
-  addPeer,
   BackchatThread,
+  addBranches,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
 import { assert, assertObject } from '@sindresorhus/is'
+import { ThreeBoxProps } from '../stories/ThreeBox.tsx'
 const log = Debug('AI:hooks')
 
 export const useBackchat = (): Backchat => {
@@ -26,11 +27,19 @@ export const useBackchat = (): Backchat => {
   assert.nonEmptyObject(backchat, 'backchat undefined')
   return backchat
 }
-export const useArtifactString = ({
+export const useArtifactString = (triad?: PathTriad): string | undefined => {
+  if (!triad) {
+    return
+  }
+  const { path, pid, commit } = triad
+  const { string } = useArtifactBundle({ path, pid, commit })
+  return string
+}
+const useArtifactBundle = ({
   path,
   pid,
   commit,
-}: PathTriad): string | undefined => {
+}: PathTriad): { splice?: Splice; string?: string } => {
   const splice = useSplice({ pid, path, commit })
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState<string>()
@@ -43,7 +52,7 @@ export const useArtifactString = ({
       }
     }
   }
-  return string
+  return { splice, string }
 }
 export const useArtifact = <T>({
   path,
@@ -83,7 +92,7 @@ export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
     }
     consume()
     return () => abort.abort()
-  }, [backchat, pid, path])
+  }, [backchat, pid, path, commit])
   if (!pid) {
     return
   }
@@ -165,24 +174,36 @@ export const usePrompt = (threadId: string) => {
       }
       return await backchat.prompt(text, threadId)
     },
-    [backchat]
+    [backchat, threadId]
   )
   if (backchat) {
     return prompt
   }
 }
-export const useFocus = () => {
-  const { id, pid } = useBackchat()
-  const thread = useArtifact<BackchatThread>({ path: 'threads/' + id, pid })
-  if (thread) {
-    return thread.focus
-  }
+
+export const useBackchatThread = (): ThreeBoxProps & { focusId?: string } => {
+  const { threadId, pid } = useBackchat()
+  return useThreadBundle(threadId, pid)
 }
-export const useThread = (threadId: string) => {
+export const useThread = (threadId?: string) => {
   const backchat = useBackchat()
-  const pid = addPeer(backchat.pid, threadId)
-  const thread = useArtifact<Thread>({ path: 'threads/' + threadId, pid })
-  return thread
+  const pid = threadId ? addBranches(backchat.pid, threadId) : undefined
+  return useThreadBundle(threadId, pid)
+}
+
+const useThreadBundle = (threadId?: string, pid?: PID) => {
+  const path = 'threads/' + threadId
+  const { splice, string } = useArtifactBundle({ path, pid })
+  let thread: Thread | undefined
+  let focusId: string | undefined
+  if (string) {
+    const { focus, ...rest }: BackchatThread = JSON.parse(string)
+    focusId = focus
+    thread = rest
+  }
+  const mdSource = thread ? thread.agent.source : undefined
+  const md = useArtifactString(mdSource)
+  return { thread, threadId, splice, md, focusId }
 }
 
 export const useLatestCommit = (pid?: PID): Splice | undefined => {
