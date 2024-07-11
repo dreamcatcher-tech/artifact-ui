@@ -7,7 +7,6 @@ import {
   freezePid,
   JSONSchemaType,
   JsonValue,
-  machineIdRegex,
   Params,
   PID,
   PierceRequest,

@@ -106,8 +106,8 @@ const context: { trigger?: (value: unknown) => void } = {}
 export const Transcribing: Story = {
   args: {
     presubmit: true,
-    transcribe: async (_audio: File) => {
-      await new Promise(() => {})
+    transcribe: async (audio: File) => {
+      await new Promise(() => audio)
       console.log('transcribe done')
       return 'never'
     },

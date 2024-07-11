@@ -13,6 +13,8 @@ import {
   Thread,
   Triad,
   PathTriad,
+  addPeer,
+  BackchatThread,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
@@ -28,8 +30,8 @@ export const useArtifactString = ({
   path,
   pid,
   commit,
-}: Partial<Triad>): string | undefined => {
-  const splice = useSplice({ pid, path })
+}: PathTriad): string | undefined => {
+  const splice = useSplice({ pid, path, commit })
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState<string>()
   if (path && splice && splice.changes && !equal(lastSplice, splice)) {
@@ -48,23 +50,10 @@ export const useArtifact = <T>({
   pid,
   commit,
 }: PathTriad): T | undefined => {
-  const splice = useSplice({ pid, path })
-  const [lastSplice, setLastSplice] = useState<Splice>()
-  const [string, setString] = useState('')
-  const [artifact, setArtifact] = useState<T>()
-  log('useArtifact %s %s', path, print(pid))
-  if (splice && splice.changes && !equal(lastSplice, splice)) {
-    setLastSplice(splice)
-    if (splice.changes[path]) {
-      const { patch } = splice.changes[path]
-      if (patch && string !== patch) {
-        setString(patch)
-        setArtifact(JSON.parse(patch))
-      }
-    }
+  const string = useArtifactString({ path, pid, commit })
+  if (string) {
+    return JSON.parse(string) as T
   }
-  log('artifact', artifact)
-  return artifact
 }
 
 export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
@@ -80,7 +69,8 @@ export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
     }
     const abort = new AbortController()
     const consume = async () => {
-      const after = undefined
+      // TODO move this to be for direct one off reads
+      const after = commit
       for await (const splice of backchat.read(
         pid,
         path,
@@ -103,7 +93,7 @@ export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
 
 export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
   // used to access raw Uint8Array data
-  log('useRawArtifact %s', print(pid), path)
+  log('useRawArtifact %s', print(pid), path, commit)
   throw new Error('not implemented')
 }
 
@@ -182,14 +172,17 @@ export const usePrompt = (threadId: string) => {
   }
 }
 export const useFocus = () => {
-  const backchat = useBackchat()
-  // get out the focus of backchat
-  return 'TODO'
+  const { id, pid } = useBackchat()
+  const thread = useArtifact<BackchatThread>({ path: 'threads/' + id, pid })
+  if (thread) {
+    return thread.focus
+  }
 }
-export const useThread = (threadId: string): Thread => {
-  // keep track of a given thread
-  // track more than just the current thread so we can flick rapidly
-  return {} as Thread
+export const useThread = (threadId: string) => {
+  const backchat = useBackchat()
+  const pid = addPeer(backchat.pid, threadId)
+  const thread = useArtifact<Thread>({ path: 'threads/' + threadId, pid })
+  return thread
 }
 
 export const useLatestCommit = (pid?: PID): Splice | undefined => {
@@ -215,7 +208,8 @@ export const useTranscribe = () => {
   )
   return transcribe
 }
-const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
+
+export const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
   let fragment = parseHashFragment()
   if (create) {
     fragment = undefined
@@ -223,7 +217,7 @@ const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
   if (!fragment) {
     const sessionId = ulid()
     const actorId = getActorId(terminalPid)
-    fragment = setFragment(actorId, sessionId)
+    setFragment(actorId, sessionId)
     log('new hal sessionId set')
   } else {
     log('recovered hal fragment')
@@ -246,8 +240,7 @@ const parseHashFragment = () => {
   }
 }
 
-const setFragment = (actorId: string, sessionId: string) => {
-  const params = new URLSearchParams({ actorId, sessionId })
+const setFragment = (actor: string, thread: string) => {
+  const params = new URLSearchParams({ actor, thread })
   window.location.hash = params.toString()
-  return { actorId, sessionId }
 }
