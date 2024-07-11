@@ -1,20 +1,21 @@
 import '../examples/button.css'
 import { WebClientEngine } from '../api/web-client-engine.ts'
+import { Backchat } from '../api/web-client-backchat.ts'
 import Provider from '../react/Provider.tsx'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
-import { usePing, useTerminal } from '../react/hooks.ts'
-import { Machine } from '../api/web-client-machine.ts'
+import { usePing, useBackchat } from '../react/hooks.ts'
 import { print } from '../api/web-client.types.ts'
+import { Crypto } from '../api/web-client-crypto.ts'
 
 const log = Debug('AI:API')
 
 const url = import.meta.env.VITE_API_URL
 
 const PingButton = () => {
-  const session = useTerminal()
+  const session = useBackchat()
   log('session', session)
   log('session %s', print(session.pid))
   const ping = usePing()
@@ -74,23 +75,22 @@ export const Harness: Story = {
     log('play')
     within(canvasElement)
     const engine = await WebClientEngine.start(url)
-    const machine = Machine.load(engine, Machine.generatePrivateKey())
-    log('machineId %s', print(machine.pid))
-    const terminal = machine.openTerminal()
+    const key = Crypto.generatePrivateKey()
+    const backchat = await Backchat.upsert(engine, key)
     await step('ping ' + url, async () => {
       log('ping')
-      const result = await terminal.ping()
+      const result = await backchat.ping()
       log('done', result)
     })
     const repo = 'dreamcatcher-tech/HAL'
     await step(`remove ${repo}`, async () => {
       log('remove')
-      const result = await terminal.rm({ repo })
+      const result = await backchat.rm({ repo })
       log('done', result)
     })
     await step(`clone ${url} with ${repo}`, async () => {
       log('clone')
-      const result = await terminal.clone({ repo })
+      const result = await backchat.clone({ repo })
       log('done', result)
     })
   },

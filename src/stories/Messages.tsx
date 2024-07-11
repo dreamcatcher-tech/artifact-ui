@@ -1,11 +1,11 @@
-import { MessageParam } from '../constants.ts'
-import { Help } from '../api/web-client.types'
+import { Agent, Thread } from '../api/web-client.types'
 import { FC, useState } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
 import Chip from '@mui/material/Chip'
 import Debug from 'debug'
+import AgentIcon from '@mui/icons-material/SupportAgent'
 import DaveIcon from '@mui/icons-material/SentimentDissatisfied'
 import ToolIcon from '@mui/icons-material/Construction'
 import GoalIcon from '@mui/icons-material/GpsFixed'
@@ -95,6 +95,7 @@ const ChatType: FC<ChatType> = ({ content, type }) => {
           {chatIcons[type]}
           {!content && <Progress />}
         </TimelineDot>
+        <TimelineConnector sx={{ bgcolor: ChatColors[type] + '.main' }} />
       </TimelineSeparator>
       <TimelineContent className='parent'>
         <Box
@@ -146,17 +147,17 @@ const Assistant: FC<Chat> = ({ content }) => (
 const System: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='system' />
 )
-interface Goal {
-  text: string
-  status: string
-  helps: Help[]
+interface AgentPanel {
+  agent: Agent
 }
-const Goal: FC<Goal> = ({ text, status, helps }) => {
+const AgentPanel: FC<AgentPanel> = ({ agent }) => {
+  const status = STATUS.RUNNING
+  const { description, commands, instructions } = agent
   return (
     <TimelineItem>
       <TimelineSeparator>
         <TimelineDot color='warning' sx={{ position: 'relative' }}>
-          <GoalIcon />
+          <AgentIcon />
           {status !== STATUS.DONE && <Progress />}
         </TimelineDot>
       </TimelineSeparator>
@@ -165,68 +166,54 @@ const Goal: FC<Goal> = ({ text, status, helps }) => {
           HAL
         </Typography>
         <Tooltip title='Goal' arrow placement='left'>
-          <Alert icon={<GoalIcon fontSize='small' />} severity='info'>
-            {text}
+          <Alert icon={<AgentIcon fontSize='small' />} severity='info'>
+            {description}
           </Alert>
         </Tooltip>
-        {helps.map(({ instructions, done, commands }, key) => (
-          <Card sx={{ m: 1 }} key={key}>
-            <List>
-              <Tooltip title='Directory' arrow placement='left'>
-                <ListItem dense>
-                  <ListItemIcon>
-                    <FolderIcon />
-                  </ListItemIcon>
-                  <ListItemText primary={'TODO'} />
-                </ListItem>
-              </Tooltip>
-              <Tooltip title='Commands' arrow placement='left'>
-                <ListItem dense>
-                  <ListItemIcon>
-                    <Terminal />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={commands?.map((cmd, key) => (
-                      <Chip
-                        label={cmd}
-                        key={key}
-                        color='primary'
-                        variant='outlined'
-                        sx={{ mr: 1, fontWeight: 'bold' }}
-                      />
-                    ))}
-                  />
-                </ListItem>
-              </Tooltip>
-              <Tooltip title='Instructions' arrow placement='left'>
-                <ListItem dense>
-                  <ListItemIcon>
-                    <DraftsIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Markdown remarkPlugins={[remarkGfm]}>
-                        {instructions}
-                      </Markdown>
-                    }
-                  />
-                </ListItem>
-              </Tooltip>
-              <Tooltip title='Checklist' arrow placement='left'>
-                <ListItem dense>
-                  <ListItemIcon>
-                    <RuleIcon />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Markdown remarkPlugins={[remarkGfm]}>{done}</Markdown>
-                    }
-                  />
-                </ListItem>
-              </Tooltip>
-            </List>
-          </Card>
-        ))}
+        <Card sx={{ m: 1 }}>
+          <List>
+            <Tooltip title='Directory' arrow placement='left'>
+              <ListItem dense>
+                <ListItemIcon>
+                  <FolderIcon />
+                </ListItemIcon>
+                <ListItemText primary={'TODO'} />
+              </ListItem>
+            </Tooltip>
+            <Tooltip title='Commands' arrow placement='left'>
+              <ListItem dense>
+                <ListItemIcon>
+                  <Terminal />
+                </ListItemIcon>
+                <ListItemText
+                  primary={commands?.map((cmd, key) => (
+                    <Chip
+                      label={cmd}
+                      key={key}
+                      color='primary'
+                      variant='outlined'
+                      sx={{ mr: 1, fontWeight: 'bold' }}
+                    />
+                  ))}
+                />
+              </ListItem>
+            </Tooltip>
+            <Tooltip title='Instructions' arrow placement='left'>
+              <ListItem dense>
+                <ListItemIcon>
+                  <DraftsIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {instructions}
+                    </Markdown>
+                  }
+                />
+              </ListItem>
+            </Tooltip>
+          </List>
+        </Card>
       </TimelineContent>
     </TimelineItem>
   )
@@ -234,7 +221,6 @@ const Goal: FC<Goal> = ({ text, status, helps }) => {
 const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
   <TimelineItem>
     <TimelineSeparator>
-      <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
       <TimelineDot color='secondary' sx={{ position: 'relative' }}>
         <ToolIcon />
       </TimelineDot>
@@ -247,9 +233,13 @@ const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
 )
 
 interface Messages {
-  messages: MessageParam[]
+  thread?: Thread
 }
-const Messages: FC<Messages> = ({ messages }) => {
+const Messages: FC<Messages> = ({ thread }) => {
+  const messages = thread?.messages || []
+  if (!messages.length) {
+    return null
+  }
   return (
     <Timeline
       sx={{
@@ -280,7 +270,7 @@ const Messages: FC<Messages> = ({ messages }) => {
               return <Assistant key={key} content={content} />
             }
           case 'system':
-            // TODO BUT this should be a help file, with front matter
+            // TODO display the entire Agent
             return <System key={key} content={content} />
           case 'tool':
             return null

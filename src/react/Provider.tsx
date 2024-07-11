@@ -1,22 +1,21 @@
 import { createContext, FC, useState, useEffect } from 'react'
+import { Crypto } from '../api/web-client-crypto.ts'
 import { WebClientEngine } from '../api/web-client-engine.ts'
-import { Machine } from '../api/web-client-machine.ts'
+import { Backchat } from '../api/web-client-backchat.ts'
 import {
-  ArtifactTerminal,
-  PID,
-  freezePid,
-  isValidForMachine,
   print,
+  EngineInterface,
+  backchatIdRegex,
 } from '../api/web-client.types.ts'
-import { assertNull } from '@sindresorhus/is'
+import { assert } from '@sindresorhus/is'
 import Debug from 'debug'
 const log = Debug('AI:Provider')
 
 interface ContextType {
-  session: ArtifactTerminal
+  backchat: Backchat
 }
 export const ArtifactContext = createContext<ContextType>({
-  session: {} as ArtifactTerminal,
+  backchat: {} as Backchat,
 })
 interface Props {
   children: React.ReactNode
@@ -28,44 +27,39 @@ const Provider: FC<Props> = ({ children, url }) => {
   if (!url) {
     throw new Error('API URL not set')
   }
-  const [session, setSession] = useState<ArtifactTerminal>()
+  const [backchat, setBackchat] = useState<Backchat>()
   const [error, setError] = useState<Error>()
 
   useEffect(() => {
     let active = true
-    let toStop: ArtifactTerminal
+    let toStop: EngineInterface
     WebClientEngine.start(url)
       .then((engine) => {
-        log('engine home: %s', print(engine.homeAddress))
         if (!active) {
           return
         }
-        const privateKey = recoverPrivateKey()
-        const machine = Machine.load(engine, privateKey)
-        log('machine PID: %s', print(machine.pid))
+        log('engine home: %s', print(engine.homeAddress))
+        toStop = engine
 
-        const retry = maybeExistingTerminal(machine.pid)
-        let terminal
-        try {
-          terminal = machine.openTerminal(retry)
-        } catch (error) {
-          console.error('error opening session %s', error)
-          terminal = machine.openTerminal()
+        const key = recoverPrivateKey()
+        const resume = recoverBackchatId()
+        return Backchat.upsert(engine, key, resume)
+      })
+      .then((backchat) => {
+        assert.nonEmptyObject(backchat, 'backchat undefined')
+        if (!active) {
+          return
         }
-        const string = JSON.stringify(terminal.pid, null, 2)
-        sessionStorage.setItem('terminal', string)
-        setSession(terminal)
-        toStop = terminal
+        log('backchat: %s', print(backchat.pid))
+        setBackchat(backchat)
       })
       .catch((error) => active && setError(error))
     return () => {
       active = false
-      setSession(undefined)
+      setBackchat(undefined)
       if (toStop) {
-        toStop.engineStop()
-        log('shutdown machine: %s', print(toStop.machine.pid))
-      } else {
-        log('shutdown machine: none')
+        toStop.stop()
+        log('shutdown engine')
       }
     }
   }, [url])
@@ -73,41 +67,37 @@ const Provider: FC<Props> = ({ children, url }) => {
     throw error
   }
 
-  if (!session) {
-    return <div>Loading... </div>
+  if (!backchat) {
+    return <div>Loading backchat... </div>
   }
-  // TODO do home chain negotiations, then auth login
+  // TODO do crypto negotiations, then auth login
   return (
-    <ArtifactContext.Provider value={{ session }}>
+    <ArtifactContext.Provider value={{ backchat }}>
       {children}
     </ArtifactContext.Provider>
   )
 }
 
-const maybeExistingTerminal = (machinePid: PID) => {
+const recoverBackchatId = () => {
   try {
-    const existing = sessionStorage.getItem('terminal')
-    if (!existing) {
-      return
+    const existing = sessionStorage.getItem('backchatId')
+    if (existing) {
+      if (backchatIdRegex.test(existing)) {
+        return existing
+      }
     }
-    const terminal = JSON.parse(existing)
-    if (!isValidForMachine(terminal, machinePid)) {
-      throw new Error('Invalid terminal pid: ' + print(terminal))
-    }
-    freezePid(terminal)
-    return terminal
   } catch (error) {
-    console.error('error restoring terminal', error)
-    sessionStorage.removeItem('terminal')
+    console.error('recoverBackchatId', error)
   }
+  sessionStorage.removeItem('backchatId')
 }
 
 const recoverPrivateKey = () => {
   let privateKey = localStorage.getItem('privateKey')
   if (!privateKey) {
     log('generating new private key')
-    privateKey = Machine.generatePrivateKey()
-    assertNull(localStorage.getItem('privateKey'), 'privateKey race')
+    privateKey = Crypto.generatePrivateKey()
+    assert.falsy(localStorage.getItem('privateKey'), 'privateKey race')
     localStorage.setItem('privateKey', privateKey)
   } else {
     log('recovered private key')

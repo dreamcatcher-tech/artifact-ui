@@ -4,27 +4,32 @@ import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
-  ArtifactTerminal,
-  DispatchFunctions,
+  Backchat,
   PID,
   print,
   getActorId,
   freezePid,
+  ApiFunctions,
+  Thread,
+  Triad,
+  PathTriad,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
-import { assertObject } from '@sindresorhus/is'
+import { assert, assertObject } from '@sindresorhus/is'
 const log = Debug('AI:hooks')
 
-export const useTerminal = (): ArtifactTerminal => {
-  const { session } = useContext(ArtifactContext)
-  return session
+export const useBackchat = (): Backchat => {
+  const { backchat } = useContext(ArtifactContext)
+  assert.nonEmptyObject(backchat, 'backchat undefined')
+  return backchat
 }
-export const useArtifactString = (
-  path?: string,
-  pid?: PID
-): string | undefined => {
-  const splice = useSplice(pid, path)
+export const useArtifactString = ({
+  path,
+  pid,
+  commit,
+}: Partial<Triad>): string | undefined => {
+  const splice = useSplice({ pid, path })
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState<string>()
   if (path && splice && splice.changes && !equal(lastSplice, splice)) {
@@ -38,8 +43,12 @@ export const useArtifactString = (
   }
   return string
 }
-export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
-  const splice = useSplice(pid, path)
+export const useArtifact = <T>({
+  path,
+  pid,
+  commit,
+}: PathTriad): T | undefined => {
+  const splice = useSplice({ pid, path })
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState('')
   const [artifact, setArtifact] = useState<T>()
@@ -58,28 +67,33 @@ export const useArtifact = <T>(path: string, pid?: PID): T | undefined => {
   return artifact
 }
 
-export const useSplice = (pid?: PID, path?: string) => {
+export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
   if (path && posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
   const [splice, setSplice] = useState<Splice>()
-  const api = useTerminal()
+  const backchat = useBackchat()
 
   useEffect(() => {
-    if (!pid) {
+    if (!pid || !backchat) {
       return
     }
     const abort = new AbortController()
     const consume = async () => {
       const after = undefined
-      for await (const splice of api.read(pid, path, after, abort.signal)) {
+      for await (const splice of backchat.read(
+        pid,
+        path,
+        after,
+        abort.signal
+      )) {
         log('splice', splice)
         setSplice(splice)
       }
     }
     consume()
     return () => abort.abort()
-  }, [api, pid, path])
+  }, [backchat, pid, path])
   if (!pid) {
     return
   }
@@ -87,27 +101,27 @@ export const useSplice = (pid?: PID, path?: string) => {
   return splice
 }
 
-export const useArtifactBytes = (pid: PID, path: string) => {
+export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
   // used to access raw Uint8Array data
   log('useRawArtifact %s', print(pid), path)
   throw new Error('not implemented')
 }
 
 export const usePing = () => {
-  const terminal = useTerminal()
-  return (...args: Parameters<typeof terminal.ping>) => terminal.ping(...args)
+  const backchat = useBackchat()
+  return (...args: Parameters<typeof backchat.ping>) => backchat.ping(...args)
 }
 
 export const useDNS = (repo: string) => {
-  const terminal = useTerminal()
+  const backchat = useBackchat()
   const [pid, setPid] = useState<PID>()
   const setError = useError()
   useEffect(() => {
     let active = true
-    if (!terminal) {
+    if (!backchat) {
       return
     }
-    terminal
+    backchat
       .dns(repo)
       .then((pid) => {
         if (active) {
@@ -118,51 +132,23 @@ export const useDNS = (repo: string) => {
     return () => {
       active = false
     }
-  }, [terminal, repo, setError])
+  }, [backchat, repo, setError])
   return pid
 }
 
-const useHalSession = (createNew = false) => {
-  const halPid = useDNS('dreamcatcher-tech/HAL')
-  const terminal = useTerminal()
-  const [halSessionPid, setHalSessionPid] = useState<PID>()
-  const setError = useError()
-  useEffect(() => {
-    let active = true
-    if (!halPid || !terminal) {
-      return
-    }
-    const session = recoverHal(halPid, terminal.pid, createNew)
-
-    terminal
-      .ensureBranch(session, halPid)
-      .then(() => {
-        if (active) {
-          log('hal session %s', print(session))
-          setHalSessionPid(session)
-        }
-      })
-      .catch(setError)
-    return () => {
-      active = false
-    }
-  }, [terminal, halPid, createNew, setError])
-  return halSessionPid
-}
-
-export const useActions = (isolate: string, pid?: PID) => {
-  const terminal = useTerminal()
-  const [actions, setActions] = useState<DispatchFunctions>()
+export const useActions = (isolate: string, target?: PID) => {
+  const backchat = useBackchat()
+  const [actions, setActions] = useState<ApiFunctions>()
   const [error, setError] = useState()
   useEffect(() => {
-    log('useActions', isolate, terminal)
-    if (!pid) {
+    if (!target) {
       return
     }
+    log('useActions', isolate, backchat)
     let active = true
     // TODO listen to changes in the available actions
-    terminal
-      .actions(isolate, pid)
+    backchat
+      .actions(isolate, { target })
       .then((actions) => {
         if (active) {
           setActions(actions)
@@ -173,33 +159,41 @@ export const useActions = (isolate: string, pid?: PID) => {
     return () => {
       active = false
     }
-  }, [pid, terminal, isolate])
+  }, [target, backchat, isolate])
   if (error) {
     throw error
   }
   return actions
 }
-export const useHAL = () => {
-  const session = useHalSession()
-  const actions = useActions('hal', session)
+export const usePrompt = (threadId: string) => {
+  const backchat = useBackchat()
   const prompt = useCallback(
     async (text: string) => {
-      log('prompt', text, actions)
-      if (!actions || !actions.prompt) {
-        throw new Error('actions.prompt is not defined')
+      log('prompt', text)
+      if (!backchat) {
+        throw new Error('backchat is not yet defined')
       }
-      await actions.prompt({ text })
+      return await backchat.prompt(text, threadId)
     },
-    [actions]
+    [backchat]
   )
-  if (!actions || !actions.prompt) {
-    return {}
+  if (backchat) {
+    return prompt
   }
-  return { prompt, session }
+}
+export const useFocus = () => {
+  const backchat = useBackchat()
+  // get out the focus of backchat
+  return 'TODO'
+}
+export const useThread = (threadId: string): Thread => {
+  // keep track of a given thread
+  // track more than just the current thread so we can flick rapidly
+  return {} as Thread
 }
 
 export const useLatestCommit = (pid?: PID): Splice | undefined => {
-  const splice = useSplice(pid)
+  const splice = useSplice({ pid })
   log('useLatestCommit %s', print(pid), splice)
   return splice
 }
@@ -211,7 +205,7 @@ export const useError = () => {
   return setError
 }
 export const useTranscribe = () => {
-  const api = useTerminal()
+  const api = useBackchat()
   const transcribe = useCallback(
     async (audio: File) => {
       const transcription = await api.transcribe({ audio })

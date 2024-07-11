@@ -13,6 +13,10 @@ import { assertString } from '@sindresorhus/is'
 
 const debug = Debug('AI:ToolAction')
 
+export interface ToolAction {
+  tool_calls: { id: string; function: { name: string; arguments: string } }[]
+  messages: MessageParam[]
+}
 export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
   // const noDisabled = createTheme({ palette: { text: { disabled: '0 0 0' } }
   // })
@@ -51,10 +55,6 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
       </Card>
     )
   })
-}
-export interface ToolAction {
-  tool_calls: { id: string; function: { name: string; arguments: string } }[]
-  messages: MessageParam[]
 }
 const findOutput = (messages: MessageParam[], id: string) => {
   const message = messages.find((message) => {

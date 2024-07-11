@@ -2,11 +2,10 @@ import SpeedDial from '@mui/material/SpeedDial'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import SpeedDialAction from '@mui/material/SpeedDialAction'
 import FileIcon from '@mui/icons-material/FileCopyOutlined'
-import { useTranscribe, useHAL } from '../react/hooks.ts'
 import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
@@ -32,40 +31,43 @@ const Send: FC<SendProps> = ({ send }) => (
 
 interface MicProps {
   onEvent: () => void
+  disabled?: boolean
 }
-const Mic: FC<MicProps> = ({ onEvent }) => (
-  <IconButton onClick={onEvent}>
+const Mic: FC<MicProps> = ({ onEvent, disabled }) => (
+  <IconButton onClick={onEvent} disabled={disabled} data-testid='mic'>
     <MicIcon />
   </IconButton>
 )
 
-const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
+const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
+  disabled,
+  handleBackchat,
+}) => {
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
   })
   debug('filesContent', filesContent, loading)
 
-  const [open, setOpen] = useState(false)
-  const handleOpen = () => setOpen(true)
-  const handleClose = () => setOpen(false)
-
   const actions = [
-    { icon: <FileIcon />, name: 'File(s)', onClick: openFilePicker },
-    { icon: <Text />, name: 'Text', onClick: handleClose },
-    { icon: <Image />, name: 'Image', onClick: handleClose },
-    { icon: <Link />, name: 'Webpage', onClick: handleClose },
-    { icon: <Terminal />, name: 'Backchat', onClick: handleClose },
+    { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
+    { icon: <Text />, name: 'Text' },
+    { icon: <Image />, name: 'Image' },
+    { icon: <Link />, name: 'Web Link' },
   ]
+  if (handleBackchat) {
+    actions.push({
+      icon: <Terminal />,
+      name: 'Backchat',
+      onClick: handleBackchat,
+    })
+  }
 
   return (
     <Box sx={{ position: 'relative', width: 40 }}>
       <SpeedDial
         sx={{ position: 'absolute', top: -28, left: -5 }}
-        ariaLabel='SpeedDial tooltip example'
+        ariaLabel='SpeedDial'
         icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
-        onClose={handleClose}
-        onOpen={handleOpen}
-        open={open}
         FabProps={{ size: 'small', color: 'default', disabled }}
         direction='right'
       >
@@ -73,10 +75,7 @@ const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
           <SpeedDialAction
             key={action.name}
             icon={action.icon}
-            onClick={() => {
-              handleClose()
-              action.onClick()
-            }}
+            onClick={action.onClick}
             tooltipTitle={action.name}
           />
         ))}
@@ -85,12 +84,23 @@ const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
   )
 }
 
-interface InputProps {
+export interface InputProps {
+  prompt?: (text: string) => Promise<void>
+  transcribe?: (audio: File) => Promise<string>
+  onRecording?: (isRecording: boolean) => void
+  handleBackchat?: () => void
   preload?: string
   presubmit?: boolean
-  onTranscribe?: (isTranscribing: boolean) => void
 }
-const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
+const Input: FC<InputProps> = (props) => {
+  const {
+    prompt,
+    transcribe,
+    onRecording,
+    handleBackchat,
+    preload,
+    presubmit,
+  } = props
   const [error, setError] = useState()
   if (error) {
     throw error
@@ -104,11 +114,10 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     useAudioRecorder()
   const start = useCallback(() => {
     startRecording()
-    onTranscribe && onTranscribe(true)
+    onRecording && onRecording(true)
     setDisabled(true)
-  }, [startRecording, onTranscribe])
+  }, [startRecording, onRecording])
 
-  const { prompt } = useHAL()
   useEffect(() => {
     if (!prompt) {
       setDisabled(true)
@@ -119,9 +128,6 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     }
   }, [prompt])
   const send = useCallback(() => {
-    if (!value) {
-      return
-    }
     debug('send', value)
     setValue('')
     setDisabled(true)
@@ -133,9 +139,8 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
       .finally(() => setDisabled(false))
   }, [prompt, value])
 
-  const transcribe = useTranscribe()
   useEffect(() => {
-    if (!recordingBlob) {
+    if (!recordingBlob || !transcribe) {
       return
     }
     const file = new File([recordingBlob], 'recording.webm', {
@@ -143,6 +148,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
     })
     debug('transcribe', file)
     let active = true
+    setDisabled(true)
     transcribe(file)
       .then((text) => {
         if (!active) {
@@ -156,13 +162,13 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
         if (!active) {
           return
         }
-        onTranscribe && onTranscribe(false)
+        onRecording && onRecording(false)
         setDisabled(false)
       })
     return () => {
       active = false
     }
-  }, [transcribe, recordingBlob, onTranscribe])
+  }, [transcribe, recordingBlob, onRecording])
 
   useEffect(() => {
     if (!isTransReady) {
@@ -172,33 +178,30 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   }, [isTransReady])
 
   // TODO fix why the component rerenders whenever things change
-  const inputProps = useMemo(
-    () => ({
-      endAdornment: (
-        <InputAdornment position='end'>
-          {value ? (
-            <Send send={send} />
-          ) : (
-            <>
-              {mediaRecorder && (
-                <LiveAudioVisualizer
-                  height={50}
-                  mediaRecorder={mediaRecorder}
-                />
-              )}
-              <Mic onEvent={mediaRecorder ? stopRecording : start} />
-            </>
-          )}
-        </InputAdornment>
-      ),
-      startAdornment: (
-        <InputAdornment position='start'>
-          <AttachMenu disabled={disabled} />
-        </InputAdornment>
-      ),
-    }),
-    [send, mediaRecorder, stopRecording, start, disabled, value]
-  )
+  const inputProps = {
+    endAdornment: (
+      <InputAdornment position='end'>
+        {value ? (
+          <Send send={send} />
+        ) : (
+          <>
+            {mediaRecorder && (
+              <LiveAudioVisualizer height={50} mediaRecorder={mediaRecorder} />
+            )}
+            <Mic
+              onEvent={mediaRecorder ? stopRecording : start}
+              disabled={!transcribe || (!mediaRecorder && disabled)}
+            />
+          </>
+        )}
+      </InputAdornment>
+    ),
+    startAdornment: (
+      <InputAdornment position='start'>
+        <AttachMenu disabled={disabled} handleBackchat={handleBackchat} />
+      </InputAdornment>
+    ),
+  }
   // TODO if a file is uploaded, store on fs, then sample it, then goal it
 
   const onKeyDown = useCallback(
@@ -261,7 +264,7 @@ const Input: FC<InputProps> = ({ preload, presubmit, onTranscribe }) => {
   return (
     <TextField
       inputRef={ref}
-      value={disabled ? ' ' : value}
+      value={disabled ? '' : value}
       multiline
       fullWidth
       variant='outlined'
