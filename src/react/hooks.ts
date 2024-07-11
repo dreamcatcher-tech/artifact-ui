@@ -28,21 +28,16 @@ export const useBackchat = (): Backchat => {
   return backchat
 }
 export const useArtifactString = (triad?: PathTriad): string | undefined => {
-  if (!triad) {
-    return
-  }
-  const { path, pid, commit } = triad
-  const { string } = useArtifactBundle({ path, pid, commit })
+  const { string } = useArtifactBundle(triad)
   return string
 }
-const useArtifactBundle = ({
-  path,
-  pid,
-  commit,
-}: PathTriad): { splice?: Splice; string?: string } => {
-  const splice = useSplice({ pid, path, commit })
+const useArtifactBundle = (
+  triad?: PathTriad
+): { splice?: Splice; string?: string } => {
+  const splice = useSplice(triad)
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState<string>()
+  const { path } = triad || {}
   if (path && splice && splice.changes && !equal(lastSplice, splice)) {
     setLastSplice(splice)
     if (splice.changes[path]) {
@@ -65,18 +60,19 @@ export const useArtifact = <T>({
   }
 }
 
-export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
-  if (path && posix.isAbsolute(path)) {
-    throw new Error(`path must be relative: ${path}`)
-  }
+export const useSplice = (triad?: Partial<Triad>) => {
   const [splice, setSplice] = useState<Splice>()
   const backchat = useBackchat()
 
   useEffect(() => {
-    if (!pid || !backchat) {
+    if (!triad) {
       return
     }
     const abort = new AbortController()
+    const { pid, path, commit } = triad
+    if (!pid) {
+      return
+    }
     const consume = async () => {
       // TODO move this to be for direct one off reads
       const after = commit
@@ -92,7 +88,14 @@ export const useSplice = ({ pid, path, commit }: Partial<Triad>) => {
     }
     consume()
     return () => abort.abort()
-  }, [backchat, pid, path, commit])
+  }, [backchat, triad])
+  if (!triad) {
+    return
+  }
+  const { pid, path } = triad
+  if (path && posix.isAbsolute(path)) {
+    throw new Error(`path must be relative: ${path}`)
+  }
   if (!pid) {
     return
   }
