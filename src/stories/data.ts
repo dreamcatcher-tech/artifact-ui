@@ -2,6 +2,7 @@ import { AGENT_RUNNERS, Splice, Thread } from '../constants.ts'
 
 export const longThread: Thread = {
   agent: {
+    name: 'test',
     source: {
       path: 'test/agent name.md',
       pid: {
@@ -103,6 +104,27 @@ export const blankThread: Thread = { ...longThread, messages: [] }
 export const shortThread: Thread = {
   ...longThread,
   messages: longThread.messages.slice(0, 3),
+}
+export const mermaidThread: Thread = {
+  ...shortThread,
+  messages: [
+    shortThread.messages[0],
+    {
+      role: 'user',
+      content:
+        'this is a mermaid diagram\n```mermaid\ngraph TD\n  A[Hard edge] -->|Link text| B(Round edge)\n  B --> C{Decision}\n  C -->|One| D[Result one]\n  C -->|Two| E[Result two]\n```',
+    },
+    {
+      role: 'assistant',
+      content:
+        'this is another mermaid diagram\n```mermaid\nsequenceDiagram\n  participant Alice\n  participant Bob\n  Alice->>John: Hello John, how are you?\n  loop Healthcheck\n    John->>John: Fight against hypochondria\n  end\n  Note right of John: Rational thoughts <br/>prevail...\n  John-->>Alice: Great!\n  John->>Bob: How about you?\n  Bob-->>John: Jolly good!',
+    },
+    {
+      role: 'user',
+      content:
+        'this is a mermaid ER diagram\n```mermaid\nerDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ LINE-ITEM : contains\n  CUSTOMER }|..|{ DELIVERY-ADDRESS : uses\n```',
+    },
+  ],
 }
 export const splice: Splice = {
   pid: {

@@ -94,7 +94,7 @@ export const Recording: Story = {
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
     await step('transcribe', async () => {
-      await delay(500)
+      await delay(1000)
       const mic = canvas.getByTestId('mic')
       await userEvent.click(mic)
     })
@@ -124,10 +124,11 @@ export const Transcribing: Story = {
     })
     await step('transcribe', async () => {
       await delay(500)
-      const mic = canvas.getByTestId('mic')
+      let mic = canvas.getByTestId('mic')
       await userEvent.click(mic)
       await promise
       await delay(1000)
+      mic = canvas.getByTestId('mic')
       await userEvent.click(mic)
     })
   },

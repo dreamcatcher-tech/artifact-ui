@@ -28,14 +28,15 @@ import DraftsIcon from '@mui/icons-material/Drafts'
 import FolderIcon from '@mui/icons-material/Folder'
 import Tooltip from '@mui/material/Tooltip'
 import { ToolAction } from './ToolAction.tsx'
-import remarkGfm from 'remark-gfm'
-import Markdown from 'react-markdown'
 import { assertString } from '@sindresorhus/is'
 import Box from '@mui/material/Box'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
+import remarkGfm from 'remark-gfm'
+import Markdown from 'react-markdown'
+import { renderers } from './Mermaid.tsx'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
@@ -109,7 +110,9 @@ const ChatType: FC<ChatType> = ({ content, type }) => {
           </ExpandMore>
         </Box>
         <Collapse in={expanded} timeout='auto'>
-          <Markdown remarkPlugins={[remarkGfm]}>{content || ''}</Markdown>
+          <Markdown components={renderers} remarkPlugins={[remarkGfm]}>
+            {content || ''}
+          </Markdown>
         </Collapse>
       </TimelineContent>
     </TimelineItem>
@@ -204,7 +207,10 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Markdown remarkPlugins={[remarkGfm]}>
+                    <Markdown
+                      components={renderers}
+                      remarkPlugins={[remarkGfm]}
+                    >
                       {instructions}
                     </Markdown>
                   }

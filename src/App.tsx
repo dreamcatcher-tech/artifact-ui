@@ -1,5 +1,11 @@
-import { useBackchatThread, useThread } from './react/hooks.ts'
+import {
+  useBackchatThread,
+  usePrompt,
+  useThread,
+  useTranscribe,
+} from './react/hooks.ts'
 import Container from './stories/Container.tsx'
+import { ThreeBoxProps } from './stories/ThreeBox.tsx'
 
 // export interface ThreeBoxProps {
 //   threadId: string
@@ -8,6 +14,14 @@ import Container from './stories/Container.tsx'
 //   md?: string
 //   inputProps?: InputProps
 //   handleBackchat?: () => void
+// }
+// export interface InputProps {
+//   prompt?: (text: string) => Promise<void>
+//   transcribe?: (audio: File) => Promise<string>
+//   onRecording?: (isRecording: boolean) => void
+//   handleBackchat?: () => void
+//   preload?: string
+//   presubmit?: boolean
 // }
 
 function App() {
@@ -21,9 +35,20 @@ function App() {
 
   // we can use the props interfaces to describe slices on the top level prop
 
-  const { focusId, ...backchat } = useBackchatThread()
-  const focus = useThread(focusId)
-  const showBackchat = focusId === backchat.threadId
+  const { focusId, ...backchatData } = useBackchatThread()
+  const focusData = useThread(focusId)
+  const showBackchat = focusId === backchatData.threadId
+  const prompt = usePrompt(focusId)
+  const transcribe = useTranscribe()
+  const focus: ThreeBoxProps = {
+    ...focusData,
+    inputProps: { prompt, transcribe },
+  }
+  const backchatPrompt = usePrompt(backchatData.threadId)
+  const backchat: ThreeBoxProps = {
+    ...backchatData,
+    inputProps: { transcribe, prompt: backchatPrompt },
+  }
 
   return (
     <Container focus={focus} backchat={backchat} showBackchat={showBackchat} />
@@ -31,6 +56,3 @@ function App() {
 }
 
 export default App
-
-// try make a standard set of scenarios, and allow all subcomponents to show
-// their own narrow version of this

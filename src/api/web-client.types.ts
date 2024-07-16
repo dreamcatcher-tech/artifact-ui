@@ -136,6 +136,8 @@ export type RemoteThread = {
   triad: Triad
 }
 export type Agent = {
+  /** Name used to identify this agent in the UI */
+  name: string
   /** Where exactly did this agent come from */
   source: Triad
   description?: string
@@ -259,9 +261,9 @@ export const getProcType = (procOpts?: ProcessOptions) => {
   }
   return PROCTYPE.SERIAL
 }
+/** Here is where additional AI models and runner techniques can be added */
 export enum AGENT_RUNNERS {
-  CHAT = 'ai-prompt',
-  INJECTOR = 'ai-prompt-injector',
+  CHAT = 'ai-runner',
 }
 
 export type Change = {
@@ -610,6 +612,6 @@ export const addPeer = (pid: PID, peer: string) => {
 export const randomId = () => {
   const string = ulid()
   const regex = /(?<=.{10})(.{16})/
-  const randomnessPart = string.match(regex)?.[0] || ''
+  const randomnessPart = string.match(regex)?.[0]
   return randomnessPart
 }
