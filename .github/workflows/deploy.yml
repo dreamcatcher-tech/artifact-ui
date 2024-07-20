@@ -1,48 +1,42 @@
-name: Deploy to GitHub Pages
-
+name: Deploy
 on:
   push:
-    branches:
-      - main
+    branches: next
+  pull_request:
+    branches: next
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
+
     permissions:
-      contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      id-token: write # Needed for auth with Deno Deploy
+      contents: read # Needed to clone the repository
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
         with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
+          deno-version: v1.x
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: latest
-          cache: npm
+          node-version: lts/*
 
-      - name: Install
-        run: npm install
+      - name: Install step
+        run: "npm install"
 
-      - name: Lint
-        run: npm run lint
+      - name: Build step
+        run: "npm run build"
 
-      - name: Build
-        run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL}}
-
-      - name: Publish to Chromatic
-        uses: chromaui/action@latest
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL}}
+      - name: Upload to Deno Deploy
+        uses: denoland/deployctl@v1
         with:
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-          exitOnceUploaded: true
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist
-          cname: hal3.dreamcatcher.land
+          project: "backchat-next-ui"
+          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
+          root: "dist"
