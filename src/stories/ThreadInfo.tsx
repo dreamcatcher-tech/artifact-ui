@@ -16,8 +16,9 @@ interface Display {
   oid?: string
   agent?: Agent
   md?: string
+  threadId?: string
 }
-const Display: FC<Display> = ({ commit, oid, agent, md }) => {
+const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -57,6 +58,8 @@ const Display: FC<Display> = ({ commit, oid, agent, md }) => {
           <>
             <i>commit: </i>
             <b>{oid.slice(0, 8)} </b>
+            <i>thread: </i>
+            <b>{threadId?.substring(0, 11)} </b>
             <i>when:</i> {since}
           </>
         )}
@@ -89,7 +92,15 @@ const ThreadInfo: FC<ThreadInfo> = ({ threadId, agent, splice, md }) => {
     )
   }
   const { commit, oid } = splice || {}
-  return <Display commit={commit} oid={oid} agent={agent} md={md} />
+  return (
+    <Display
+      threadId={threadId || ''}
+      commit={commit}
+      oid={oid}
+      agent={agent}
+      md={md}
+    />
+  )
 }
 export default ThreadInfo
 

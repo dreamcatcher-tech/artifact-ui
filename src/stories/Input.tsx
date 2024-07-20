@@ -47,13 +47,20 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
     accept: '.txt',
   })
   debug('filesContent', filesContent, loading)
+  const speedDialRef = useRef(null)
 
-  const actions = [
-    { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
-    { icon: <Text />, name: 'Text' },
-    { icon: <Image />, name: 'Image' },
-    { icon: <Link />, name: 'Web Link' },
-  ]
+  const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    // if (!speedDialRef.current )
+    // if (
+    //   speedDialRef.current &&
+    //   'contains' in speedDialRef.current &&
+    //   !speedDialRef.current.contains(event.relatedTarget)
+    // ) {
+    // setOpen(false)
+    // }
+  }
+  const [open, setOpen] = useState(false)
+  const actions = []
   if (handleBackchat) {
     actions.push({
       icon: <Terminal />,
@@ -61,10 +68,20 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
       onClick: handleBackchat,
     })
   }
+  const onClick = () => {}
+  actions.push(
+    { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
+    { icon: <Text />, name: 'Text', onClick },
+    { icon: <Image />, name: 'Image', onClick },
+    { icon: <Link />, name: 'Web Link', onClick }
+  )
 
   return (
     <Box sx={{ position: 'relative', width: 40 }}>
       <SpeedDial
+        open={open}
+        onClick={() => setOpen(!open)}
+        // onBlur={handleBlur}
         sx={{ position: 'absolute', top: -28, left: -5 }}
         ariaLabel='SpeedDial'
         icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
@@ -75,7 +92,10 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
           <SpeedDialAction
             key={action.name}
             icon={action.icon}
-            onClick={action.onClick}
+            onClickCapture={() => {
+              setOpen(false)
+              action.onClick()
+            }}
             tooltipTitle={action.name}
           />
         ))}

@@ -75,8 +75,9 @@ const Progress = () => (
 interface ChatType {
   content: string
   type: 'user' | 'goalie' | 'runner' | 'system'
+  path?: string
 }
-const ChatType: FC<ChatType> = ({ content, type }) => {
+const ChatType: FC<ChatType> = ({ content, type, path }) => {
   const defaultExpanded = type === 'system' ? false : true
   const [expanded, setExpanded] = useState(defaultExpanded)
 
@@ -103,7 +104,7 @@ const ChatType: FC<ChatType> = ({ content, type }) => {
           onClick={handleExpandClick}
         >
           <Typography variant='h6' component='span' sx={{ width: 100 }}>
-            {chatTitles[type]}
+            {chatTitles[type] + '\u00A0' + (path ? path : '')}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
@@ -128,7 +129,7 @@ const chatTitles = {
   user: 'Dave',
   goalie: 'HAL',
   runner: 'HAL',
-  system: 'SYSTEM',
+  system: 'Agent:',
 }
 const chatIcons = {
   user: <DaveIcon />,
@@ -139,6 +140,7 @@ const chatIcons = {
 
 interface Chat {
   content: string
+  path?: string
 }
 const Dave: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='user' />
@@ -146,8 +148,8 @@ const Dave: FC<Chat> = ({ content }) => (
 const Assistant: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='goalie' />
 )
-const System: FC<Chat> = ({ content }) => (
-  <ChatType content={content} type='system' />
+const System: FC<Chat> = ({ content, path }) => (
+  <ChatType content={content} type='system' path={path} />
 )
 interface AgentPanel {
   agent: Agent
@@ -241,6 +243,7 @@ interface Messages {
   thread?: Thread
 }
 const Messages: FC<Messages> = ({ thread }) => {
+  const path = thread?.agent.name
   const messages = thread?.messages || []
   if (!messages.length) {
     return null
@@ -276,7 +279,7 @@ const Messages: FC<Messages> = ({ thread }) => {
             }
           case 'system':
             // TODO display the entire Agent
-            return <System key={key} content={content} />
+            return <System key={key} content={content} path={path} />
           case 'tool':
             return null
           default:

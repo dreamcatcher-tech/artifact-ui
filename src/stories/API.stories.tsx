@@ -6,7 +6,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
-import { usePing, useBackchat } from '../react/hooks.ts'
+import { usePing, useBackchat, useBackchatThread } from '../react/hooks.ts'
 import { print } from '../api/web-client.types.ts'
 import { Crypto } from '../api/web-client-crypto.ts'
 
@@ -20,6 +20,9 @@ const PingButton = () => {
   log('session %s', print(session.pid))
   const ping = usePing()
   const [latency, setLatency] = useState(0)
+  const { focusId, ...backchatData } = useBackchatThread()
+  log('focusId', focusId)
+  log('backchatData', backchatData)
 
   const onClick = useCallback(async () => {
     log('ping')
@@ -95,3 +98,5 @@ export const Harness: Story = {
     })
   },
 }
+
+export const BackchatThread: Story = {}

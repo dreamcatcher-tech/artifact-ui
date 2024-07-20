@@ -14,17 +14,16 @@ import {
   Triad,
   PathTriad,
   BackchatThread,
-  addBranches,
+  addPeer,
 } from '../api/web-client.types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
-import { assert, assertObject } from '@sindresorhus/is'
+import { assertObject } from '@sindresorhus/is'
 import { ThreeBoxProps } from '../stories/ThreeBox.tsx'
 const log = Debug('AI:hooks')
 
 export const useBackchat = (): Backchat => {
   const { backchat } = useContext(ArtifactContext)
-  assert.nonEmptyObject(backchat, 'backchat undefined')
   return backchat
 }
 export const useArtifactString = (triad?: PathTriad): string | undefined => {
@@ -38,16 +37,19 @@ const useArtifactBundle = (
   const [lastSplice, setLastSplice] = useState<Splice>()
   const [string, setString] = useState<string>()
   const { path } = triad || {}
-  if (path && splice && splice.changes && !equal(lastSplice, splice)) {
+  if (!equal(lastSplice, splice)) {
     setLastSplice(splice)
-    if (splice.changes[path]) {
-      const { patch } = splice.changes[path]
+  }
+
+  if (path && lastSplice && lastSplice.changes) {
+    if (lastSplice.changes[path]) {
+      const { patch } = lastSplice.changes[path]
       if (patch && string !== patch) {
         setString(patch)
       }
     }
   }
-  return { splice, string }
+  return { splice: lastSplice, string }
 }
 export const useArtifact = <T>({
   path,
@@ -63,19 +65,29 @@ export const useArtifact = <T>({
 export const useSplice = (triad?: Partial<Triad>) => {
   const [splice, setSplice] = useState<Splice>()
   const backchat = useBackchat()
+  const [stableTriad, setTriad] = useState<Partial<Triad>>()
+  useEffect(() => {
+    setTriad((prev) => {
+      if (triad && !equal(prev, triad)) {
+        log('setTriad', triad)
+        return triad
+      }
+      return prev
+    })
+  }, [triad])
 
   useEffect(() => {
-    if (!triad) {
+    if (!stableTriad) {
       return
     }
     const abort = new AbortController()
-    const { pid, path, commit } = triad
+    const { pid, path, commit } = stableTriad
     if (!pid) {
       return
     }
     const consume = async () => {
       // TODO move this to be for direct one off reads
-      const after = commit
+      const after = undefined // commit
       for await (const splice of backchat.read(
         pid,
         path,
@@ -87,12 +99,15 @@ export const useSplice = (triad?: Partial<Triad>) => {
       }
     }
     consume()
-    return () => abort.abort()
-  }, [backchat, triad])
-  if (!triad) {
+    return () => {
+      log('aborting useSplice')
+      abort.abort('useSplice unmount')
+    }
+  }, [backchat, stableTriad])
+  if (!stableTriad) {
     return
   }
-  const { pid, path } = triad
+  const { pid, path } = stableTriad
   if (path && posix.isAbsolute(path)) {
     throw new Error(`path must be relative: ${path}`)
   }
@@ -107,14 +122,16 @@ export const useBackchatThread = (): ThreeBoxProps & { focusId?: string } => {
   return useThreadBundle(threadId, pid)
 }
 export const useThread = (threadId?: string) => {
+  // TODO cache the bundles
+  // TODO blank what is returned whenever the threadId switches
   const backchat = useBackchat()
-  const pid = threadId ? addBranches(backchat.pid, threadId) : undefined
+  const pid = threadId ? addPeer(backchat.pid, threadId) : undefined
   const bundle = useThreadBundle(threadId, pid)
   const { focusId, ...rest } = bundle
   return rest
 }
 const useThreadBundle = (threadId?: string, pid?: PID) => {
-  const path = 'threads/' + threadId
+  const path = 'threads/' + threadId + '.json'
   const { splice, string } = useArtifactBundle({ path, pid })
   let thread: Thread | undefined
   let focusId: string | undefined
@@ -167,6 +184,7 @@ export const useActions = (isolate: string, target?: PID) => {
   const backchat = useBackchat()
   const [actions, setActions] = useState<ApiFunctions>()
   const [error, setError] = useState()
+  // TODO make target use deep equality, since it might be subject to change
   useEffect(() => {
     if (!target) {
       return
@@ -195,16 +213,13 @@ export const useActions = (isolate: string, target?: PID) => {
 export const usePrompt = (threadId?: string) => {
   const backchat = useBackchat()
   const prompt = useCallback(
-    async (text: string) => {
-      log('prompt', text)
-      if (!backchat) {
-        throw new Error('backchat is not yet defined')
-      }
-      await backchat.prompt(text, threadId)
+    async (content: string) => {
+      log('prompt', content)
+      await backchat.prompt(content, threadId)
     },
     [backchat, threadId]
   )
-  if (backchat && threadId) {
+  if (backchat) {
     return prompt
   }
 }

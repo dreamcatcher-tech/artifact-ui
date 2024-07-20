@@ -7,6 +7,7 @@ import {
   backchatIdRegex,
   EngineInterface,
   freezePid,
+  getParent,
   IoStruct,
   JsonValue,
   Params,
@@ -85,41 +86,37 @@ export class Backchat {
    * system. The prompt is relayed thru backchat, and then if it is not
    * intercepted, it will go on to the targeted thread, where the agent running
    * that thread will respond.
-   * @param text The optional text that is to be parsed by the AI.  It can be
+   * @param content The optional text that is to be parsed by the AI.  It can be
    * empty if there are files attached or to indicate a positive response to
    * something.
    * @param threadId The thread we targeting with the prompt.  Backchat may
    * intercept this before it reaches target. The target can be anything, since
    * the user might have used the back button to navigate away from the current
    * focus
-   * @param paths The relative paths to the files that were attached with the
-   * prompt, which may include directories.  May include pointers to the tmp
-   * files that are created when a user attaches files in the browser.
+   * @param attachments The relative paths to the files that were attached with
+   * the  prompt, which may include directories.  May include pointers to the
+   * tmp files that are created when a user attaches files in the browser.
    */
-  async prompt(text = '', threadId?: string, paths?: string[]) {
+  async prompt(content = '', threadId?: string, attachments?: string[]) {
     // pierce the backchat thread
     const pierce: PierceRequest = {
       target: this.#pid,
       ulid: ulid(),
       isolate: 'backchat',
       functionName: 'prompt',
-      params: { text },
+      params: { content },
       proctype: PROCTYPE.SERIAL,
     }
     if (threadId) {
-      pierce.params.target = threadId
+      pierce.params.threadId = threadId
     }
-    if (paths) {
-      pierce.params.paths = paths
+    if (attachments) {
+      pierce.params.attachments = attachments
     }
     const promise = this.#watcher.watch(pierce.ulid)
     // TODO handle an error in pierce
     await this.#engine.pierce(pierce)
     return promise
-  }
-  /** start a new thread and make it the focus */
-  thread() {
-    // call into the backchat isolate, and pull up the thread you want
   }
   /** The path to the current session that this backchat is pointing to.  Can
    * sometimes be itself */
@@ -194,7 +191,7 @@ export class Backchat {
     return actor.lsRepos()
   }
   async #getActor() {
-    const target = getActorPid(this.#pid)
+    const target = getParent(this.#pid)
     const actor = await this.actions<ActorApi>('actors', { target })
     return actor
   }
@@ -272,9 +269,4 @@ interface Update {
   path: string
   regex: string
   replacement: string
-}
-
-export const getActorPid = (source: PID) => {
-  const branches = source.branches.slice(0, 2)
-  return { ...source, branches }
 }

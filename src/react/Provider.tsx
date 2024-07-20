@@ -46,9 +46,11 @@ const Provider: FC<Props> = ({ children, url }) => {
         return Backchat.upsert(engine, key, resume)
       })
       .then((backchat) => {
-        assert.nonEmptyObject(backchat, 'backchat undefined')
         if (!active) {
           return
+        }
+        if (!backchat) {
+          throw new Error('backchat not created')
         }
         log('backchat: %s', print(backchat.pid))
         setBackchat(backchat)

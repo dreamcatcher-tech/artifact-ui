@@ -1,3 +1,4 @@
+import Debug from 'debug'
 import {
   useBackchatThread,
   usePrompt,
@@ -6,6 +7,8 @@ import {
 } from './react/hooks.ts'
 import Container from './stories/Container.tsx'
 import { ThreeBoxProps } from './stories/ThreeBox.tsx'
+const log = Debug('AI:App')
+Debug.enable('AI:App AI:hooks')
 
 // export interface ThreeBoxProps {
 //   threadId: string
@@ -15,40 +18,29 @@ import { ThreeBoxProps } from './stories/ThreeBox.tsx'
 //   inputProps?: InputProps
 //   handleBackchat?: () => void
 // }
-// export interface InputProps {
-//   prompt?: (text: string) => Promise<void>
-//   transcribe?: (audio: File) => Promise<string>
-//   onRecording?: (isRecording: boolean) => void
-//   handleBackchat?: () => void
-//   preload?: string
-//   presubmit?: boolean
-// }
 
 function App() {
-  // here we would assemble the state prop and drop it in
-  // - the splice of the thread, possibly cached
-  // - the thread
-  // - the splice of backchat
-  // - the backchat thread
-  // - transcribe function
-  // - prompt function, targetted to the scoped thread
-
-  // we can use the props interfaces to describe slices on the top level prop
-
   const { focusId, ...backchatData } = useBackchatThread()
   const focusData = useThread(focusId)
-  const showBackchat = focusId === backchatData.threadId
+  const showBackchat = !focusId || focusId === backchatData.threadId
   const prompt = usePrompt(focusId)
   const transcribe = useTranscribe()
   const focus: ThreeBoxProps = {
     ...focusData,
     inputProps: { prompt, transcribe },
   }
+  log('focus id:', focusId)
+
   const backchatPrompt = usePrompt(backchatData.threadId)
   const backchat: ThreeBoxProps = {
     ...backchatData,
     inputProps: { transcribe, prompt: backchatPrompt },
   }
+  log('backchat prompt id:', backchatData.threadId)
+
+  log('backchat data', backchatData)
+  log('focus data', focusData)
+  log('showBackchat', showBackchat)
 
   return (
     <Container focus={focus} backchat={backchat} showBackchat={showBackchat} />
