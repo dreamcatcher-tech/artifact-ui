@@ -81,7 +81,7 @@ export const useSplice = (triad?: Partial<Triad>) => {
       return
     }
     const abort = new AbortController()
-    const { pid, path, commit } = stableTriad
+    const { pid, path } = stableTriad
     if (!pid) {
       return
     }

@@ -47,18 +47,18 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
     accept: '.txt',
   })
   debug('filesContent', filesContent, loading)
-  const speedDialRef = useRef(null)
+  // const speedDialRef = useRef(null)
 
-  const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
-    // if (!speedDialRef.current )
-    // if (
-    //   speedDialRef.current &&
-    //   'contains' in speedDialRef.current &&
-    //   !speedDialRef.current.contains(event.relatedTarget)
-    // ) {
-    // setOpen(false)
-    // }
-  }
+  // const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+  // if (!speedDialRef.current )
+  // if (
+  //   speedDialRef.current &&
+  //   'contains' in speedDialRef.current &&
+  //   !speedDialRef.current.contains(event.relatedTarget)
+  // ) {
+  // setOpen(false)
+  // }
+  // }
   const [open, setOpen] = useState(false)
   const actions = []
   if (handleBackchat) {
