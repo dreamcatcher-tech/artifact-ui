@@ -1,6 +1,6 @@
 import equal from 'fast-deep-equal'
 import { ArtifactContext } from '../react/Provider.tsx'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
@@ -132,14 +132,23 @@ export const useThread = (threadId?: string) => {
 }
 const useThreadBundle = (threadId?: string, pid?: PID) => {
   const path = 'threads/' + threadId + '.json'
+  const [thread, setThread] = useState<Thread>()
   const { splice, string } = useArtifactBundle({ path, pid })
-  let thread: Thread | undefined
-  let focusId: string | undefined
-  if (string) {
-    const { focus, ...rest }: BackchatThread = JSON.parse(string)
-    focusId = focus
-    thread = rest
-  }
+  useEffect(() => {
+    setThread(undefined)
+  }, [threadId])
+  const backchatThread = useMemo(() => {
+    if (string) {
+      return JSON.parse(string) as BackchatThread
+    }
+  }, [string])
+  useEffect(() => {
+    if (backchatThread) {
+      const { focus, ...rest } = backchatThread
+      setThread(rest)
+    }
+  }, [backchatThread])
+  const focusId = backchatThread?.focus
   const mdSource = thread ? thread.agent.source : undefined
   const md = useArtifactString(mdSource)
   return { thread, threadId, splice, md, focusId }
