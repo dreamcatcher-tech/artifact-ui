@@ -126,6 +126,17 @@ export const mermaidThread: Thread = {
     },
   ],
 }
+export const mermaidErrorThread: Thread = {
+  ...mermaidThread,
+  messages: [
+    shortThread.messages[0],
+    {
+      role: 'user',
+      content:
+        'this is a mermaid diagram\n```mermaid\ngraphdsdf TD\n  A[Hard edge] -->|Link text| B(Round edge)\n  B --> C{Decision}\n  C -->|One| D[Result one]\n  C -->|Two| E[Result two]\n```',
+    },
+  ],
+}
 export const splice: Splice = {
   pid: {
     repoId: 'test',

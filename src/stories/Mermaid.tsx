@@ -1,5 +1,5 @@
 import Debug from 'debug'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 import { Components } from 'react-markdown'
 const log = Debug('AI:Mermaid')
@@ -10,18 +10,30 @@ interface MermaidProps {
 
 const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   const chartRef = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (chartRef.current) {
+      mermaid.setParseErrorHandler((err, hash) => {
+        console.error('Mermaid rendering error:', hash, err)
+        setError(true)
+      })
       mermaid.initialize({ startOnLoad: true })
       mermaid.contentLoaded()
     }
   }, [chart])
 
   return (
-    <div ref={chartRef} className='mermaid'>
-      {chart}
-    </div>
+    <>
+      <div
+        ref={chartRef}
+        className='mermaid'
+        style={{ display: error ? 'none' : 'block' }}
+      >
+        {chart}
+      </div>
+      {error && <pre>{chart}</pre>}
+    </>
   )
 }
 
