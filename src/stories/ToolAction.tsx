@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, useMemo } from 'react'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
 import { ObjectInspector } from 'react-inspector'
@@ -29,7 +29,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
     const { id, function: func } = tool_call
     const { name, arguments: args } = func
     const data = tryParse(args)
-    const output = findOutput(messages, id)
+    const output = useMemo(() => findOutput(messages, id), [messages, id])
     return (
       <Card key={key}>
         <CardHeader
@@ -49,7 +49,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
           {typeof output === 'string' ? (
             <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
           ) : (
-            <ObjectInspector data={output} expandLevel={999} />
+            <ObjectInspector data={output} />
           )}
         </CardContent>
       </Card>
