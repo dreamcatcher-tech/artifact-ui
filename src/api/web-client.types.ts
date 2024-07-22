@@ -130,6 +130,9 @@ export type Thread = {
   agent: Agent
   messages: OpenAI.ChatCompletionMessageParam[]
   toolCommits: { [toolCallId: string]: CommitOid }
+  // openai threadid
+  // metadatas: name and summary of sections of the thread
+  // stateboards: stateboard changes linked to messages
 }
 export type BackchatThread = Thread & {
   focus: string
@@ -145,9 +148,11 @@ export type Agent = {
   source: Triad
   description?: string
   config?: {
-    model?: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o'
+    model?: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini'
     temperature?: number
     presencePenalty?: number
+    /** control model behaviour to force it to call a tool or no tool */
+    toolChoice?: 'auto' | 'none' | 'required'
   }
   runner: AGENT_RUNNERS
   commands?: string[]
@@ -176,6 +181,7 @@ export type JsonValue =
   | number
   | boolean
   | null
+  | undefined
   | JsonValue[]
   | {
     [key: string]: JsonValue
@@ -388,12 +394,13 @@ export interface EngineInterface {
   apiSchema(isolate: string): Promise<ApiSchema>
   transcribe(audio: File): Promise<{ text: string }>
   pierce(pierce: PierceRequest): Promise<void>
-  read(
+  watch(
     pid: PID,
     path?: string,
     after?: string,
     signal?: AbortSignal,
   ): AsyncIterable<Splice>
+  read(path: string, pid: PID, commit?: string): Promise<string>
   readJSON<T>(path: string, pid: PID, commit?: string): Promise<T>
   exists(path: string, pid: PID): Promise<boolean>
 }

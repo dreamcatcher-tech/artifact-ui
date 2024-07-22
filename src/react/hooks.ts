@@ -88,7 +88,7 @@ export const useSplice = (triad?: Partial<Triad>) => {
     const consume = async () => {
       // TODO move this to be for direct one off reads
       const after = undefined // commit
-      for await (const splice of backchat.read(
+      for await (const splice of backchat.watch(
         pid,
         path,
         after,
