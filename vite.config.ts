@@ -12,7 +12,7 @@ function excludeStories(): Plugin {
     name: 'exclude-stories',
     resolveId(source) {
       if (
-        process.env.STORYBOOK_CHROMATIC === 'true' &&
+        process.env.GITHUB_ACTIONS === 'true' &&
         source.includes('API.stories.tsx')
       ) {
         console.log('exclude-stories')
