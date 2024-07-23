@@ -24,37 +24,41 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
   // need to get the isolate from the caller
   // then get the schema from the api
   // THEN somehow format the output or have a schema for it ?
-  return tool_calls.map((tool_call, key) => {
-    debug('tool_call', tool_call)
-    const { id, function: func } = tool_call
-    const { name, arguments: args } = func
-    const data = tryParse(args)
-    const output = useMemo(() => findOutput(messages, id), [messages, id])
-    return (
-      <Card key={key}>
-        <CardHeader
-          title={name}
-          titleTypographyProps={{ variant: 'h6' }}
-          avatar={<Terminal />}
-        />
-        <CardContent sx={{ pt: 0, pb: 0 }}>
-          <ObjectInspector data={data} expandLevel={999} />
-        </CardContent>
-        <CardHeader
-          title='Output:'
-          titleTypographyProps={{ variant: 'h6' }}
-          avatar={<Terminal />}
-        />
-        <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
-          {typeof output === 'string' ? (
-            <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
-          ) : (
-            <ObjectInspector data={output} />
-          )}
-        </CardContent>
-      </Card>
-    )
-  })
+  return useMemo(
+    () =>
+      tool_calls.map((tool_call, key) => {
+        debug('tool_call', tool_call)
+        const { id, function: func } = tool_call
+        const { name, arguments: args } = func
+        const data = tryParse(args)
+        const output = findOutput(messages, id)
+        return (
+          <Card key={key}>
+            <CardHeader
+              title={name}
+              titleTypographyProps={{ variant: 'h6' }}
+              avatar={<Terminal />}
+            />
+            <CardContent sx={{ pt: 0, pb: 0 }}>
+              <ObjectInspector data={data} expandLevel={999} />
+            </CardContent>
+            <CardHeader
+              title='Output:'
+              titleTypographyProps={{ variant: 'h6' }}
+              avatar={<Terminal />}
+            />
+            <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
+              {typeof output === 'string' ? (
+                <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
+              ) : (
+                <ObjectInspector data={output} />
+              )}
+            </CardContent>
+          </Card>
+        )
+      }),
+    [messages, tool_calls]
+  )
 }
 const findOutput = (messages: MessageParam[], id: string) => {
   const message = messages.find((message) => {

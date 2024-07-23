@@ -128,6 +128,7 @@ export const useThread = (threadId?: string) => {
   const pid = threadId ? addPeer(backchat.pid, threadId) : undefined
   const bundle = useThreadBundle(threadId, pid)
   const { focusId, ...rest } = bundle
+  log('dropping focus', focusId)
   return rest
 }
 const useThreadBundle = (threadId?: string, pid?: PID) => {
@@ -145,6 +146,7 @@ const useThreadBundle = (threadId?: string, pid?: PID) => {
   useEffect(() => {
     if (backchatThread) {
       const { focus, ...rest } = backchatThread
+      log('dropping focus', focus)
       setThread(rest)
     }
   }, [backchatThread])

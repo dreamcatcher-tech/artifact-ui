@@ -35,11 +35,24 @@ import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
 import remarkGfm from 'remark-gfm'
-import Markdown from 'react-markdown'
-import { renderers } from './Mermaid.tsx'
+import Markdown, { Components } from 'react-markdown'
+import { Mermaid } from './Mermaid.tsx'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
+}
+
+const renderers: Partial<Components> = {
+  code: ({ className, children, ...props }) => {
+    const match = /language-(mermaid)/.exec(className || '')
+    return match ? (
+      <Mermaid chart={String(children).replace(/\n$/, '')} />
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    )
+  },
 }
 
 const ExpandMore = styled((props: ExpandMoreProps) => {
