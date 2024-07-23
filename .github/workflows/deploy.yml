@@ -1,9 +1,6 @@
 name: Deploy
 on:
   push:
-    branches: next
-  pull_request:
-    branches: next
 
 jobs:
   deploy:
@@ -17,6 +14,8 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Deno
         uses: denoland/setup-deno@v1
@@ -27,18 +26,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: npm
 
       - name: Install step
-        run: "npm install"
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
 
       - name: Build step
-        run: "npm run build"
+        run: npm run build
         env:
-          VITE_API_URL: https://hal3-next.deno.dev        
+          VITE_API_URL: https://hal3-next.deno.dev
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "backchat-next-ui"
-          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
-          root: "dist"
+          project: 'longthreat-ui'
+          entrypoint: 'https://deno.land/std@0.217.0/http/file_server.ts'
+          root: 'dist'
+
+      - name: Publish to Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitOnceUploaded: true

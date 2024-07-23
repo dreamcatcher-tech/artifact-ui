@@ -11,3 +11,7 @@ console.log('VITE_API_URL', process.env.VITE_API_URL)
 
 // https://vitejs.dev/config/
 export default defineConfig({ plugins: [react()], build: { sourcemap: true } })
+
+if (process.env.STORYBOOK_CHROMATIC === 'true') {
+  // TODO block export of the API stories if we are in chromatic environment
+}
