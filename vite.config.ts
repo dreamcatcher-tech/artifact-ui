@@ -7,7 +7,6 @@ if (!process.env.VITE_API_URL) {
   // process.env.VITE_API_URL = 'https://192.168.1.49:8000'
 }
 
-// Custom plugin to exclude api.stories.tsx conditionally
 function excludeStories(): Plugin {
   return {
     name: 'exclude-stories',
@@ -17,14 +16,11 @@ function excludeStories(): Plugin {
         source.includes('API.stories.tsx')
       ) {
         console.log('exclude-stories')
-        return this.resolve(source, undefined, { skipSelf: true }).then(
-          (resolved) => {
-            // Returning null tells Rollup to ignore this import
-            return null
-          }
-        )
+        return this.resolve(source, undefined, { skipSelf: true }).then(() => {
+          return null
+        })
       }
-      return null // Returning null for other files means "proceed with the default behavior"
+      return null
     },
   }
 }
