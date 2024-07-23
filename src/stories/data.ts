@@ -133,6 +133,16 @@ export const mermaidErrorThread: Thread = {
     {
       role: 'user',
       content:
+        'this is a mermaid diagram\n```mermaid\ngraphdgsdf TD\n  A[Hard edge] -->|Link text| B(Round edge)\n  B --> C{Decision}\n  C -->|One| D[Result one]\n  C -->|Two| E[Result two]\n```',
+    },
+    {
+      role: 'user',
+      content:
+        'this is a mermaid ER diagram\n```mermaid\nerDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ LINE-ITEM : contains\n  CUSTOMER }|..|{ DELIVERY-ADDRESS : uses\n```',
+    },
+    {
+      role: 'user',
+      content:
         'this is a mermaid diagram\n```mermaid\ngraphdsdf TD\n  A[Hard edge] -->|Link text| B(Round edge)\n  B --> C{Decision}\n  C -->|One| D[Result one]\n  C -->|Two| E[Result two]\n```',
     },
   ],

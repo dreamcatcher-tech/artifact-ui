@@ -10,30 +10,31 @@ interface MermaidProps {
 
 const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   const chartRef = useRef<HTMLDivElement>(null)
-  const [error, setError] = useState(false)
+  const [raw, setRaw] = useState(true)
 
   useEffect(() => {
-    if (chartRef.current) {
-      mermaid.setParseErrorHandler((err, hash) => {
-        console.error('Mermaid rendering error:', hash, err)
-        setError(true)
+    mermaid
+      .parse(chart)
+      .then(() => {
+        setRaw(false)
       })
-      mermaid.initialize({ startOnLoad: true })
-      mermaid.contentLoaded()
-    }
+      .catch(() => {
+        setRaw(true)
+      })
   }, [chart])
 
+  useEffect(() => {
+    const element = chartRef.current
+    if (raw || !element) {
+      return
+    }
+    mermaid.run({ nodes: [element] })
+  }, [raw])
+
   return (
-    <>
-      <div
-        ref={chartRef}
-        className='mermaid'
-        style={{ display: error ? 'none' : 'block' }}
-      >
-        {chart}
-      </div>
-      {error && <pre>{chart}</pre>}
-    </>
+    <div ref={chartRef} className='mermaid'>
+      {chart}
+    </div>
   )
 }
 
