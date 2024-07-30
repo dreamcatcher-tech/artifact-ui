@@ -5,7 +5,6 @@ import { ThreeBoxProps } from './ThreeBox.tsx'
 const focus: ThreeBoxProps = {
   thread: shortThread,
   threadId: 'testThreadId',
-  md: '## Short Thread\n\nThis is a short thread.',
   splice,
   inputProps: {
     prompt: async (text: string) => {
@@ -35,7 +34,6 @@ export const Backchat: Story = {
     backchat: {
       thread: longThread,
       threadId: backchatThreadId,
-      md: '## Long Thread\n\nThis is a long thread.',
       splice,
     },
     showBackchat: true,

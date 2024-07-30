@@ -1,21 +1,6 @@
-import { AGENT_RUNNERS, Splice, Thread } from '../constants.ts'
+import { Splice, Thread } from '../constants.ts'
 
 export const longThread: Thread = {
-  agent: {
-    name: 'test',
-    source: {
-      path: 'test/agent name.md',
-      pid: {
-        repoId: 'test',
-        account: 'test',
-        repository: 'test',
-        branches: ['main'],
-      },
-      commit: '8b604959489d020d2a63d7f497e2a519aa244db9',
-    },
-    runner: AGENT_RUNNERS.CHAT,
-    instructions: 'test instructions',
-  },
   toolCommits: {},
   messages: [
     {
@@ -29,6 +14,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
+      name: 'test/agent name.md',
       tool_calls: [
         {
           id: 'call_i8C8lqCmSfYzOqYa9YCxDkON',
@@ -47,6 +33,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
+      name: 'test/agent name.md',
       tool_calls: [
         {
           id: 'call_kShQuzYlpAQenLDbZIcwCgF2',
@@ -66,6 +53,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
+      name: 'test/agent name.md',
       content:
         'To create a new markdown (md) file, could you please clarify if you need guidance on the markdown syntax for creating specific content or if you are looking to generate a blank md file?',
     },
@@ -75,6 +63,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
+      name: 'test/agent name.md',
       tool_calls: [
         {
           id: 'call_tmkLJN3yDs63QXkH3imrZlRe',
@@ -95,6 +84,8 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
+
+      name: 'test/agent name.md',
       content:
         'You now have the instructions on how to create a blank Markdown file. If you have any additional questions or need further assistance, feel free to ask.',
     },
@@ -116,6 +107,7 @@ export const mermaidThread: Thread = {
     },
     {
       role: 'assistant',
+      name: 'test/agent name.md',
       content:
         'this is another mermaid diagram\n```mermaid\nsequenceDiagram\n  participant Alice\n  participant Bob\n  Alice->>John: Hello John, how are you?\n  loop Healthcheck\n    John->>John: Fight against hypochondria\n  end\n  Note right of John: Rational thoughts <br/>prevail...\n  John-->>Alice: Great!\n  John->>Bob: How about you?\n  Bob-->>John: Jolly good!',
     },
@@ -180,11 +172,4 @@ export const splice: Splice = {
 }
 export const shortBackchat: Thread = {
   ...shortThread,
-  agent: {
-    ...shortThread.agent,
-    source: {
-      ...shortThread.agent.source,
-      path: 'test/Backchat.md',
-    },
-  },
 }

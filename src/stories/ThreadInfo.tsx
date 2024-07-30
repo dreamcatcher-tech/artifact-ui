@@ -1,24 +1,16 @@
-import posix from 'path-browserify'
-import remarkGfm from 'remark-gfm'
-import Markdown from 'react-markdown'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
-import { FC, useCallback, useEffect, useState } from 'react'
-import { CommitObject, Agent, Splice } from '../api/web-client.types'
+import { FC, useEffect, useState } from 'react'
+import { CommitObject, Splice } from '../api/web-client.types'
 import Chip from '@mui/material/Chip'
-import { assert } from '@sindresorhus/is'
 
 interface Display {
   commit?: CommitObject
   oid?: string
-  agent?: Agent
-  md?: string
+  repo?: string
   threadId?: string
 }
-const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
+const Display: FC<Display> = ({ threadId, commit, oid, repo }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -42,15 +34,11 @@ const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
   }, [timestamp])
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
-  const label = agent ? getName(agent) : <i>loading...</i>
-  const path = agent && agent.source.path
-  const [open, setOpen] = useState(false)
-  const openDialog = useCallback(() => setOpen(true), [setOpen])
-  const onClick = agent && md ? openDialog : undefined
+  const label = repo ? repo : <i>loading...</i>
 
   return (
     <Stack direction='row' spacing={1} padding={1} alignItems='center'>
-      <Chip label={label} color='warning' size='small' onClick={onClick} />
+      <Chip clickable={false} label={label} color='warning' size='small' />
       <Typography mt={1} variant='caption' component='span'>
         {!commit || !oid ? (
           'loading commit...'
@@ -64,26 +52,15 @@ const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
           </>
         )}
       </Typography>
-
-      <Dialog open={open} onClose={() => setOpen(false)} scroll='paper'>
-        <DialogTitle>
-          Agent: <b>{path}</b>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Markdown remarkPlugins={[remarkGfm]}>{md || ''}</Markdown>
-        </DialogContent>
-      </Dialog>
     </Stack>
   )
 }
 
 interface ThreadInfo {
   threadId?: string
-  agent?: Agent
   splice?: Splice
-  md?: string
 }
-const ThreadInfo: FC<ThreadInfo> = ({ threadId, agent, splice, md }) => {
+const ThreadInfo: FC<ThreadInfo> = ({ threadId, splice }) => {
   if (!threadId) {
     return (
       <Typography mt={1} variant='caption'>
@@ -91,15 +68,10 @@ const ThreadInfo: FC<ThreadInfo> = ({ threadId, agent, splice, md }) => {
       </Typography>
     )
   }
-  const { commit, oid } = splice || {}
+  const { commit, oid, pid } = splice || {}
+  const repo = pid ? `${pid.account}/${pid.repository}` : undefined
   return (
-    <Display
-      threadId={threadId || ''}
-      commit={commit}
-      oid={oid}
-      agent={agent}
-      md={md}
-    />
+    <Display threadId={threadId || ''} commit={commit} oid={oid} repo={repo} />
   )
 }
 export default ThreadInfo
@@ -124,10 +96,4 @@ function formatElapsedTime(secondsElapsed: number) {
   formattedString += `${seconds} sec${seconds > 1 ? 's' : ''} ago`
 
   return formattedString
-}
-const getName = (agent: Agent) => {
-  const path = agent.source.path
-  assert.truthy(path.endsWith('.md'), 'invalid agent path: ' + path)
-  const name = posix.basename(path, '.md')
-  return name
 }

@@ -149,9 +149,7 @@ const useThreadBundle = (threadId?: string, pid?: PID) => {
     }
   }, [backchatThread])
   const focusId = backchatThread?.focus
-  const mdSource = thread ? thread.agent.source : undefined
-  const md = useArtifactString(mdSource)
-  return { thread, threadId, splice, md, focusId }
+  return { thread, threadId, splice, focusId }
 }
 
 export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {

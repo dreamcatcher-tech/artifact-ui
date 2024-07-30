@@ -23,7 +23,6 @@ export const Basic: Story = {}
 export const Short: Story = {
   args: {
     thread: shortThread,
-    md: '## Short Thread\n\nThis is a short thread.',
     splice,
   },
 }

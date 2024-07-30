@@ -75,16 +75,16 @@ const Progress = () => (
 interface ChatType {
   content: string
   type: 'user' | 'goalie' | 'runner' | 'system'
-  path?: string
+  name?: string
 }
-const ChatType: FC<ChatType> = ({ content, type, path }) => {
+const ChatType: FC<ChatType> = ({ content, type, name }) => {
   const defaultExpanded = type === 'system' ? false : true
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const handleExpandClick = () => {
     setExpanded(!expanded)
   }
-
+  const title = (name ? name : chatTitles[type]).replace(' ', '\u00a0')
   return (
     <TimelineItem>
       <TimelineSeparator>
@@ -104,7 +104,7 @@ const ChatType: FC<ChatType> = ({ content, type, path }) => {
           onClick={handleExpandClick}
         >
           <Typography variant='h6' component='span' sx={{ width: 100 }}>
-            {chatTitles[type] + '\u00A0' + (path ? path : '')}
+            {title}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
@@ -127,8 +127,8 @@ enum ChatColors {
 }
 const chatTitles = {
   user: 'Dave',
-  goalie: 'HAL',
-  runner: 'HAL',
+  goalie: '',
+  runner: '',
   system: 'Agent:',
 }
 const chatIcons = {
@@ -141,15 +141,16 @@ const chatIcons = {
 interface Chat {
   content: string
   path?: string
+  name?: string
 }
 const Dave: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='user' />
 )
-const Assistant: FC<Chat> = ({ content }) => (
-  <ChatType content={content} type='goalie' />
+const Assistant: FC<Chat> = ({ content, name }) => (
+  <ChatType content={content} type='goalie' name={name} />
 )
-const System: FC<Chat> = ({ content, path }) => (
-  <ChatType content={content} type='system' path={path} />
+const System: FC<Chat> = ({ content }) => (
+  <ChatType content={content} type='system' />
 )
 interface AgentPanel {
   agent: Agent
@@ -243,7 +244,6 @@ interface Messages {
   thread?: Thread
 }
 const Messages: FC<Messages> = ({ thread }) => {
-  const path = thread?.agent.name
   const messages = thread?.messages || []
   if (!messages.length) {
     return null
@@ -277,11 +277,17 @@ const Messages: FC<Messages> = ({ thread }) => {
               if (!content) {
                 console.error('empty content:', message)
               }
-              return <Assistant key={key} content={content || ''} />
+              return (
+                <Assistant
+                  key={key}
+                  content={content || ''}
+                  name={message.name}
+                />
+              )
             }
           case 'system':
             // TODO display the entire Agent
-            return <System key={key} content={content} path={path} />
+            return <System key={key} content={content} />
           case 'tool':
             return null
           default:

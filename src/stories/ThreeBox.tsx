@@ -12,13 +12,12 @@ export interface ThreeBoxProps {
   threadId?: string
   thread?: Thread
   splice?: Splice
-  md?: string
   inputProps?: InputProps
   handleBackchat?: () => void
 }
 
 const ThreeBox: FC<ThreeBoxProps> = (props) => {
-  const { threadId, thread, splice, md, inputProps, handleBackchat } = props
+  const { threadId, thread, splice, inputProps, handleBackchat } = props
   const messages = thread?.messages || []
   log('messages', messages)
   return (
@@ -40,12 +39,7 @@ const ThreeBox: FC<ThreeBoxProps> = (props) => {
       >
         <Messages thread={thread} />
         <Input {...inputProps} handleBackchat={handleBackchat} />
-        <ThreadInfo
-          threadId={threadId}
-          agent={thread?.agent}
-          splice={splice}
-          md={md}
-        />
+        <ThreadInfo threadId={threadId} splice={splice} />
       </Stack>
       {/* <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>

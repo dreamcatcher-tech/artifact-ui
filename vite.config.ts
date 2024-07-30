@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 if (!process.env.VITE_API_URL) {
-  process.env.VITE_API_URL = 'https://hal3-next.deno.dev'
+  process.env.VITE_API_URL = 'https://longthreat-next.deno.dev'
   // process.env.VITE_API_URL = 'https://localhost:8002'
   // process.env.VITE_API_URL = 'https://192.168.1.49:8000'
 }

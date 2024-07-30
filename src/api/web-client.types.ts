@@ -23,19 +23,15 @@ export enum PROCTYPE {
 export type { JSONSchemaType }
 export type ApiFunction = {
   (): unknown | Promise<unknown>
-  (arg1: { [key: string]: unknown }): unknown | Promise<unknown>
+  (...args: [{ [key: string]: unknown }]): unknown | Promise<unknown>
 }
 export type ApiFunctions = {
   [key: string]: ApiFunction
 }
-export interface ThreadArgs {
-  agentPath: string
-  threadId: string
-}
 type RepoParams = { repo: string; isolate?: string; params?: Params }
-export type ActorApi = ApiFunctions & {
+export type ActorApi = {
   backchat: (params: { backchatId: string; machineId?: string }) => Promise<PID>
-  thread: (params: ThreadArgs) => Promise<PID>
+  thread: (params: { threadId: string }) => Promise<PID>
   /** Clones from github, using the github PAT (if any) for the calling machine.
    * Updates the repo.json file in the actor branch to point to the new PID of
    * the clone.
@@ -44,10 +40,14 @@ export type ActorApi = ApiFunctions & {
 
   init: (params: RepoParams) => Promise<PidHead>
 
+  rm: (
+    params: { repo?: string; all?: boolean },
+  ) => Promise<{ reposDeleted: number }>
+
   /**
    * List all the repos that this Actor has created.
    */
-  lsRepos: () => Promise<string[]>
+  lsRepos: (params: void) => Promise<string[]>
 }
 export type IsolateReturn = JsonValue | undefined | void
 export type ProcessOptions = {
@@ -127,15 +127,28 @@ export const ENTRY_BRANCH = 'main'
 export type PartialPID = Omit<PID, 'repoId'>
 
 export type Thread = {
-  agent: Agent
   messages: OpenAI.ChatCompletionMessageParam[]
   toolCommits: { [toolCallId: string]: CommitOid }
-  // openai threadid
-  // metadatas: name and summary of sections of the thread
-  // stateboards: stateboard changes linked to messages
+  /** Have any files been changed in this threads branch */
+  isDirty?: boolean
+  summaries?: {
+    title: string
+    summary: string
+    /** The message index that this summary starts with */
+    start: number
+    /** The message index that this summary ends with */
+    end: number
+  }[]
+  /** When the stateboard changes, the commit is logged, for replay */
+  stateboards?: { start: number; commit: string }[]
 }
 export type BackchatThread = Thread & {
   focus: string
+}
+export type AssistantsThread = Thread & {
+  externalId: string
+  messages: OpenAI.Beta.Threads.Message[]
+  additionalMessages: OpenAI.Beta.Threads.RunCreateParams.AdditionalMessage[]
 }
 export type RemoteThread = {
   /** The location in the remote repo and the last known commit we have of it */
@@ -147,15 +160,17 @@ export type Agent = {
   /** Where exactly did this agent come from */
   source: Triad
   description?: string
-  config?: {
-    model?: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini'
-    temperature?: number
-    presencePenalty?: number
+  config: {
+    model: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini'
+    temperature: number
+    presence_penalty?: number
     /** control model behaviour to force it to call a tool or no tool */
-    toolChoice?: 'auto' | 'none' | 'required'
+    tool_choice: 'auto' | 'none' | 'required'
+    /** Is the model permitted to call more than one function at a time */
+    parallel_tool_calls: boolean
   }
   runner: AGENT_RUNNERS
-  commands?: string[]
+  commands: string[]
   instructions: string
 }
 export type Triad = {
@@ -181,7 +196,6 @@ export type JsonValue =
   | number
   | boolean
   | null
-  | undefined
   | JsonValue[]
   | {
     [key: string]: JsonValue
@@ -530,7 +544,12 @@ export const toActions = <T = DispatchFunctions>(
       return execute(unsequencedRequest)
     }
   }
-  return actions as T
+  return actions as PromisifyFunctionReturnTypes<T>
+}
+type PromisifyFunctionReturnTypes<T> = {
+  [K in keyof T]: T[K] extends (...args: infer Args) => infer R
+    ? (...args: Args) => R extends Promise<unknown> ? R : Promise<R>
+    : T[K]
 }
 const safeParams = (params?: Params) => {
   if (!params) {
@@ -542,24 +561,40 @@ const safeParams = (params?: Params) => {
       delete safe[key]
     }
   }
+  checkUndefined(safe)
   return safe
+}
+const checkUndefined = (params: Params) => {
+  for (const key in params) {
+    if (params[key] === undefined) {
+      throw new Error('undefined value: ' + key)
+    }
+    if (typeof params[key] === 'object') {
+      checkUndefined(params[key] as Params)
+    }
+  }
 }
 export const repoIdRegex = /^rep_[0-9A-HJKMNP-TV-Z]{16}$/
 export const machineIdRegex = /^mac_[2-7a-z]{33}$/
 export const actorIdRegex = /^act_[0-9A-HJKMNP-TV-Z]{16}$/
 export const backchatIdRegex = /^bac_[0-9A-HJKMNP-TV-Z]{16}$/
 export const threadIdRegex = /^the_[0-9A-HJKMNP-TV-Z]{16}$/
+export const agentHashRegex = /^age_[0-9A-HJKMNP-TV-Z]{16}$/
+
 export const SU_ACTOR = 'act_0000000000000000'
 export const SU_BACKCHAT = 'bac_0000000000000000'
 
 export const generateActorId = (seed: string) => {
-  return 'act_' + randomId(seed)
+  return 'act_' + hash(seed)
 }
 export const generateBackchatId = (seed: string) => {
-  return 'bac_' + randomId(seed)
+  return 'bac_' + hash(seed)
 }
 export const generateThreadId = (seed: string) => {
-  return 'the_' + randomId(seed)
+  return 'the_' + hash(seed)
+}
+export const generateAgentHash = (creationString: string) => {
+  return 'age_' + hash(creationString)
 }
 
 export const getActorId = (source: PID) => {
@@ -640,13 +675,21 @@ export const getParent = (pid: PID) => {
   branches.pop()
   return freezePid({ ...pid, branches })
 }
+export const getBase = (pid: PID) => {
+  const branches = [pid.branches[0]]
+  return freezePid({ ...pid, branches })
+}
 
-export const randomId = (seed: string) => {
+export const hash = (seed: string) => {
   const hash = ripemd160(seed)
   const encoded = base32crockford.encode(hash)
   return encoded.slice(-16)
 }
-export const isBackchatSummoned = (text: string = '') => {
-  const plain = text.toLowerCase().trim()
-  return plain.startsWith('backchat') || plain.startsWith('back chat')
+
+export const getContent = (message: AssistantsThread['messages'][number]) => {
+  const { content } = message
+  if (content[0].type !== 'text') {
+    throw new Error('content not text')
+  }
+  return content[0].text.value
 }
