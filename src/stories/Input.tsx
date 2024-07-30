@@ -18,6 +18,8 @@ import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 import Text from '@mui/icons-material/TextSnippet'
 import { Box } from '@mui/material'
+import { ClickAwayListener } from '@mui/base/ClickAwayListener'
+
 const debug = Debug('AI:Input')
 
 interface SendProps {
@@ -49,16 +51,6 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
   debug('filesContent', filesContent, loading)
   // const speedDialRef = useRef(null)
 
-  // const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
-  // if (!speedDialRef.current )
-  // if (
-  //   speedDialRef.current &&
-  //   'contains' in speedDialRef.current &&
-  //   !speedDialRef.current.contains(event.relatedTarget)
-  // ) {
-  // setOpen(false)
-  // }
-  // }
   const [open, setOpen] = useState(false)
   const actions = []
   if (handleBackchat) {
@@ -78,28 +70,34 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
 
   return (
     <Box sx={{ position: 'relative', width: 40 }}>
-      <SpeedDial
-        open={open}
-        onClick={() => setOpen(!open)}
-        // onBlur={handleBlur}
-        sx={{ position: 'absolute', top: -28, left: -5 }}
-        ariaLabel='SpeedDial'
-        icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
-        FabProps={{ size: 'small', color: 'default', disabled }}
-        direction='right'
-      >
-        {actions.map((action) => (
-          <SpeedDialAction
-            key={action.name}
-            icon={action.icon}
-            onClickCapture={() => {
-              setOpen(false)
-              action.onClick()
-            }}
-            tooltipTitle={action.name}
-          />
-        ))}
-      </SpeedDial>
+      <ClickAwayListener onClickAway={() => setOpen(false)}>
+        <SpeedDial
+          open={open}
+          onClick={() => setOpen(!open)}
+          // onBlur={handleBlur}
+          sx={{ position: 'absolute', top: -28, left: -5 }}
+          ariaLabel='SpeedDial'
+          icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
+          FabProps={{
+            size: 'small',
+            color: 'default',
+            disabled,
+          }}
+          direction='right'
+        >
+          {actions.map((action) => (
+            <SpeedDialAction
+              key={action.name}
+              icon={action.icon}
+              onClick={() => {
+                setOpen(false)
+                action.onClick()
+              }}
+              tooltipTitle={action.name}
+            />
+          ))}
+        </SpeedDial>
+      </ClickAwayListener>
     </Box>
   )
 }
