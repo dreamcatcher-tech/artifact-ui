@@ -1,7 +1,15 @@
 import Debug from 'debug'
 import React, { useEffect, useRef, useState } from 'react'
-import mermaid from 'mermaid'
 import { Components } from 'react-markdown'
+import type { Mermaid } from 'mermaid'
+
+const getMermaid = () => {
+  const { mermaid } = globalThis as unknown as { mermaid: Mermaid }
+  if (!mermaid) {
+    throw new Error('Mermaid is not loaded')
+  }
+  return mermaid
+}
 const log = Debug('AI:Mermaid')
 
 interface MermaidProps {
@@ -9,6 +17,7 @@ interface MermaidProps {
 }
 
 const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
+  const mermaid = getMermaid()
   const chartRef = useRef<HTMLDivElement>(null)
   const [raw, setRaw] = useState(true)
 

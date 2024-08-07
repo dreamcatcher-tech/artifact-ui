@@ -35,6 +35,7 @@ import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
 import remarkGfm from 'remark-gfm'
+import frontmatter from 'remark-frontmatter'
 import Markdown from 'react-markdown'
 import { renderers } from './Mermaid.tsx'
 
@@ -111,7 +112,10 @@ const ChatType: FC<ChatType> = ({ content, type, name }) => {
           </ExpandMore>
         </Box>
         <Collapse in={expanded} timeout='auto'>
-          <Markdown components={renderers} remarkPlugins={[remarkGfm]}>
+          <Markdown
+            components={renderers}
+            remarkPlugins={[remarkGfm, frontmatter]}
+          >
             {content || ''}
           </Markdown>
         </Collapse>
@@ -212,7 +216,7 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
                   primary={
                     <Markdown
                       components={renderers}
-                      remarkPlugins={[remarkGfm]}
+                      remarkPlugins={[remarkGfm, frontmatter]}
                     >
                       {instructions}
                     </Markdown>

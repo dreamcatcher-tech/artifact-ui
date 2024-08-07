@@ -41,7 +41,7 @@ const Mic: FC<MicProps> = ({ onEvent, disabled }) => (
   </IconButton>
 )
 
-const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
+const AttachMenu: FC<{ disabled: boolean; handleBackchat: () => void }> = ({
   disabled,
   handleBackchat,
 }) => {
@@ -49,19 +49,12 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
     accept: '.txt',
   })
   debug('filesContent', filesContent, loading)
-  // const speedDialRef = useRef(null)
 
   const [open, setOpen] = useState(false)
   const actions = []
-  if (handleBackchat) {
-    actions.push({
-      icon: <Terminal />,
-      name: 'Backchat',
-      onClick: handleBackchat,
-    })
-  }
   const onClick = () => {}
   actions.push(
+    { icon: <Terminal />, name: 'Backchat', onClick: handleBackchat },
     { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
     { icon: <Text />, name: 'Text', onClick },
     { icon: <Image />, name: 'Image', onClick },
@@ -214,7 +207,7 @@ const Input: FC<InputProps> = (props) => {
         )}
       </InputAdornment>
     ),
-    startAdornment: (
+    startAdornment: handleBackchat && (
       <InputAdornment position='start'>
         <AttachMenu disabled={disabled} handleBackchat={handleBackchat} />
       </InputAdornment>

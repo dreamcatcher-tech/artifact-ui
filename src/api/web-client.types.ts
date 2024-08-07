@@ -162,7 +162,7 @@ export type Agent = {
   description?: string
   config: {
     model: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini'
-    temperature: number
+    temperature?: number
     presence_penalty?: number
     /** control model behaviour to force it to call a tool or no tool */
     tool_choice: 'auto' | 'none' | 'required'
@@ -675,9 +675,12 @@ export const getParent = (pid: PID) => {
   branches.pop()
   return freezePid({ ...pid, branches })
 }
-export const getBase = (pid: PID) => {
+export const getRoot = (pid: PID) => {
   const branches = [pid.branches[0]]
   return freezePid({ ...pid, branches })
+}
+export const getBaseName = (pid: PID) => {
+  return pid.branches[pid.branches.length - 1]
 }
 
 export const hash = (seed: string) => {
@@ -692,4 +695,8 @@ export const getContent = (message: AssistantsThread['messages'][number]) => {
     throw new Error('content not text')
   }
   return content[0].text.value
+}
+export const getThreadPath = (pid: PID) => {
+  const threadId = getBaseName(pid)
+  return `threads/${threadId}.json`
 }
