@@ -80,7 +80,7 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.9",
     "eslint-plugin-storybook": "^0.8.0",
-    "openai": "^4.55.2",
+    "openai": "^4.55.3",
     "storybook": "^8.2.8",
     "typescript": "^5.5.4",
     "vite": "^5.4.0"

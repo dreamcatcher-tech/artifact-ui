@@ -1,4 +1,4 @@
-import { Agent, Thread } from '../api/web-client.types'
+import { Agent, Thread } from '../api/types.ts'
 import { FC, useState } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
