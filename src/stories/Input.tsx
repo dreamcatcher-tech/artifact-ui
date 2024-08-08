@@ -1,3 +1,4 @@
+import TurndownService from 'turndown'
 import SpeedDial from '@mui/material/SpeedDial'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import SpeedDialAction from '@mui/material/SpeedDialAction'
@@ -21,6 +22,7 @@ import { Box } from '@mui/material'
 import { ClickAwayListener } from '@mui/base/ClickAwayListener'
 
 const debug = Debug('AI:Input')
+const turndown = new TurndownService()
 
 interface SendProps {
   send: (arg0: unknown) => void
@@ -272,6 +274,34 @@ const Input: FC<InputProps> = (props) => {
     send() // Remove the argument passed to the send function
   }, [prompt, doPreSubmit, send, value])
 
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      const clipboardData = event.clipboardData
+      const html = clipboardData.getData('text/html')
+      let text = clipboardData.getData('text/plain')
+      console.log('html', html)
+      console.log('text', text)
+      if (html) {
+        text = turndown.turndown(html)
+      }
+      const textarea = ref.current
+      if (!textarea) {
+        console.error('textarea is not defined')
+        return
+      }
+      const startPos = textarea.selectionStart
+      const endPos = textarea.selectionEnd
+
+      setValue(value.substring(0, startPos) + text + value.substring(endPos))
+      setTimeout(() => {
+        textarea.selectionStart = startPos
+        textarea.selectionEnd = startPos + text.length
+      })
+    },
+    [value]
+  )
+
   return (
     <TextField
       inputRef={ref}
@@ -284,6 +314,7 @@ const Input: FC<InputProps> = (props) => {
       onChange={(e) => setValue(e.target.value)}
       disabled={disabled}
       onKeyDown={onKeyDown}
+      onPaste={handlePaste}
     />
   )
 }
