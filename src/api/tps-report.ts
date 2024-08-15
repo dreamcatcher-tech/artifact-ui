@@ -2,78 +2,211 @@ import { z } from 'zod'
 
 const md5 = z.string().regex(/^[a-f0-9]{40}$/, 'Invalid MD5 hash')
 
-const outcome = z.object({
+const outcome = z
+  .object({
     reasoning: z.array(z.string()),
     outcome: z.boolean(),
-    commit: md5.describe('the commit of the branch this test completed on'),
-}).describe(
-    'the result of a single test run along with chain of thought reasoning for how the outcome was reached',
-)
+  })
+  .describe(
+    'the result of a single test iteration along with chain of thought reasoning for how the outcome was reached',
+  )
 
-const summary = z.object({
-    timestamp: z.number().int().gt(1723003530757).default(Date.now).describe(
-        'the time the test run started',
-    ),
-    elapsed: z.number().int().gte(0).describe(
-        'the time the test run took to complete in ms',
-    ),
-    iterations: z.number().int().gte(0).describe(
-        'the number of planned iterations to run',
-    ),
-    completed: z.number().int().gte(0).default(0).describe(
-        'the number of iterations that have completed',
-    ),
-}).describe(
+type Iteration = z.infer<typeof iteration>
+const iteration = z
+  .object({
+    commit: md5.describe('the commit this iteration completed on'),
+    prompts: z.array(z.string()).describe('the prompt(s) that were used'),
+    outcomes: z.array(outcome).describe('the outcomes of this iteration'),
+  })
+const summary = z
+  .object({
+    timestamp: z
+      .number()
+      .int()
+      .gt(1723003530757)
+      .default(Date.now)
+      .describe('the start time'),
+    elapsed: z
+      .number()
+      .int()
+      .gte(0)
+      .describe('the time the operation has been running for in ms'),
+    iterations: z
+      .number()
+      .int()
+      .gte(0)
+      .describe('the number of planned iterations to run'),
+    completed: z
+      .number()
+      .int()
+      .gte(0)
+      .default(0)
+      .describe(
+        'the lowest number of iterations of a test that have completed.  Tests complete asynchronously, so one test might complete all its planned iterations before another test.  The overall progress is based on the lowest number of completed iterations',
+      ),
+  })
+  .describe(
     'A summary of the test results combining all individual results into a ratio',
-)
+  )
 
-type SingleTestSchema = z.infer<typeof singleTestSchema>
-const singleTestSchema = z.object({
-    summary: summary.extend({
-        expectations: z.number().int().gte(0).describe(
-            'the number of expectations specified for this run',
-        ),
-        results: z.array(z.object({
-            outcomes: z.array(outcome).describe(
-                'the results of each interation that has executed so far',
-            ),
-        })).describe(
-            'the results of each interation that has executed so far',
-        ),
-    }).describe(
+type TestCaseSchema = z.infer<typeof testCaseSchema>
+const testCaseSchema = z
+  .object({
+    summary: summary
+      .extend({
+        expectations: z
+          .number()
+          .int()
+          .gt(0)
+          .describe('the number of expectations for this test case'),
+        successes: z
+          .array(z.number().int().gte(0))
+          .describe(
+            'for each expectation, the sum of the successful outcomes so far.  When divided by the number of completed iterations, the ratio of successful outcomes is calculated',
+          ),
+      })
+      .strict()
+      .describe(
         'A summary of the test results combining all individual results into a ratio',
-    ),
-    outcomes: z.object({
-        type: z.literal('array'),
-        items: z.object({
-            type: z.literal('object'),
-            properties: z.object({
-                prompt: z.object({
-                    type: z.literal('string'),
-                    description: z.literal('the prompt that was used'),
-                }),
-                outcomes: z.object({
-                    type: z.literal('array'),
-                    items: z.object({
-                        type: z.literal('boolean'),
-                    }),
-                }),
-            }),
-        }),
-    }),
-}).describe(
-    'Store large numbers of test results in a compact format that supports manipulation and retrieval without needing to load the entire object into context',
-)
+      )
+      .refine((v) => v.completed <= v.iterations, {
+        message: 'completed cannot be greater than iterations',
+      })
+      .refine((v) => v.successes.length === v.expectations, {
+        message: 'successes length must equal expectations count',
+      })
+      .refine((v) => v.successes.every((success) => success <= v.completed), {
+        message: 'successes cannot be greater than completed',
+      }),
+    iterations: z.array(iteration)
+      .describe('the outcome and info about each test run that has executed'),
+  })
+  .strict()
+  .describe('summary and runs output of a single test')
+  .refine(
+    (v) =>
+      v.iterations.every((run) =>
+        run.outcomes.length === v.summary.expectations
+      ),
+    { message: 'outcomes count must match expectations count' },
+  )
+  .refine((v) => v.iterations.length <= v.summary.iterations, {
+    message: 'runs cannot be greater than iterations',
+  })
+  .refine((v) => v.iterations.length === v.summary.completed, {
+    message: 'runs must equal completed',
+  })
+  .refine((v) => {
+    const tally = v.summary.successes.map(() => 0)
+    for (const run of v.iterations) {
+      run.outcomes.forEach(({ outcome }, index) => {
+        if (outcome) {
+          tally[index]++
+        }
+      })
+    }
+    return v.summary.successes.every((success, index) =>
+      success === tally[index]
+    )
+  }, { message: 'runs outcomes must sum to successes' })
 
-export type TestSuiteSchema = z.infer<typeof testSuiteSchema>
-export const testSuiteSchema = z.object({
+export type TestFileSchema = z.infer<typeof testFileSchema>
+export const testFileSchema = z
+  .object({
     summary: summary.extend({
-        hash: md5.describe(
-            'the hash of the test file used to generate the test run',
-        ),
-        tests: z.number().int().gte(0).describe(
-            'the number of tests specified in the test file',
-        ),
-    }),
-    outcomes: z.array(singleTestSchema).describe('the results of each test'),
-})
+      hash: md5.describe(
+        'the hash of the test file used to generate the test run',
+      ),
+      path: z.string().describe('the path to the test file'),
+      tests: z
+        .number()
+        .int()
+        .gte(0)
+        .describe('the number of tests specified in the test file'),
+    })
+      .strict()
+      .refine((value) => value.completed <= value.iterations, {
+        message: 'completed cannot be greater than iterations',
+      }),
+    cases: z.array(testCaseSchema).describe('the results of each test case'),
+  })
+  .strict()
+  .refine((value) => value.cases.length <= value.summary.tests, {
+    message: 'the number of tests cannot be less than the number of results',
+    path: ['cases'],
+  })
+
+export type TestControllerSchema = z.infer<typeof testControllerSchema>
+export const testControllerSchema = z.object({
+  globs: z.array(z.string()).default([]).describe(
+    'the globs to select the files to run',
+  ),
+  files: z.array(z.object({
+    path: z.string(),
+    status: z.enum(['pending', 'running', 'complete', 'error']),
+  })).describe(
+    'the files to run after resolving the globs, in run order, along with their run status',
+  ),
+  concurrency: z.number().int().gt(0).default(1).describe(
+    'the number of files to run concurrently',
+  ),
+}).strict()
+export const create = (path: string, hash: string, iterations: number) => {
+  const blank: TestFileSchema = {
+    summary: {
+      timestamp: Date.now(),
+      path,
+      hash,
+      tests: 0,
+      elapsed: 0,
+      iterations,
+      completed: 0,
+    },
+    cases: [],
+  }
+  return testFileSchema.parse(blank)
+}
+
+export const addTest = (base: TestFileSchema, expectations: number) => {
+  const copy = testFileSchema.parse(base)
+  const test: TestCaseSchema = {
+    summary: {
+      timestamp: Date.now(),
+      elapsed: 0,
+      iterations: copy.summary.iterations,
+      expectations,
+      completed: 0,
+      successes: Array(expectations).fill(0),
+    },
+    iterations: [],
+  }
+  copy.cases.push(test)
+  copy.summary.tests++
+  return testFileSchema.parse(copy)
+}
+
+export const addIteration = (
+  base: TestFileSchema,
+  index: number,
+  iteration: Iteration,
+) => {
+  const copy = testFileSchema.parse(base)
+  const test = copy.cases[index]
+  test.summary.completed++
+  test.summary.elapsed = Date.now() - test.summary.timestamp
+  iteration.outcomes.forEach(({ outcome }, index) => {
+    if (outcome) {
+      test.summary.successes[index]++
+    }
+  })
+  test.iterations.push(iteration)
+  let leastCompleted = Number.MAX_SAFE_INTEGER
+  for (const _test of copy.cases) {
+    if (_test.summary.completed < leastCompleted) {
+      leastCompleted = _test.summary.completed
+    }
+  }
+  copy.summary.completed = leastCompleted
+  copy.summary.elapsed = Date.now() - copy.summary.timestamp
+  return testFileSchema.parse(copy)
+}

@@ -281,6 +281,7 @@ const Messages: FC<Messages> = ({ thread }) => {
               if (!content) {
                 console.error('empty content:', message)
               }
+              assertString(content)
               return (
                 <Assistant
                   key={key}
@@ -291,6 +292,7 @@ const Messages: FC<Messages> = ({ thread }) => {
             }
           case 'system':
             // TODO display the entire Agent
+            assertString(content)
             return <System key={key} content={content} />
           case 'tool':
             return null

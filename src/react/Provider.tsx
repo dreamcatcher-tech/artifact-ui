@@ -1,12 +1,8 @@
 import { createContext, FC, useState, useEffect } from 'react'
-import { Crypto } from '../api/web-client-crypto.ts'
-import { WebClientEngine } from '../api/web-client-engine.ts'
-import { Backchat } from '../api/web-client-backchat.ts'
-import {
-  print,
-  EngineInterface,
-  backchatIdRegex,
-} from '../api/web-client.types.ts'
+import { Crypto } from '../api/crypto.ts'
+import { WebClientEngine } from '../api/client-engine.ts'
+import { Backchat } from '../api/client-backchat.ts'
+import { print, EngineInterface, backchatIdRegex } from '../api/types.ts'
 import { assert } from '@sindresorhus/is'
 import Debug from 'debug'
 const log = Debug('AI:Provider')

@@ -1,7 +1,7 @@
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
 import { FC, useEffect, useState } from 'react'
-import { CommitObject, Splice } from '../api/web-client.types'
+import { CommitObject, Splice } from '../api/types.ts'
 import Chip from '@mui/material/Chip'
 
 interface Display {

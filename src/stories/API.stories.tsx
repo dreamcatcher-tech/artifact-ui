@@ -1,14 +1,14 @@
 import '../examples/button.css'
-import { WebClientEngine } from '../api/web-client-engine.ts'
-import { Backchat } from '../api/web-client-backchat.ts'
+import { WebClientEngine } from '../api/client-engine.ts'
+import { Backchat } from '../api/client-backchat.ts'
 import Provider from '../react/Provider.tsx'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
 import { usePing, useBackchat, useBackchatThread } from '../react/hooks.ts'
-import { print } from '../api/web-client.types.ts'
-import { Crypto } from '../api/web-client-crypto.ts'
+import { print } from '../api/types.ts'
+import { Crypto } from '../api/crypto.ts'
 
 const log = Debug('AI:API')
 

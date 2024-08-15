@@ -15,7 +15,7 @@ import {
   PathTriad,
   BackchatThread,
   addPeer,
-} from '../api/web-client.types.ts'
+} from '../api/types.ts'
 import posix from 'path-browserify'
 import { ulid } from 'ulid'
 import { assertObject } from '@sindresorhus/is'
