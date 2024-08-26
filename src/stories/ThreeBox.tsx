@@ -6,6 +6,8 @@ import Debug from 'debug'
 import Messages from './Messages.tsx'
 import ThreadInfo from './ThreadInfo.tsx'
 import { Splice, Thread } from '../constants.ts'
+import Paper from '@mui/material/Paper'
+import Stateboard from './Stateboard.tsx'
 
 const log = Debug('AI:ThreeBox')
 export interface ThreeBoxProps {
@@ -41,11 +43,11 @@ const ThreeBox: FC<ThreeBoxProps> = (props) => {
         <Input {...inputProps} handleBackchat={handleBackchat} />
         <ThreadInfo threadId={threadId} splice={splice} />
       </Stack>
-      {/* <Box sx={{ flexGrow: 1, p: 1 }}>
+      <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
-          <StateBoard />
+          <Stateboard />
         </Paper>
-      </Box> */}
+      </Box>
     </Box>
   )
 }

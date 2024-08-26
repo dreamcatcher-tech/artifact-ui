@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import BackchatDialog from './Backchat.tsx'
-import { splice, longThread } from './data.ts'
+import { splice, longThread } from '../data.ts'
 import { useEffect, useState } from 'react'
 
 type Story = StoryObj<typeof BackchatDialog>

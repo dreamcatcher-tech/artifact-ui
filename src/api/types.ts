@@ -1,5 +1,10 @@
 // copied from the artifact project
 import { Chalk } from 'chalk'
+import { z } from 'zod'
+export type {
+  ChatCompletionAssistantMessageParam,
+  ChatCompletionMessageParam,
+} from './zod.ts'
 import { ripemd160 } from '@noble/hashes/ripemd160'
 import { base32crockford } from '@scure/base'
 import { JSONSchemaType } from './types.ajv.ts'
@@ -20,6 +25,16 @@ export enum PROCTYPE {
   // together to allow for a fire and forget branches
   // OR make DAEMON be the same as FORGET since no new info need be returned ?
 }
+export const WIDGETS = z.enum([
+  'TPS_REPORT',
+  'FILES',
+  'BRANCH_EXPLORER',
+  'COMMIT_GRAPH',
+  'COMMIT_INFO',
+  'THREADS',
+  'REPOS',
+])
+
 export type { JSONSchemaType }
 export type ApiFunction = {
   (): unknown | Promise<unknown>
@@ -74,7 +89,9 @@ export type ProcessOptions = {
    * is done.
    */
   noClose?: boolean
-  /** Set a prefix for the new branch name.  Implies branch = true */
+  /** Set a prefix for the new branch name, which will be combined with a
+   * random id and separated by a "-". Implies branch = true
+   */
   prefix?: string
   /** Set the name of the new branch.  Will error if this exists already */
   branchName?: string
@@ -126,22 +143,50 @@ export const ENTRY_BRANCH = 'main'
 
 export type PartialPID = Omit<PID, 'repoId'>
 
-export type Thread = {
-  messages: OpenAI.ChatCompletionMessageParam[]
-  toolCommits: { [toolCallId: string]: CommitOid }
+import { ChatCompletionMessageParamSchema } from './zod.ts'
+export const thread = z.object({
+  /** If the messages were truncated, this is the offset count */
+  messageOffset: z.number(),
+  messages: z.array(ChatCompletionMessageParamSchema),
+  toolCommits: z.record(
+    /** The tool call id */
+    z.string(),
+    /** The commit hash the tool ended on */
+    z.string(),
+  ),
   /** Have any files been changed in this threads branch */
-  isDirty?: boolean
-  summaries?: {
-    title: string
-    summary: string
-    /** The message index that this summary starts with */
-    start: number
-    /** The message index that this summary ends with */
-    end: number
-  }[]
-  /** When the stateboard changes, the commit is logged, for replay */
-  stateboards?: { start: number; commit: string }[]
-}
+  isDirty: z.boolean().optional(),
+  summaries: z.array(
+    z.object({
+      title: z.string(),
+      summary: z.string(),
+      /** The message index that this summary starts with */
+      start: z.number().int().gte(0),
+      /** The message index that this summary ends with */
+      end: z.number().int().gte(0).optional(),
+    }).refine((data) => data.end === undefined || data.end >= data.start, {
+      message: "'end' must be greater than or equal to 'start'",
+      path: ['end'],
+    }),
+  ).optional(),
+  /** History of stateboard changes */
+  stateboards: z.array(z.object({
+    /** What message number set the stateboard change */
+
+    setter: z.number(),
+    commit: z.string(),
+  })),
+  /** History of what the focus was set to */
+  foci: z.array(z.object({
+    /** The message number that set the focus */
+
+    setter: z.number(),
+    focus: z.object({
+      // Define the structure of PathTriad here
+    }),
+  })),
+})
+export type Thread = z.infer<typeof thread>
 export type BackchatThread = Thread & {
   focus: string
 }
@@ -154,30 +199,7 @@ export type RemoteThread = {
   /** The location in the remote repo and the last known commit we have of it */
   triad: Triad
 }
-export type Agent = {
-  /** Name used to identify this agent in the UI */
-  name: string
-  /** Where exactly did this agent come from */
-  source: Triad
-  description?: string
-  config: {
-    model: 'gpt-3.5-turbo' | 'gpt-4-turbo' | 'gpt-4o' | 'gpt-4o-mini'
-    temperature?: number
-    presence_penalty?: number
-    /** control model behaviour to force it to call a tool or no tool */
-    tool_choice: 'auto' | 'none' | 'required'
-    /** Is the model permitted to call more than one function at a time */
-    parallel_tool_calls: boolean
-  }
-  runner: AGENT_RUNNERS
-  commands: string[]
-  instructions: string
-}
-export type Triad = {
-  path: string
-  pid: PID
-  commit: CommitOid
-}
+
 export type PathTriad = {
   path: string
   pid?: PID
@@ -484,7 +506,6 @@ export const freezePid = (pid: PID) => {
   if (!pid.branches[0]) {
     throw new Error('branch is required')
   }
-  const githubRegex = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i
   if (!githubRegex.test(pid.account) || !githubRegex.test(pid.repository)) {
     const repo = `${pid.account}/${pid.repository}`
     throw new Error('Invalid GitHub account or repository name: ' + repo)
@@ -523,7 +544,7 @@ export const toActions = <T = DispatchFunctions>(
   const proctype = getProcType(procOpts)
   const actions: DispatchFunctions = {}
   for (const functionName of Object.keys(schema)) {
-    actions[functionName] = (arg1?: Params) => {
+    actions[functionName] = (arg1: Params = {}) => {
       const params = safeParams(arg1)
       const unsequencedRequest: UnsequencedRequest = {
         target,
@@ -551,10 +572,7 @@ type PromisifyFunctionReturnTypes<T> = {
     ? (...args: Args) => R extends Promise<unknown> ? R : Promise<R>
     : T[K]
 }
-const safeParams = (params?: Params) => {
-  if (!params) {
-    return {}
-  }
+const safeParams = (params: Params) => {
   const safe = { ...params }
   for (const key in safe) {
     if (safe[key] === undefined) {
@@ -574,6 +592,7 @@ const checkUndefined = (params: Params) => {
     }
   }
 }
+export const githubRegex = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i
 export const repoIdRegex = /^rep_[0-9A-HJKMNP-TV-Z]{16}$/
 export const machineIdRegex = /^mac_[2-7a-z]{33}$/
 export const actorIdRegex = /^act_[0-9A-HJKMNP-TV-Z]{16}$/
@@ -622,6 +641,7 @@ export const isActorBranch = (pid: PID) => {
 }
 
 export const isPidEqual = (pid1: PID, pid2: PID) => {
+  // TODO why not just use the fast-equals utility ?
   if (pid1.repoId !== pid2.repoId) {
     return false
   }
@@ -645,7 +665,7 @@ export const META_SYMBOL = Symbol.for('settling commit')
 export type Meta = {
   parent?: CommitOid
 }
-export const withMeta = async (promise: MetaPromise) => {
+export const withMeta = async <T>(promise: MetaPromise<T>) => {
   const result = await promise
   assert.truthy(META_SYMBOL in promise, 'missing commit symbol')
   const meta = promise[META_SYMBOL]
@@ -658,7 +678,7 @@ export const withMeta = async (promise: MetaPromise) => {
   return { result, parent }
 }
 export const sha1 = /^[0-9a-f]{40}$/i
-export type MetaPromise = Promise<unknown> & { [META_SYMBOL]?: Meta }
+export type MetaPromise<T> = Promise<T> & { [META_SYMBOL]?: Meta }
 
 export const addBranches = (pid: PID, ...children: string[]) => {
   const next = { ...pid, branches: [...pid.branches, ...children] }
@@ -700,3 +720,36 @@ export const getThreadPath = (pid: PID) => {
   const threadId = getBaseName(pid)
   return `threads/${threadId}.json`
 }
+export const zodPid = z.object({
+  repoId: z.string().regex(repoIdRegex),
+  account: z.string().regex(githubRegex),
+  repository: z.string().regex(githubRegex),
+  branches: z.array(z.string()).min(1),
+})
+export const triad = z.object({
+  path: z.string(),
+  pid: zodPid,
+  commit: z.string(),
+})
+export type Triad = z.infer<typeof triad>
+
+export const agent = z.object({
+  name: z.string().regex(/^[a-zA-Z0-9_-]+$/),
+  source: triad.describe('Where exactly did this agent come from'),
+  description: z.string().optional(),
+  config: z.object({
+    model: z.enum(['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini']),
+    temperature: z.number().gte(0).lte(2).optional(),
+    presence_penalty: z.number().optional(),
+    tool_choice: z.enum(['auto', 'none', 'required']).describe(
+      'control model behaviour to force it to call a tool or no tool',
+    ),
+    parallel_tool_calls: z.boolean().describe(
+      'Is the model permitted to call more than one function at a time.  Must be false to use strict function calling',
+    ),
+  }),
+  runner: z.enum(['ai-runner']),
+  commands: z.array(z.string()),
+  instructions: z.string().max(256000),
+})
+export type Agent = z.infer<typeof agent>

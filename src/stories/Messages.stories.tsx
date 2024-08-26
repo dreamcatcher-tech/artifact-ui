@@ -1,4 +1,4 @@
-import { longThread, mermaidThread, mermaidErrorThread } from './data.ts'
+import { longThread, mermaidThread, mermaidErrorThread } from '../data.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
 

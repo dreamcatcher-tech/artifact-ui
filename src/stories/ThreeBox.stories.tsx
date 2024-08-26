@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import ThreeBox from './ThreeBox.tsx'
-import { splice, longThread, shortThread, blankThread } from './data.ts'
+import { splice, longThread, shortThread, blankThread } from '../data.ts'
 
 const meta: Meta<typeof ThreeBox> = {
   title: 'ThreeBox',
@@ -26,6 +26,10 @@ export const Short: Story = {
     splice,
   },
 }
+
+// stateboard should show underneath the thread, or next to, depending on screen
+// size
+
 export const Long: Story = {
   args: {
     thread: longThread,

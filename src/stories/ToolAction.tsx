@@ -1,7 +1,6 @@
 import { FC, useMemo } from 'react'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
-import { ObjectInspector } from 'react-inspector'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Terminal from '@mui/icons-material/Terminal'
@@ -10,6 +9,7 @@ import Debug from 'debug'
 // import { createTheme, ThemeProvider } from '@mui/material/styles'
 import CardHeader from '@mui/material/CardHeader'
 import { assertString } from '@sindresorhus/is'
+import ReactJson from '@microlink/react-json-view'
 
 const debug = Debug('AI:ToolAction')
 
@@ -38,7 +38,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
           avatar={<Terminal />}
         />
         <CardContent sx={{ pt: 0, pb: 0 }}>
-          <ObjectInspector data={data} expandLevel={999} />
+          <ReactJson src={data} quotesOnKeys={false} name={false} />
         </CardContent>
         <CardHeader
           title='Output:'
@@ -49,7 +49,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
           {typeof output === 'string' ? (
             <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
           ) : (
-            <ObjectInspector data={output} />
+            <ReactJson src={output} quotesOnKeys={false} name={false} />
           )}
         </CardContent>
       </Card>

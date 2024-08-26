@@ -1,7 +1,11 @@
-import { Splice, Thread } from '../constants.ts'
+import { TestFile } from './api/tps-report.ts'
+import { Splice, Thread } from './constants.ts'
 
 export const longThread: Thread = {
   toolCommits: {},
+  messageOffset: 0,
+  foci: [],
+  stateboards: [],
   messages: [
     {
       role: 'system',
@@ -172,4 +176,109 @@ export const splice: Splice = {
 }
 export const shortBackchat: Thread = {
   ...shortThread,
+}
+
+export const tpsReport: TestFile = {
+  summary: {
+    timestamp: 1724633441398,
+    elapsed: 8437,
+    iterations: 1,
+    completed: 1,
+    hash: '65ea5741533a7611bb6f2c413f8ad765d0e488e7',
+    path: 'tests/fixtures/test-file-runner.test.md',
+    agent: 'agents/hamr.md',
+    assessor: 'agents/test-assessor.md',
+  },
+  cases: [
+    {
+      summary: {
+        timestamp: 1724633442824,
+        elapsed: 7011,
+        iterations: 1,
+        completed: 1,
+        prompts: [['list all customers']],
+        expectations: [
+          '10 customers listed',
+          'it is short',
+          'purely informational, with no instructions, prompts, or questions at the end',
+          'No suggesting or asking for further actions or clarifications',
+        ],
+        successes: [0, 0, 0, 0],
+        name: 'Starter for 10',
+      },
+      iterations: [
+        {
+          commit: 'e654a67c20574ef4258542145b0769064388ca1e',
+          prompts: ['list all customers'],
+          outcomes: [
+            {
+              reasoning: [
+                'The response failed to provide a list of customers as requested, indicating a lack of recognition of straightforward queries for customer data.',
+                "The system prompt's complexity and multiple conditions may have led to the AI's inability to deliver the requested information succinctly.",
+                'The instruction to not return a description of thinking could prevent the AI from clarifying any ambiguities effectively.',
+              ],
+              outcome: false,
+              analysis: [
+                'The system prompt is overly complex and details numerous constraints on various roles, which could distract from the primary task of listing customers.',
+                'The refusal to show customers may be influenced by misinterpreting the request as requiring modification or more specific data rather than a simple list.',
+              ],
+              improvements: [
+                'Simplify the prompt by removing redundant instructions.',
+                'Make explicit the expectation for the AI to list customers in direct response to such queries without additional qualifiers.',
+                'Clarify that certain system capabilities can yield straightforward responses like customer lists without intricate permissions involved.',
+              ],
+            },
+            {
+              reasoning: [
+                "The agent response was indirect and unclear as it did not directly list customers but instead asked for further clarification, failing to meet the user's straightforward request to list all customers.",
+                "The system prompt's verbosity and multiple rules may have caused the agent to hedge its response rather than providing the requested information succinctly.",
+              ],
+              outcome: false,
+              analysis: [
+                "The system prompt was excessively detailed and created a barrier to generating direct responses, likely contributing to the agent's unclear reply.",
+                'There was no explicit instruction for providing a customer list, which led the agent to refuse the request.',
+              ],
+              improvements: [
+                'Simplify the prompt to focus more explicitly on direct responses to user queries without asking for clarifications unless necessary.',
+                'Ensure the prompt includes clear guidance on how to respond to requests for listing entities, possibly providing an example of direct listing.',
+              ],
+            },
+            {
+              reasoning: [
+                'The response requested a specific action (displaying a list of all customers) but instead provided a refusal, indicating an inability to fulfill the request directly.',
+                'The system prompt did not explicitly convey that the assistant should provide information based on the request without conditions or limitations, leading to an incomplete response.',
+              ],
+              outcome: false,
+              analysis: [
+                'The system prompt permits the assistant to refuse certain requests if they require a specific action or event, which is what occurred here.',
+                'The response should have been purely informational and provided a summary of customers or clarified the nature of the request instead of deflecting it.',
+              ],
+              improvements: [
+                'Revise the system prompt to stress that the assistant should provide requested information directly when it is publicly available or accessible without requiring a specific query.',
+                'Remove unnecessarily restrictive language that implies the assistant can refuse based on the nature of information requests, thus maintaining an emphasis on providing comprehensive responses.',
+              ],
+            },
+            {
+              reasoning: [
+                'The response provided an inability to directly list all customers due to a presumed need for a specific query or event, which contradicts the expectation to refrain from suggesting further actions.',
+                'The system prompt did include a directive to follow certain permissions, however, it did not clearly align with the simple task of listing customers.',
+                'The inclusion of a suggestion to let the assistant know about specific customers or to update details indicates a deviation from the expectation to avoid further inquiries.',
+              ],
+              outcome: false,
+              analysis: [
+                "The prompt has multiple layers of instructions that may cause confusion regarding the assistant's capabilities.",
+                'Explicit instructions could guide the assistant more directly regarding simple information requests without additional clarifications.',
+                'Simplifying the instructions to focus solely on the task of data output instead of suggesting further actions would comply better with the user prompt.',
+              ],
+              improvements: [
+                'Remove any instructions in the prompt that allow or encourage asking for clarifications.',
+                'Make the system prompt more concise, focusing strictly on responding to queries without suggesting actions.',
+                "Reiterate that the bot's role is to provide information directly from the CRM without additional prompting.",
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
 }

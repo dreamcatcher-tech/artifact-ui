@@ -1,4 +1,3 @@
-import '../examples/button.css'
 import { WebClientEngine } from '../api/client-engine.ts'
 import { Backchat } from '../api/client-backchat.ts'
 import Provider from '../react/Provider.tsx'

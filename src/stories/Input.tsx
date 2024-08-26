@@ -18,8 +18,10 @@ import Image from '@mui/icons-material/Image'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 import Text from '@mui/icons-material/TextSnippet'
-import { Box } from '@mui/material'
+import { Box, Stack } from '@mui/material'
 import { ClickAwayListener } from '@mui/base/ClickAwayListener'
+import StateboardIcon from '@mui/icons-material/Monitor'
+import MessageIcon from '@mui/icons-material/Forum'
 
 const debug = Debug('AI:Input')
 const turndown = new TurndownService()
@@ -303,19 +305,28 @@ const Input: FC<InputProps> = (props) => {
   )
 
   return (
-    <TextField
-      inputRef={ref}
-      value={disabled ? '' : value}
-      multiline
-      fullWidth
-      variant='outlined'
-      placeholder={placeholder}
-      InputProps={inputProps}
-      onChange={(e) => setValue(e.target.value)}
-      disabled={disabled}
-      onKeyDown={onKeyDown}
-      onPaste={handlePaste}
-    />
+    <Stack>
+      {/* <div>asdf</div>
+      <IconButton color='primary'>
+        <MessageIcon />
+      </IconButton>
+      <IconButton color='primary' aria-label='add to shopping cart'>
+        <StateboardIcon />
+      </IconButton> */}
+      <TextField
+        inputRef={ref}
+        value={disabled ? '' : value}
+        multiline
+        fullWidth
+        variant='outlined'
+        placeholder={placeholder}
+        InputProps={inputProps}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={disabled}
+        onKeyDown={onKeyDown}
+        onPaste={handlePaste}
+      />
+    </Stack>
   )
 }
 

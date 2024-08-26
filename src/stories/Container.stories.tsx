@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import Container from './Container.tsx'
-import { shortBackchat, splice, shortThread, longThread } from './data.ts'
+import { shortBackchat, splice, shortThread, longThread } from '../data.ts'
 import { ThreeBoxProps } from './ThreeBox.tsx'
 const focus: ThreeBoxProps = {
   thread: shortThread,
