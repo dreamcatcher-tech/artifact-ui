@@ -36,8 +36,6 @@ jobs:
 
       - name: Build step
         run: npm run build
-        env:
-          VITE_API_URL: https://hal3-next.deno.dev
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1

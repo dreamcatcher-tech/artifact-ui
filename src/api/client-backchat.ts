@@ -1,28 +1,33 @@
 // THIS IS SYNCED FROM THE ARTIFACT PROJECT
 // TODO publish to standalone repo
 import {
-  ActorApi,
   addBranches,
   backchatIdRegex,
+  backchatStateSchema,
   EngineInterface,
   freezePid,
   getParent,
+  getThreadPath,
   IoStruct,
   JsonValue,
   Params,
   PID,
   PierceRequest,
   ProcessOptions,
-  PROCTYPE,
+  Proctype,
   RpcOpts,
   SU_ACTOR,
   SU_BACKCHAT,
+  threadSchema,
   toActions,
   UnsequencedRequest,
 } from './types.ts'
+import * as actor from './isolates/actor.ts'
 import { ulid } from 'ulid'
 import { PierceWatcher } from './watcher.ts'
 import { Crypto } from './crypto.ts'
+import { ZodObject, ZodTypeAny } from 'zod'
+import z from 'zod'
 type Init = {
   repo: string
   isolate?: string
@@ -50,8 +55,8 @@ export class Backchat {
   }
   /**
    * If the resume parameter is provided, the backchat will attempt to resume
-   * the backchat session with the given id.  If the session is not found, a new
-   * session will be created.
+   * the backchat branch with the given id.  If the branch is not found, a new
+   * branch will be created with a new id.
    * @param engine
    * @param key The Machine private key
    * @param resume the backchat id to attempt to resume
@@ -71,14 +76,23 @@ export class Backchat {
   get pid() {
     return this.#pid
   }
-  get threadId() {
-    return this.pid.branches[2]
+  get id() {
+    const id = this.pid.branches[2]
+    if (!backchatIdRegex.test(id)) {
+      throw new Error('Invalid backchat id: ' + id)
+    }
+    return id
   }
   get machineId() {
     return this.#crypto.machineId
   }
   get homeAddress() {
     return this.#engine.homeAddress
+  }
+  async readBaseThread() {
+    const io = await this.readJSON<IoStruct>('.io.json')
+    const state = backchatStateSchema.parse(io.state)
+    return state.target
   }
   /**
    * This is the main function that is used to interact with the backchat
@@ -88,25 +102,20 @@ export class Backchat {
    * @param content The optional text that is to be parsed by the AI.  It can be
    * empty if there are files attached or to indicate a positive response to
    * something.
-   * @param threadId The thread we targeting with the prompt.  The client may
-   * have used history to navigate to a different threadId.  As soon as this is
-   * processed, the focus of backchat will be switched.
    * @param attachments The relative paths to the files that were attached with
    * the  prompt, which may include directories.  May include pointers to the
    * tmp files that are created when a user attaches files in the browser.  Can
    * also include structured data that widgets have prepared.
    */
-  async prompt(content: string, threadId?: string, attachments?: string[]) {
+  // TODO adorn with other types of input, like file paths and selections
+  async prompt(content: string, attachments?: string[]) {
     const pierce: PierceRequest = {
       target: this.#pid,
       ulid: ulid(),
       isolate: 'backchat',
       functionName: 'prompt',
       params: { content },
-      proctype: PROCTYPE.SERIAL,
-    }
-    if (threadId) {
-      pierce.params.threadId = threadId
+      proctype: Proctype.enum.SERIAL,
     }
     if (attachments) {
       pierce.params.attachments = attachments
@@ -116,13 +125,26 @@ export class Backchat {
     await this.#engine.pierce(pierce)
     await promise
   }
+  async newThread() {
+    const pierce: PierceRequest = {
+      target: this.#pid,
+      ulid: ulid(),
+      isolate: 'backchat',
+      functionName: 'create',
+      params: {},
+      proctype: Proctype.enum.SERIAL,
+    }
+    const promise = this.#watcher.watch(pierce.ulid)
+    await this.#engine.pierce(pierce)
+    return await promise
+  }
   async actions<T>(isolate: string, opts: RpcOpts = {}) {
     const { target = this.#pid, ...procOpts } = opts
     const schema = await this.apiSchema(isolate)
     const execute = (request: UnsequencedRequest) => this.#action(request)
     return toActions<T>(target, isolate, schema, procOpts, execute)
   }
-  #action(request: UnsequencedRequest) {
+  async #action(request: UnsequencedRequest) {
     // TODO if the target is this branch, convert to a direct pierce
     const pierce: PierceRequest = {
       target: this.#pid,
@@ -130,12 +152,12 @@ export class Backchat {
       isolate: 'backchat',
       functionName: 'relay',
       params: { request },
-      proctype: PROCTYPE.SERIAL,
+      proctype: Proctype.enum.SERIAL,
     }
     const promise = this.#watcher.watch(pierce.ulid)
     // TODO handle an error in pierce
-    this.#engine.pierce(pierce)
-    return promise
+    await this.#engine.pierce(pierce)
+    return await promise
   }
   ping(params?: { data?: JsonValue }) {
     return this.#engine.ping(params?.data)
@@ -150,10 +172,17 @@ export class Backchat {
     }
     return await this.#engine.transcribe(params.audio)
   }
+  /**
+   * Initialize a new repository, optionally installing an isolate with the
+   * given parameters.
+   */
   async init({ repo, isolate, params }: Init) {
     const actor = await this.#getActor()
     return actor.init({ repo, isolate, params })
   }
+  /** Clone the given repo from github, optionally installing an isolate with
+   * the given parameters
+   */
   async clone({ repo, isolate, params }: Init) {
     const actor = await this.#getActor()
     return actor.clone({ repo, isolate, params })
@@ -173,11 +202,11 @@ export class Backchat {
   }
   async lsRepos() {
     const actor = await this.#getActor()
-    return actor.lsRepos()
+    return actor.lsRepos({})
   }
   async #getActor() {
     const target = getParent(this.#pid)
-    const actor = await this.actions<ActorApi>('actors', { target })
+    const actor = await this.actions<actor.Api>('actor', { target })
     return actor
   }
   watch(pid: PID, path?: string, after?: string, signal?: AbortSignal) {
@@ -191,6 +220,20 @@ export class Backchat {
   }
   readJSON<T>(path: string, pid: PID = this.pid, commit?: string) {
     return this.#engine.readJSON<T>(path, pid, commit)
+  }
+  async readThread(pid?: PID) {
+    if (!pid) {
+      pid = await this.readBaseThread()
+    }
+    const thread = await this.readJSON(getThreadPath(pid), pid)
+    return threadSchema.parse(thread)
+  }
+  async state<T extends ZodObject<Record<string, ZodTypeAny>>>(
+    pid: PID,
+    schema: T,
+  ) {
+    const io = await this.readJSON<IoStruct>('.io.json', pid)
+    return schema.parse(io.state) as z.infer<T>
   }
   exists(path: string, pid: PID = this.pid) {
     return this.#engine.exists(path, pid)
@@ -206,7 +249,7 @@ export class Backchat {
     const actions = await this.actions<Files>('files', { target })
     return actions.rm({ path })
   }
-  async ls(path: string = '.', target: PID = this.pid) {
+  async ls({ path = '.', target = this.pid }: { path?: string; target?: PID }) {
     const actions = await this.actions<Files>('files', { target })
     return actions.ls({ path })
   }

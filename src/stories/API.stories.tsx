@@ -14,14 +14,13 @@ const log = Debug('AI:API')
 const url = import.meta.env.VITE_API_URL
 
 const PingButton = () => {
-  const session = useBackchat()
-  log('session', session)
-  log('session %s', print(session.pid))
+  const backchat = useBackchat()
+  log('backchat', backchat)
+  log('backchat %s', print(backchat.pid))
   const ping = usePing()
   const [latency, setLatency] = useState(0)
-  const { focusId, ...backchatData } = useBackchatThread()
-  log('focusId', focusId)
-  log('backchatData', backchatData)
+  const thread = useBackchatThread()
+  log('thread', thread)
 
   const onClick = useCallback(async () => {
     log('ping')

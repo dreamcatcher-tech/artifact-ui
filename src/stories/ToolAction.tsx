@@ -1,4 +1,4 @@
-import { FC, useMemo } from 'react'
+import { FC } from 'react'
 import remarkGfm from 'remark-gfm'
 import Markdown from 'react-markdown'
 import Card from '@mui/material/Card'
@@ -29,7 +29,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
     const { id, function: func } = tool_call
     const { name, arguments: args } = func
     const data = tryParse(args)
-    const output = useMemo(() => findOutput(messages, id), [messages, id])
+    const output = findOutput(messages, id)
     return (
       <Card key={key}>
         <CardHeader
@@ -68,11 +68,14 @@ const findOutput = (messages: MessageParam[], id: string) => {
       return tryParse(message.content)
     }
   }
+  return null
 }
 const tryParse = (value: string) => {
   try {
     return JSON.parse(value)
-  } catch (e) {
-    return value
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return value === undefined ? null : value
+    }
   }
 }

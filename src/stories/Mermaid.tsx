@@ -1,22 +1,19 @@
-import Debug from 'debug'
 import React, { useEffect, useRef, useState } from 'react'
-import { Components } from 'react-markdown'
-import type { Mermaid } from 'mermaid'
+import type { Mermaid as MermaidType } from 'mermaid'
 
 const getMermaid = () => {
-  const { mermaid } = globalThis as unknown as { mermaid: Mermaid }
+  const { mermaid } = globalThis as unknown as { mermaid: MermaidType }
   if (!mermaid) {
     throw new Error('Mermaid is not loaded')
   }
   return mermaid
 }
-const log = Debug('AI:Mermaid')
 
 interface MermaidProps {
   chart: string
 }
 
-const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
+export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
   const mermaid = getMermaid()
   const chartRef = useRef<HTMLDivElement>(null)
   const [raw, setRaw] = useState(true)
@@ -30,7 +27,7 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       .catch(() => {
         setRaw(true)
       })
-  }, [chart])
+  }, [mermaid, chart])
 
   useEffect(() => {
     const element = chartRef.current
@@ -38,25 +35,11 @@ const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       return
     }
     mermaid.run({ nodes: [element] })
-  }, [raw])
+  }, [mermaid, raw])
 
   return (
     <div ref={chartRef} className='mermaid'>
       {chart}
     </div>
   )
-}
-
-export const renderers: Partial<Components> = {
-  code: ({ node, className, children, ...props }) => {
-    const match = /language-(mermaid)/.exec(className || '')
-    log('code:', { node, className, children, props }, 'match:', match)
-    return match ? (
-      <Mermaid chart={String(children).replace(/\n$/, '')} />
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    )
-  },
 }

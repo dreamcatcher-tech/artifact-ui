@@ -18,32 +18,25 @@ const meta: Meta<typeof Input> = {
       await new Promise((resolve) => setTimeout(resolve, 500))
       return 'Hello'
     },
-    handleBackchat: () => {
-      console.log('backchat')
-    },
   },
 }
 export default meta
 
 type Story = StoryObj<typeof Input>
 
+export const Ready: Story = {}
 export const Loading: Story = {
   args: {
     prompt: undefined,
     transcribe: undefined,
   },
 }
-export const Ready: Story = {}
 export const Attachments: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const attach = canvas.getByLabelText('SpeedDial')
     await userEvent.click(attach)
   },
-}
-export const NoBackchat: Story = {
-  args: { handleBackchat: undefined },
-  play: Attachments.play,
 }
 export const Narrow: Story = {
   parameters: {

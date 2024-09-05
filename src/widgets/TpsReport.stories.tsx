@@ -8,12 +8,6 @@ const meta: Meta<typeof TpsReport> = {
   args: { tpsReport },
 }
 
-interface WidgetArgs {
-  // either put it in a provider, or pass it props to use
-  // provider seems easiest, allowing same functions as core, but with
-  // restricted scope
-}
-
 export default meta
 type Story = StoryObj<typeof TpsReport>
 

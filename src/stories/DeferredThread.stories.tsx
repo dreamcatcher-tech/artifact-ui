@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import BackchatDialog from './Backchat.tsx'
+import DeferredDialog from './DeferredThread.tsx'
 import { splice, longThread } from '../data.ts'
 import { useEffect, useState } from 'react'
 
-type Story = StoryObj<typeof BackchatDialog>
+type Story = StoryObj<typeof DeferredDialog>
 
-const meta: Meta<typeof BackchatDialog> = {
-  title: 'Backchat',
-  component: BackchatDialog,
-  args: { open: true },
+const meta: Meta<typeof DeferredDialog> = {
+  title: 'Deferred Thread',
+  component: DeferredDialog,
+  args: { open: true, thread: longThread, splice },
 }
 export default meta
 
@@ -29,11 +29,9 @@ export const Narrow: Story = {
     },
   },
 }
-export const Long: Story = {
-  args: { thread: longThread },
-}
+export const Long: Story = {}
 export const Slideshow: Story = {
-  render: () => {
+  render: ({ thread, splice }) => {
     const [open, setOpen] = useState(true)
     useEffect(() => {
       let state = true
@@ -45,11 +43,10 @@ export const Slideshow: Story = {
     })
 
     return (
-      <BackchatDialog
+      <DeferredDialog
         handleClose={() => setOpen(false)}
         open={open}
-        thread={longThread}
-        threadId='123'
+        thread={thread}
         splice={splice}
       />
     )

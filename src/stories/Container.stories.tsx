@@ -2,9 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react'
 import Container from './Container.tsx'
 import { shortBackchat, splice, shortThread, longThread } from '../data.ts'
 import { ThreeBoxProps } from './ThreeBox.tsx'
-const focus: ThreeBoxProps = {
+const deferred: ThreeBoxProps = {
   thread: shortThread,
-  threadId: 'testThreadId',
   splice,
   inputProps: {
     prompt: async (text: string) => {
@@ -20,23 +19,21 @@ const meta: Meta<typeof Container> = {
   title: 'Container',
   component: Container,
   args: {
-    focus,
-    backchat: { ...focus, thread: shortBackchat },
+    deferred,
+    backchat: { ...deferred, thread: shortBackchat },
   },
 }
 export default meta
 
 export const Basic: Story = {}
-const backchatThreadId = 'backchatThreadId'
-export const Backchat: Story = {
+export const Deferred: Story = {
   args: {
-    focus,
+    deferred: deferred,
     backchat: {
       thread: longThread,
-      threadId: backchatThreadId,
       splice,
     },
-    showBackchat: true,
+    showDeferred: true,
   },
 }
 export const Narrow: Story = {

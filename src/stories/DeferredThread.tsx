@@ -19,12 +19,12 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction='up' ref={ref} {...props} />
 })
 
-export interface BackchatDialogProps extends ThreeBoxProps {
+export interface DeferredDialogProps extends ThreeBoxProps {
   open: boolean
   handleClose: () => void
 }
 
-const BackchatDialog: React.FC<BackchatDialogProps> = (props) => {
+const DeferredDialog: React.FC<DeferredDialogProps> = (props) => {
   const { open, handleClose, ...threeBox } = props
 
   return (
@@ -47,7 +47,7 @@ const BackchatDialog: React.FC<BackchatDialogProps> = (props) => {
             <CloseIcon />
           </IconButton>
           <Typography sx={{ ml: 2, flex: 1 }} variant='h6' component='div'>
-            Backchat 🤖
+            Deferred Thread 🤖
           </Typography>
         </Toolbar>
       </AppBar>
@@ -58,4 +58,4 @@ const BackchatDialog: React.FC<BackchatDialogProps> = (props) => {
   )
 }
 
-export default BackchatDialog
+export default DeferredDialog

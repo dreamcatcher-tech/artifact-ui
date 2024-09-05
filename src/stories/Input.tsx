@@ -13,15 +13,15 @@ import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import MicIcon from '@mui/icons-material/Mic'
 import Link from '@mui/icons-material/Link'
-import Terminal from '@mui/icons-material/Terminal'
+// import Terminal from '@mui/icons-material/Terminal'
 import Image from '@mui/icons-material/Image'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 import Text from '@mui/icons-material/TextSnippet'
-import { Box, Stack } from '@mui/material'
+import { Box } from '@mui/material'
 import { ClickAwayListener } from '@mui/base/ClickAwayListener'
-import StateboardIcon from '@mui/icons-material/Monitor'
-import MessageIcon from '@mui/icons-material/Forum'
+// import StateboardIcon from '@mui/icons-material/Monitor'
+// import MessageIcon from '@mui/icons-material/Forum'
 
 const debug = Debug('AI:Input')
 const turndown = new TurndownService()
@@ -45,10 +45,7 @@ const Mic: FC<MicProps> = ({ onEvent, disabled }) => (
   </IconButton>
 )
 
-const AttachMenu: FC<{ disabled: boolean; handleBackchat: () => void }> = ({
-  disabled,
-  handleBackchat,
-}) => {
+const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
   })
@@ -58,7 +55,6 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat: () => void }> = ({
   const actions = []
   const onClick = () => {}
   actions.push(
-    { icon: <Terminal />, name: 'Backchat', onClick: handleBackchat },
     { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
     { icon: <Text />, name: 'Text', onClick },
     { icon: <Image />, name: 'Image', onClick },
@@ -103,19 +99,11 @@ export interface InputProps {
   prompt?: (text: string) => Promise<void>
   transcribe?: (audio: File) => Promise<string>
   onRecording?: (isRecording: boolean) => void
-  handleBackchat?: () => void
   preload?: string
   presubmit?: boolean
 }
 const Input: FC<InputProps> = (props) => {
-  const {
-    prompt,
-    transcribe,
-    onRecording,
-    handleBackchat,
-    preload,
-    presubmit,
-  } = props
+  const { prompt, transcribe, onRecording, preload, presubmit } = props
   const [error, setError] = useState()
   if (error) {
     throw error
@@ -129,7 +117,9 @@ const Input: FC<InputProps> = (props) => {
     useAudioRecorder()
   const start = useCallback(() => {
     startRecording()
-    onRecording && onRecording(true)
+    if (onRecording) {
+      onRecording(true)
+    }
     setDisabled(true)
   }, [startRecording, onRecording])
 
@@ -177,7 +167,9 @@ const Input: FC<InputProps> = (props) => {
         if (!active) {
           return
         }
-        onRecording && onRecording(false)
+        if (onRecording) {
+          onRecording(false)
+        }
         setDisabled(false)
       })
     return () => {
@@ -211,9 +203,9 @@ const Input: FC<InputProps> = (props) => {
         )}
       </InputAdornment>
     ),
-    startAdornment: handleBackchat && (
+    startAdornment: (
       <InputAdornment position='start'>
-        <AttachMenu disabled={disabled} handleBackchat={handleBackchat} />
+        <AttachMenu disabled={disabled} />
       </InputAdornment>
     ),
   }
@@ -305,28 +297,21 @@ const Input: FC<InputProps> = (props) => {
   )
 
   return (
-    <Stack>
-      {/* <div>asdf</div>
-      <IconButton color='primary'>
-        <MessageIcon />
-      </IconButton>
-      <IconButton color='primary' aria-label='add to shopping cart'>
-        <StateboardIcon />
-      </IconButton> */}
-      <TextField
-        inputRef={ref}
-        value={disabled ? '' : value}
-        multiline
-        fullWidth
-        variant='outlined'
-        placeholder={placeholder}
-        InputProps={inputProps}
-        onChange={(e) => setValue(e.target.value)}
-        disabled={disabled}
-        onKeyDown={onKeyDown}
-        onPaste={handlePaste}
-      />
-    </Stack>
+    <TextField
+      inputRef={ref}
+      value={disabled ? '' : value}
+      multiline
+      fullWidth
+      variant='outlined'
+      placeholder={placeholder}
+      onChange={(e) => setValue(e.target.value)}
+      disabled={disabled}
+      onKeyDown={onKeyDown}
+      onPaste={handlePaste}
+      slotProps={{
+        input: inputProps,
+      }}
+    />
   )
 }
 

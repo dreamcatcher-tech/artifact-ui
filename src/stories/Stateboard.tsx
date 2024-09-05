@@ -2,9 +2,11 @@ import { FC } from 'react'
 import Debug from 'debug'
 const debug = Debug('AI:Stateboard')
 
-interface StateboardProps {}
+interface StateboardProps {
+  show: boolean
+}
 
-const Stateboard: FC<StateboardProps> = (props) => {
+const Stateboard: FC<StateboardProps> = () => {
   debug('Stateboard')
   // watch a specific file that indicates what to draw on the stateboard.
   // then interpret that file to look up other files
@@ -16,7 +18,7 @@ const Stateboard: FC<StateboardProps> = (props) => {
   // if datum then show markdown text
   // if geometry show on a map
 
-  return <div>meow</div>
+  return <div>test stateboard</div>
 }
 
 export default Stateboard

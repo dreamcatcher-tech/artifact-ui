@@ -6,20 +6,15 @@ import Debug from 'debug'
 import Messages from './Messages.tsx'
 import ThreadInfo from './ThreadInfo.tsx'
 import { Splice, Thread } from '../constants.ts'
-import Paper from '@mui/material/Paper'
-import Stateboard from './Stateboard.tsx'
 
 const log = Debug('AI:ThreeBox')
 export interface ThreeBoxProps {
-  threadId?: string
   thread?: Thread
   splice?: Splice
   inputProps?: InputProps
-  handleBackchat?: () => void
 }
 
-const ThreeBox: FC<ThreeBoxProps> = (props) => {
-  const { threadId, thread, splice, inputProps, handleBackchat } = props
+const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
   const messages = thread?.messages || []
   log('messages', messages)
   return (
@@ -27,8 +22,7 @@ const ThreeBox: FC<ThreeBoxProps> = (props) => {
       sx={{
         display: 'flex',
         flexDirection: 'row',
-        // height: '100%',
-        // width: '100%',
+        flexGrow: 1,
         justifyContent: 'center',
       }}
     >
@@ -37,17 +31,22 @@ const ThreeBox: FC<ThreeBoxProps> = (props) => {
         alignItems='flex-start'
         justifyContent='flex-end'
         pb={3}
-        sx={{ minHeight: '100%', maxWidth: '800px', width: '100%' }}
+        sx={{
+          minHeight: '100%',
+          maxWidth: '800px',
+          width: '100%',
+          flexGrow: 1,
+        }}
       >
         <Messages thread={thread} />
-        <Input {...inputProps} handleBackchat={handleBackchat} />
-        <ThreadInfo threadId={threadId} splice={splice} />
+        <Input {...inputProps} />
+        <ThreadInfo splice={splice} />
       </Stack>
-      <Box sx={{ flexGrow: 1, p: 1 }}>
+      {/* <Box sx={{ flexGrow: 1, p: 1 }}>
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
           <Stateboard />
         </Paper>
-      </Box>
+      </Box> */}
     </Box>
   )
 }

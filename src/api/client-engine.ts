@@ -5,7 +5,6 @@ import {
   backchatIdRegex,
   EngineInterface,
   freezePid,
-  JSONSchemaType,
   JsonValue,
   Params,
   PID,
@@ -23,7 +22,7 @@ export class WebClientEngine implements EngineInterface {
     init?: RequestInit,
   ) => Promise<Response>
   readonly #homeAddress: PID
-  readonly #schemas = new Map<string, JSONSchemaType<object>>()
+  readonly #schemas = new Map<string, object>()
   private constructor(url: string, fetcher: typeof fetch, homeAddress: PID) {
     if (url.endsWith('/')) {
       throw new Error('url should not end with "/": ' + url)

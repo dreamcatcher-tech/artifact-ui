@@ -1,6 +1,5 @@
+import { md5 } from './types.ts'
 import { z } from 'zod'
-
-const md5 = z.string().regex(/^[a-f0-9]{40}$/, 'Invalid MD5 hash')
 
 export const outcome = z
   .object({
@@ -8,17 +7,17 @@ export const outcome = z
       'the chain of thought reasoning for how the outcome was reached',
     ),
     outcome: z.boolean().describe(
-      'the outcome of the test compared with the expectation',
+      'the outcome of the test iteration, true if the expectation was met, false if it was not',
     ),
     analysis: z.array(z.string()).optional().describe(
-      'the step by step analysis of WHY the system prompt of the agent under test did meet the expectation as well as it could have',
+      'the step by step analysis of WHY the system prompt of the agent under test did NOT perform as well in the outcome as it could have',
     ),
     improvements: z.array(z.string()).optional().describe(
-      'the improvement(s) to the agent prompt that would have resulted in better performance against the expectation',
+      'the improvement(s) to the agent prompt that would have resulted in better performance to reach the outcome',
     ),
   })
   .describe(
-    'After a single test iteration is assessed, along with chain of thought reasoning for how the outcome was reached',
+    'The assessment outcome of a single test iteration, including reasoning, analysis, and improvements',
   )
 
 export type TestIteration = z.infer<typeof testIteration>
@@ -206,11 +205,12 @@ export const addTest = (
 
 export const addIteration = (
   base: TestFile,
-  index: number,
+  caseIndex: number,
+  iterationIndex: number,
   iteration: TestIteration,
 ) => {
   const copy = testFile.parse(base)
-  const test = copy.cases[index]
+  const test = copy.cases[caseIndex]
   test.summary.completed++
   test.summary.elapsed = Date.now() - test.summary.timestamp
   iteration.outcomes.forEach(({ outcome }, index) => {
@@ -218,7 +218,7 @@ export const addIteration = (
       test.summary.successes[index]++
     }
   })
-  test.iterations.push(iteration)
+  test.iterations[iterationIndex] = iteration
   let leastCompleted = Number.MAX_SAFE_INTEGER
   for (const _test of copy.cases) {
     if (_test.summary.completed < leastCompleted) {

@@ -4,7 +4,7 @@ import { Splice, Thread } from './constants.ts'
 export const longThread: Thread = {
   toolCommits: {},
   messageOffset: 0,
-  foci: [],
+  focusedFiles: [],
   stateboards: [],
   messages: [
     {

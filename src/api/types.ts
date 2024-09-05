@@ -1,13 +1,10 @@
 // copied from the artifact project
 import { Chalk } from 'chalk'
-import { z } from 'zod'
-export type {
-  ChatCompletionAssistantMessageParam,
-  ChatCompletionMessageParam,
-} from './zod.ts'
+import { z, ZodSchema } from 'zod'
+export type { AssistantMessage, CompletionMessage } from './zod.ts'
+import { completionMessage } from './zod.ts'
 import { ripemd160 } from '@noble/hashes/ripemd160'
 import { base32crockford } from '@scure/base'
-import { JSONSchemaType } from './types.ajv.ts'
 import type { Backchat } from './client-backchat.ts'
 import { assert } from '@sindresorhus/is'
 import type OpenAI from 'openai'
@@ -15,16 +12,12 @@ import type OpenAI from 'openai'
 type CommitOid = string
 
 export { Backchat }
-export enum PROCTYPE {
-  SERIAL = 'SERIAL',
-  BRANCH = 'BRANCH',
-  DAEMON = 'DAEMON',
-  EFFECT = 'EFFECT',
-  // TODO FORGET = 'FORGET', // allow fire and forget actions
-  // BUT forget needs to be a separate option as we need DAEMON and FORGET
-  // together to allow for a fire and forget branches
-  // OR make DAEMON be the same as FORGET since no new info need be returned ?
-}
+export const Proctype = z.enum(['SERIAL', 'BRANCH', 'DAEMON', 'EFFECT'])
+// TODO FORGET = 'FORGET', // allow fire and forget actions
+// BUT forget needs to be a separate option as we need DAEMON and FORGET
+// together to allow for a fire and forget branches
+// OR make DAEMON be the same as FORGET since no new info need be returned ?
+
 export const WIDGETS = z.enum([
   'TPS_REPORT',
   'FILES',
@@ -34,8 +27,29 @@ export const WIDGETS = z.enum([
   'THREADS',
   'REPOS',
 ])
+export const md5 = z.string().regex(/^[a-f0-9]{40}$/, 'Invalid MD5 hash')
+export const githubRegex = /^[a-zA-Z\d](?:[a-zA-Z\d]|[-.](?=[a-zA-Z\d])){0,38}$/
+export const repoIdRegex = /^rep_[0-9A-HJKMNP-TV-Z]{16}$/
+export const machineIdRegex = /^mac_[2-7a-z]{33}$/
+export const actorIdRegex = /^act_[0-9A-HJKMNP-TV-Z]{16}$/
+export const backchatIdRegex = /^bac_[0-9A-HJKMNP-TV-Z]{16}$/
+export const threadIdRegex = /^the_[0-9A-HJKMNP-TV-Z]{16}$/
+export const agentHashRegex = /^age_[0-9A-HJKMNP-TV-Z]{16}$/
 
-export type { JSONSchemaType }
+export const SU_ACTOR = 'act_0000000000000000'
+export const SU_BACKCHAT = 'bac_0000000000000000'
+export const zodPid = z.object({
+  repoId: z.string().regex(repoIdRegex),
+  account: z.string().regex(githubRegex),
+  repository: z.string().regex(githubRegex),
+  branches: z.array(z.string()).min(1),
+})
+export const triad = z.object({
+  path: z.string(),
+  pid: zodPid,
+  commit: z.string(),
+})
+export type Triad = z.infer<typeof triad>
 export type ApiFunction = {
   (): unknown | Promise<unknown>
   (...args: [{ [key: string]: unknown }]): unknown | Promise<unknown>
@@ -43,27 +57,7 @@ export type ApiFunction = {
 export type ApiFunctions = {
   [key: string]: ApiFunction
 }
-type RepoParams = { repo: string; isolate?: string; params?: Params }
-export type ActorApi = {
-  backchat: (params: { backchatId: string; machineId?: string }) => Promise<PID>
-  thread: (params: { threadId: string }) => Promise<PID>
-  /** Clones from github, using the github PAT (if any) for the calling machine.
-   * Updates the repo.json file in the actor branch to point to the new PID of
-   * the clone.
-   */
-  clone: (params: RepoParams) => Promise<PidHead>
 
-  init: (params: RepoParams) => Promise<PidHead>
-
-  rm: (
-    params: { repo?: string; all?: boolean },
-  ) => Promise<{ reposDeleted: number }>
-
-  /**
-   * List all the repos that this Actor has created.
-   */
-  lsRepos: (params: void) => Promise<string[]>
-}
 export type IsolateReturn = JsonValue | undefined | void
 export type ProcessOptions = {
   /**
@@ -123,6 +117,11 @@ export type IoStruct = {
   branches: {
     [sequence: number]: BranchName
   }
+  /**
+   * Isolates can store values here and know they will not leak into other
+   * branches, and will be quick to access since the io file is always loaded.
+   */
+  state: { [key: string]: JsonValue }
 }
 type BranchName = string
 
@@ -131,7 +130,7 @@ export type DispatchFunctions = {
 }
 
 export type IsolateApiSchema = {
-  [key: string]: JSONSchemaType<object>
+  [key: string]: object
 }
 export type SerializableError = {
   name: string
@@ -143,16 +142,18 @@ export const ENTRY_BRANCH = 'main'
 
 export type PartialPID = Omit<PID, 'repoId'>
 
-import { ChatCompletionMessageParamSchema } from './zod.ts'
-export const thread = z.object({
+export const threadSchema = z.object({
+  /** If this thread is deferring to another thread, rather than taking on the
+   * the current messages directly */
+  defer: zodPid.optional(),
   /** If the messages were truncated, this is the offset count */
   messageOffset: z.number(),
-  messages: z.array(ChatCompletionMessageParamSchema),
+  messages: z.array(completionMessage),
   toolCommits: z.record(
     /** The tool call id */
     z.string(),
     /** The commit hash the tool ended on */
-    z.string(),
+    md5,
   ),
   /** Have any files been changed in this threads branch */
   isDirty: z.boolean().optional(),
@@ -176,20 +177,19 @@ export const thread = z.object({
     setter: z.number(),
     commit: z.string(),
   })),
-  /** History of what the focus was set to */
-  foci: z.array(z.object({
+  /** History of what the focus file path was set to (like the CWD).  Allows
+   * statements like "the previous file", "that other file", and "three files
+   * ago"  */
+  focusedFiles: z.array(z.object({
     /** The message number that set the focus */
-
     setter: z.number(),
     focus: z.object({
       // Define the structure of PathTriad here
     }),
   })),
 })
-export type Thread = z.infer<typeof thread>
-export type BackchatThread = Thread & {
-  focus: string
-}
+export type Thread = z.infer<typeof threadSchema>
+
 export type AssistantsThread = Thread & {
   externalId: string
   messages: OpenAI.Beta.Threads.Message[]
@@ -213,49 +213,52 @@ export type PierceRequest = Invocation & {
 export const isPierceRequest = (p: Request): p is PierceRequest => {
   return 'ulid' in p
 }
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | {
-    [key: string]: JsonValue
-  }
 export type Params = { [key: string]: JsonValue }
-export type Invocation = {
-  isolate: string
-  functionName: string
-  params: Params
-  proctype: PROCTYPE
+
+const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
+type Literal = z.infer<typeof literalSchema>
+export type JsonValue = Literal | { [key: string]: JsonValue } | JsonValue[]
+export const jsonSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)])
+)
+
+const invocation = z.object({
+  isolate: z.string(),
+  functionName: z.string(),
+  params: z.record(jsonSchema),
+  proctype: Proctype,
   /**
    * Allow a custom name for the new branch, if this is a branching request
    */
-  branch?: string
+  branch: z.string().optional(),
   /**
    * If the custom branch name might not be unique, a prefix can be given and
    * the sequence number will be appended to the branch name, ensuring
    * uniqueness.
    */
-  branchPrefix?: string
+  branchPrefix: z.string().optional(),
   /**
    * If the request is a branching request, this will be the name of the new
    * branch.  If the branch already exists, the request will fail.
    */
-  branchName?: string
+  branchName: z.string().optional(),
   /** Relative paths to delete in the branch */
-  deletes?: string[]
-  effect?: boolean | {
-    /** does this side effect have access to the network ? */
-    net?: boolean
-    /** does this side effect have access to the files of the repo ? */
-    files?: boolean
-    /** can this side effect make execution requests in artifact ? */
-    artifact?: boolean
-    /** Specify the maximum time to wait for this side effect to complete */
-    timeout?: number
-  }
-}
+  deletes: z.array(z.string()).optional(),
+  effect: z.union([
+    z.boolean(),
+    z.object({
+      /** does this side effect have access to the network ? */
+      net: z.boolean().optional(),
+      /** does this side effect have access to the files of the repo ? */
+      files: z.boolean().optional(),
+      /** can this side effect make execution requests in artifact ? */
+      artifact: z.boolean().optional(),
+      /** Specify the maximum time to wait for this side effect to complete */
+      timeout: z.number().optional(),
+    }),
+  ]).optional(),
+})
+export type Invocation = z.infer<typeof invocation>
 /**
  * The Process Identifier used to address a specific process branch.
  */
@@ -283,28 +286,26 @@ export type SolidRequest = Invocation & {
 export type RemoteRequest = SolidRequest & {
   commit: string
 }
-export type UnsequencedRequest = Omit<
-  RemoteRequest,
-  'sequence' | 'source' | 'commit'
->
+export type UnsequencedRequest = z.infer<typeof unsequencedRequest>
+export const unsequencedRequest = invocation.extend({ target: zodPid })
 
 export type Request = PierceRequest | SolidRequest | RemoteRequest
 
 // TODO remove this by passing ProcessOptions in with the Request
 export const getProcType = (procOpts?: ProcessOptions) => {
   if (!procOpts) {
-    return PROCTYPE.SERIAL
+    return Proctype.enum.SERIAL
   }
   if (procOpts.noClose) {
-    return PROCTYPE.DAEMON
+    return Proctype.enum.DAEMON
   }
   if (
     procOpts.deletes || procOpts.branch || procOpts.branchName ||
     procOpts.prefix
   ) {
-    return PROCTYPE.BRANCH
+    return Proctype.enum.BRANCH
   }
-  return PROCTYPE.SERIAL
+  return Proctype.enum.SERIAL
 }
 /** Here is where additional AI models and runner techniques can be added */
 export enum AGENT_RUNNERS {
@@ -408,8 +409,7 @@ export type CommitObject = {
   gpgsig?: string
 }
 
-type ApiSchema = Record<string, JSONSchemaType<object>>
-type PidHead = { pid: PID; head: string }
+type ApiSchema = Record<string, object>
 
 export interface EngineInterface {
   /**
@@ -592,16 +592,6 @@ const checkUndefined = (params: Params) => {
     }
   }
 }
-export const githubRegex = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i
-export const repoIdRegex = /^rep_[0-9A-HJKMNP-TV-Z]{16}$/
-export const machineIdRegex = /^mac_[2-7a-z]{33}$/
-export const actorIdRegex = /^act_[0-9A-HJKMNP-TV-Z]{16}$/
-export const backchatIdRegex = /^bac_[0-9A-HJKMNP-TV-Z]{16}$/
-export const threadIdRegex = /^the_[0-9A-HJKMNP-TV-Z]{16}$/
-export const agentHashRegex = /^age_[0-9A-HJKMNP-TV-Z]{16}$/
-
-export const SU_ACTOR = 'act_0000000000000000'
-export const SU_BACKCHAT = 'bac_0000000000000000'
 
 export const generateActorId = (seed: string) => {
   return 'act_' + hash(seed)
@@ -717,21 +707,11 @@ export const getContent = (message: AssistantsThread['messages'][number]) => {
   return content[0].text.value
 }
 export const getThreadPath = (pid: PID) => {
-  const threadId = getBaseName(pid)
-  return `threads/${threadId}.json`
+  const [, , ...actorChildBranches] = pid.branches
+  const threadPath = actorChildBranches.join('/')
+  const path = `threads/${threadPath}.json`
+  return path
 }
-export const zodPid = z.object({
-  repoId: z.string().regex(repoIdRegex),
-  account: z.string().regex(githubRegex),
-  repository: z.string().regex(githubRegex),
-  branches: z.array(z.string()).min(1),
-})
-export const triad = z.object({
-  path: z.string(),
-  pid: zodPid,
-  commit: z.string(),
-})
-export type Triad = z.infer<typeof triad>
 
 export const agent = z.object({
   name: z.string().regex(/^[a-zA-Z0-9_-]+$/),
@@ -741,10 +721,10 @@ export const agent = z.object({
     model: z.enum(['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini']),
     temperature: z.number().gte(0).lte(2).optional(),
     presence_penalty: z.number().optional(),
-    tool_choice: z.enum(['auto', 'none', 'required']).describe(
+    tool_choice: z.enum(['auto', 'none', 'required']).optional().describe(
       'control model behaviour to force it to call a tool or no tool',
     ),
-    parallel_tool_calls: z.boolean().describe(
+    parallel_tool_calls: z.boolean().optional().describe(
       'Is the model permitted to call more than one function at a time.  Must be false to use strict function calling',
     ),
   }),
@@ -753,3 +733,30 @@ export const agent = z.object({
   instructions: z.string().max(256000),
 })
 export type Agent = z.infer<typeof agent>
+
+export const chatParams = agent.shape.config.extend({
+  messages: z.array(completionMessage),
+  seed: z.literal(1337),
+  tools: z.array(z.object({
+    type: z.literal('function'),
+    function: z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      parameters: z.object({}).passthrough().optional(),
+      strict: z.boolean().optional().nullable(),
+    }),
+  })).optional(),
+})
+export type ChatParams = z.infer<typeof chatParams>
+export const backchatStateSchema = z.object({
+  /** The base thread that this backchat session points to - the thread of last resort */
+  target: zodPid,
+})
+export type ToApiType<
+  P extends Record<string, ZodSchema>,
+  R extends { [K in keyof P]: ZodSchema },
+> = {
+  [K in keyof P]: (
+    params: z.infer<P[K]>,
+  ) => z.infer<R[K]> | Promise<z.infer<R[K]>>
+}

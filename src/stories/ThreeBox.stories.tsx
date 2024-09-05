@@ -7,7 +7,6 @@ const meta: Meta<typeof ThreeBox> = {
   component: ThreeBox,
   args: {
     thread: blankThread,
-    threadId: 'testThreadId',
     inputProps: {
       prompt: async (text: string) => {
         console.log('prompt', text)
@@ -33,7 +32,6 @@ export const Short: Story = {
 export const Long: Story = {
   args: {
     thread: longThread,
-    threadId: 'testThreadId',
   },
 }
 

@@ -7,44 +7,43 @@ import {
 } from './react/hooks.ts'
 import Container from './stories/Container.tsx'
 import { ThreeBoxProps } from './stories/ThreeBox.tsx'
+import { getThreadPath, PathTriad, PID } from './constants.ts'
 const log = Debug('AI:App')
 Debug.enable('AI:App AI:hooks')
 
-// export interface ThreeBoxProps {
-//   threadId: string
-//   thread: Thread
-//   splice: Splice
-//   md?: string
-//   inputProps?: InputProps
-//   handleBackchat?: () => void
-// }
-
 function App() {
-  const { focusId, ...backchatData } = useBackchatThread()
-  const focusData = useThread(focusId)
-  const showBackchat = !focusId || focusId === backchatData.threadId
-  const prompt = usePrompt(focusId)
+  const { thread, splice } = useBackchatThread()
+  const deferredTriad = getTriad(thread?.defer)
+  const deferredThread = useThread(deferredTriad)
+  const prompt = usePrompt()
   const transcribe = useTranscribe()
-  const focus: ThreeBoxProps = {
-    ...focusData,
+
+  const backchat = { inputProps: { prompt, transcribe }, thread, splice }
+
+  const deferred: ThreeBoxProps = {
     inputProps: { prompt, transcribe },
+    thread: deferredThread.thread,
+    splice: deferredThread.splice,
   }
-  log('focus id:', focusId)
 
-  const backchatPrompt = usePrompt(backchatData.threadId)
-  const backchat: ThreeBoxProps = {
-    ...backchatData,
-    inputProps: { transcribe, prompt: backchatPrompt },
-  }
-  log('backchat prompt id:', backchatData.threadId)
-
-  log('backchat data', backchatData)
-  log('focus data', focusData)
-  log('showBackchat', showBackchat)
+  log('showBackchat', !deferred)
 
   return (
-    <Container focus={focus} backchat={backchat} showBackchat={showBackchat} />
+    <Container
+      backchat={backchat}
+      deferred={deferred}
+      showDeferred={!deferred}
+    />
   )
 }
 
 export default App
+
+const getTriad = (defer?: PID) => {
+  if (!defer) {
+    return
+  }
+  const path = getThreadPath(defer)
+  const triad: PathTriad = { path, pid: defer }
+  return triad
+}

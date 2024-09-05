@@ -1,41 +1,35 @@
 import ThreeBox, { type ThreeBoxProps } from './ThreeBox.tsx'
-import BackchatDialog from './Backchat.tsx'
+import DeferredDialog from './DeferredThread.tsx'
 import { FC, useCallback, useEffect, useState } from 'react'
 
 export interface ContainerProps {
-  focus: ThreeBoxProps
+  deferred: ThreeBoxProps
   backchat: ThreeBoxProps
-  showBackchat: boolean
+  showDeferred: boolean
 }
-const Container: FC<ContainerProps> = ({ focus, backchat, showBackchat }) => {
-  // if the top changes whether we should
-  // if we are at the history tip, then we should follow the top level changes
-  // but only if the top level switches
+const Container: FC<ContainerProps> = ({
+  deferred,
+  backchat,
+  showDeferred,
+}) => {
+  const [open, setOpen] = useState(showDeferred)
+
   useEffect(() => {
-    if (showBackchat) {
+    if (showDeferred) {
       setOpen(true)
     } else {
       setOpen(false)
     }
-    console.log('show backchat changed:', showBackchat)
-  }, [showBackchat])
+    console.log('show backchat changed:', showDeferred)
+  }, [showDeferred])
 
-  const [open, setOpen] = useState(showBackchat)
   const handleClose = useCallback(() => setOpen(false), [setOpen])
-  const handleBackchat = useCallback(() => {
-    console.log('handle backchat')
-    setOpen(true)
-  }, [setOpen])
-  console.log('open:', open)
   return (
     <>
-      <ThreeBox {...focus} handleBackchat={handleBackchat} />
-      <BackchatDialog {...{ open, handleClose, ...backchat }} />
+      <ThreeBox {...backchat} />
+      <DeferredDialog {...{ open, handleClose, ...deferred }} />
     </>
   )
 }
 
 export default Container
-
-// if there was just a single set of stories, and we make data for all of them,
-// then generate whatever we can at the top level
