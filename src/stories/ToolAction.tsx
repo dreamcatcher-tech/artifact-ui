@@ -77,7 +77,7 @@ const tryParse = (value: string) => {
   }
 }
 
-const Output: FC<{ output: any }> = ({ output }) => {
+const Output: FC<{ output: unknown }> = ({ output }) => {
   if (output !== null && typeof output === 'object') {
     return <ReactJson src={output} quotesOnKeys={false} name={false} />
   }

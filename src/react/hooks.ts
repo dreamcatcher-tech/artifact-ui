@@ -124,6 +124,9 @@ export const useBackchatThread = () => {
 
   useEffect(() => {
     // BUT this needs to be watching the state in backchat, to detect changes
+    // const path = '.io.json'
+    // const { pid } = backchat
+    // const io = useArtifactJSON({ pid, path }, ioSt)
     let active = true
     backchat
       .readBaseThread()
