@@ -13,6 +13,7 @@ Debug.enable('AI:App AI:hooks')
 
 function App() {
   const { thread, splice } = useBackchatThread()
+  console.log('thread', thread)
   const deferredTriad = getTriad(thread?.defer)
   const deferredThread = useThread(deferredTriad)
   const prompt = usePrompt()

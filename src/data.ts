@@ -282,3 +282,162 @@ export const tpsReport: TestFile = {
     },
   ],
 }
+
+export const testThread: Thread = {
+  messageOffset: 0,
+  messages: [
+    {
+      content: 'run the test tests/meetings.test.md',
+      role: 'user',
+      name: 'act_M3713D0B1P0694RJ',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/switchboard.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_0WWV5gpdcFEmswn4M8TwJFEa',
+          type: 'function',
+          function: {
+            name: 'agents_switch',
+            arguments:
+              '{"reasoning":["The prompt is focused on running a specific test file, which is not within the capabilities of the current agent.","The task requires execution of a test file and reporting on its results, which is the specialty of the test file runner agent."],"path":"agents/test-file-runner.md"}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: 'null',
+      tool_call_id: 'call_0WWV5gpdcFEmswn4M8TwJFEa',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/test-file-runner.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_cspz2RlefToMPwhqbNxRg0ed',
+          type: 'function',
+          function: {
+            name: 'files_read',
+            arguments:
+              '{"reasoning":["I need to read the contents of the test file \'tests/meetings.test.md\' to identify the test cases, prompts, and expectations in order to set up the TPS report and run the tests."],"path":"tests/meetings.test.md"}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content:
+        '---\ntarget: agents/meetings.md\nassessor: agents/test-assessor.md\n---\n\n# Summarize youtube video\n\nGiven the youtube url, analyze the transcript\n\n**Prompts:**\n\n- Analyze https://www.youtube.com/watch?v=m_mB_7-W3lc - what are the next steps\n  to be taken ? Give me a list of any questions that were asked but not\n  answered, any ambiguities, any logical fallacies, and any time where a similar\n  topic was talked about but which a different definition appeared to be used.\n\n**Expectations:**\n\n- says something about a test framework\n',
+      tool_call_id: 'call_cspz2RlefToMPwhqbNxRg0ed',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/test-file-runner.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_ZyWbLykpjRPu0Dt76dbppvTk',
+          type: 'function',
+          function: {
+            name: 'tps-report_upsert',
+            arguments:
+              '{"testPath": "tests/meetings.test.md", "agent": "agents/meetings.md", "assessor": "agents/test-assessor.md", "iterations": 1}',
+          },
+        },
+        {
+          id: 'call_qbsHCpUQvue3yFsQaZoPoyqU',
+          type: 'function',
+          function: {
+            name: 'tps-report_addCase',
+            arguments:
+              '{"testPath": "tests/meetings.test.md", "name": "Summarize youtube video", "promptChains": [["Analyze https://www.youtube.com/watch?v=m_mB_7-W3lc - what are the next steps to be taken ? Give me a list of any questions that were asked but not answered, any ambiguities, any logical fallacies, and any time where a similar topic was talked about but which a different definition appeared to be used."]], "expectations": ["says something about a test framework"]}',
+          },
+        },
+        {
+          id: 'call_QE27sPhSmk7tUKR0ZBuQcERV',
+          type: 'function',
+          function: {
+            name: 'tps-report_confirmCaseCount',
+            arguments:
+              '{"testPath": "tests/meetings.test.md", "reasoning": ["The test file contains one test case titled \'Summarize youtube video\'", "I have added one test case to the TPS report based on the contents of the test file."], "count": 1}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: '',
+      tool_call_id: 'call_ZyWbLykpjRPu0Dt76dbppvTk',
+    },
+    {
+      role: 'tool',
+      content: '',
+      tool_call_id: 'call_qbsHCpUQvue3yFsQaZoPoyqU',
+    },
+    {
+      role: 'tool',
+      content: '1',
+      tool_call_id: 'call_QE27sPhSmk7tUKR0ZBuQcERV',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/test-file-runner.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_0raWQUYzAlz7gt1yrqxILOdZ',
+          type: 'function',
+          function: {
+            name: 'test-case-runner_test',
+            arguments: '{"path":"tests/meetings.test.md","caseIndex":0}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: '',
+      tool_call_id: 'call_0raWQUYzAlz7gt1yrqxILOdZ',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/test-file-runner.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_FF7IlnOVvvqBaqQVcEUZKz9x',
+          type: 'function',
+          function: {
+            name: 'utils_resolve',
+            arguments: '{}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: 'null',
+      tool_call_id: 'call_FF7IlnOVvvqBaqQVcEUZKz9x',
+    },
+  ],
+  toolCommits: {
+    call_0WWV5gpdcFEmswn4M8TwJFEa: 'd9f1f7c92a066249fe91561ddc89f227a4a69292',
+    call_cspz2RlefToMPwhqbNxRg0ed: 'd1632fee8ba5ac5149faa1abf4ce3d829093e720',
+    call_ZyWbLykpjRPu0Dt76dbppvTk: '7aac6e9eb2048f7ea1490f332335aac6ea7408e9',
+    call_qbsHCpUQvue3yFsQaZoPoyqU: '42737e9c43072cee716508f401f9cc1b005b5321',
+    call_QE27sPhSmk7tUKR0ZBuQcERV: '66ca6e49d0824df843c2a4c807832ce4859835e2',
+    call_0raWQUYzAlz7gt1yrqxILOdZ: '122427496236062fd55578d5ad57e467cc1d89a5',
+    call_FF7IlnOVvvqBaqQVcEUZKz9x: '5dfcf58ce9210dbf2ab1600e488383e3731fc1b2',
+  },
+  stateboards: [],
+  focusedFiles: [],
+}

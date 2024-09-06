@@ -1,4 +1,9 @@
-import { longThread, mermaidThread, mermaidErrorThread } from '../data.ts'
+import {
+  longThread,
+  mermaidThread,
+  mermaidErrorThread,
+  testThread,
+} from '../data.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
 
@@ -11,6 +16,9 @@ export default meta
 type Story = StoryObj<typeof Messages>
 
 export const Chat: Story = {}
+export const Test: Story = {
+  args: { thread: testThread },
+}
 export const Mermaid: Story = { args: { thread: mermaidThread } }
 
 export const MermaidError: Story = { args: { thread: mermaidErrorThread } }

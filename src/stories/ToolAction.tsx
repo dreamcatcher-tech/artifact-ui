@@ -10,6 +10,7 @@ import Debug from 'debug'
 import CardHeader from '@mui/material/CardHeader'
 import { assertString } from '@sindresorhus/is'
 import ReactJson from '@microlink/react-json-view'
+import { Typography } from '@mui/material'
 
 const debug = Debug('AI:ToolAction')
 
@@ -46,11 +47,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
           avatar={<Terminal />}
         />
         <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
-          {typeof output === 'string' ? (
-            <Markdown remarkPlugins={[remarkGfm]}>{output}</Markdown>
-          ) : (
-            <ReactJson src={output} quotesOnKeys={false} name={false} />
-          )}
+          <Output output={output} />
         </CardContent>
       </Card>
     )
@@ -78,4 +75,27 @@ const tryParse = (value: string) => {
       return value === undefined ? null : value
     }
   }
+}
+
+const Output: FC<{ output: any }> = ({ output }) => {
+  if (output !== null && typeof output === 'object') {
+    return <ReactJson src={output} quotesOnKeys={false} name={false} />
+  }
+  if (output && typeof output === 'string') {
+    return <Markdown remarkPlugins={[remarkGfm]}>{output + ''}</Markdown>
+  }
+  if (output === undefined) {
+    output = 'undefined'
+  }
+  if (output === null) {
+    output = 'null'
+  }
+  if (output === '') {
+    output = '(empty)'
+  }
+  return (
+    <Typography fontWeight='bold' fontStyle='italic'>
+      {output + ''}
+    </Typography>
+  )
 }
