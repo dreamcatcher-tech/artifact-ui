@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack'
 
 const debug = Debug('AI:Stateboard')
 
-type WidgetComponent = FC<any>
+type WidgetComponent = FC<unknown>
 
 type WidgetMap = {
   [key in STATEBOARD_WIDGETS]: WidgetComponent
