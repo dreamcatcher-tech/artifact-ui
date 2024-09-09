@@ -6,15 +6,23 @@ import Debug from 'debug'
 import Messages from './Messages.tsx'
 import ThreadInfo from './ThreadInfo.tsx'
 import { Splice, Thread } from '../constants.ts'
+import { Paper } from '@mui/material'
+import Stateboard from './Stateboard.tsx'
 
 const log = Debug('AI:ThreeBox')
 export interface ThreeBoxProps {
   thread?: Thread
   splice?: Splice
   inputProps?: InputProps
+  stateboard?: boolean
 }
 
-const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
+const ThreeBox: FC<ThreeBoxProps> = ({
+  thread,
+  splice,
+  inputProps,
+  stateboard,
+}) => {
   const messages = thread?.messages || []
   log('messages', messages)
   return (
@@ -24,29 +32,36 @@ const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
         flexDirection: 'row',
         flexGrow: 1,
         justifyContent: 'center',
+        backgroundColor: 'red',
       }}
     >
       <Stack
         direction='column'
         alignItems='flex-start'
         justifyContent='flex-end'
-        pb={3}
         sx={{
-          minHeight: '100%',
+          height: '100%',
           maxWidth: '800px',
           width: '100%',
-          flexGrow: 1,
         }}
       >
-        <Messages thread={thread} />
+        <Box
+          sx={{
+            mb: 1,
+            backgroundColor: 'coral',
+            overflowY: 'auto',
+          }}
+        >
+          <Messages thread={thread} />
+        </Box>
         <Input {...inputProps} />
         <ThreadInfo splice={splice} />
       </Stack>
-      {/* <Box sx={{ flexGrow: 1, p: 1 }}>
+      {stateboard && (
         <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
-          <Stateboard />
+          <Stateboard widgets={['FILE_EXPLORER']} />
         </Paper>
-      </Box> */}
+      )}
     </Box>
   )
 }

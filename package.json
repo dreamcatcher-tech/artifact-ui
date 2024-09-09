@@ -13,9 +13,12 @@
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
     "chromatic": "npx chromatic --project-token=chpt_06e1ea93d90dd7c",
-    "pull": "cp -r ../artifact/api/* src/api/"
+    "pull": "cp -r ../artifact/api/* src/api/",
+    "rm": "rm -rf src/api/* && npm run pull"
   },
   "dependencies": {
+    "@aperturerobotics/chonky": "^0.2.8",
+    "@aperturerobotics/chonky-icon-fontawesome": "^0.2.8",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@microlink/react-json-view": "^1.23.1",

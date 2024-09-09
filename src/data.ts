@@ -441,3 +441,128 @@ export const testThread: Thread = {
   stateboards: [],
   focusedFiles: [],
 }
+
+export const filesStateboard: Thread = {
+  messageOffset: 0,
+  messages: [
+    {
+      content: 'what files have I got ?',
+      role: 'user',
+      name: 'act_RPC8WTXKKJK7VXD0',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/switchboard.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_keVDORgd16XuNBh0PMk5leKD',
+          type: 'function',
+          function: {
+            name: 'agents_switch',
+            arguments:
+              '{"reasoning":["The user is asking about their files, which is a task specifically suited for the files agent.","The current agent does not specialize in file management, making it less appropriate for this task.","Switching to the \'agents/files.md\' agent will allow for a more accurate and relevant response regarding the user\'s files."],"path":"agents/files.md"}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: 'null',
+      tool_call_id: 'call_keVDORgd16XuNBh0PMk5leKD',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/files.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_7uL7kko8Ts1esG4zAbKciAcH',
+          type: 'function',
+          function: {
+            name: 'files_ls',
+            arguments: '{"path":"."}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content:
+        '["agents/","curtains/","info/","tests/","threads/","LICENSE","README.md"]',
+      tool_call_id: 'call_7uL7kko8Ts1esG4zAbKciAcH',
+    },
+    {
+      role: 'assistant',
+      content:
+        'You have the following files and directories:\n\n1. **Directories:**\n   - agents/\n   - curtains/\n   - info/\n   - tests/\n   - threads/\n\n2. **Files:**\n   - LICENSE\n   - README.md\n\nIf you need to explore any specific files or directories, let me know!',
+      name: 'agents/files.md',
+      refusal: null,
+    },
+    {
+      content: 'show me',
+      role: 'user',
+      name: 'act_RPC8WTXKKJK7VXD0',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/switchboard.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_Epc3iSUy84J3r68zTPUMrmYj',
+          type: 'function',
+          function: {
+            name: 'agents_switch',
+            arguments:
+              '{"reasoning":["The user has requested to show the contents of their files, which is a task best handled by the files agent.","The current agent may not efficiently display the files, and switching to the files agent is necessary for better assistance."],"path":"agents/files.md"}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: 'null',
+      tool_call_id: 'call_Epc3iSUy84J3r68zTPUMrmYj',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/files.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_EwMKJnFNrmpMyEOUg9IEjIJ3',
+          type: 'function',
+          function: {
+            name: 'stateboard_show',
+            arguments: '{"widget":"FILE_EXPLORER"}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      content: '',
+      tool_call_id: 'call_EwMKJnFNrmpMyEOUg9IEjIJ3',
+    },
+    {
+      role: 'assistant',
+      content:
+        'The file explorer is now displayed, allowing you to browse through your files and directories. You can open directories or files to see their contents.',
+      name: 'agents/files.md',
+      refusal: null,
+    },
+  ],
+  toolCommits: {
+    call_keVDORgd16XuNBh0PMk5leKD: '61f5e019d585714e7b8177754e7720a1b5ca8994',
+    call_7uL7kko8Ts1esG4zAbKciAcH: '94970fa2a4566c21df4c8838a8015fb61d753eda',
+    call_Epc3iSUy84J3r68zTPUMrmYj: '001b414126e642d6c88101dc590349e280584664',
+    call_EwMKJnFNrmpMyEOUg9IEjIJ3: 'b17a63eea23e35680ef833c3daa08c9f70ab17bc',
+  },
+  stateboards: [],
+  focusedFiles: [],
+}

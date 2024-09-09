@@ -8,9 +8,9 @@ interface Display {
   commit?: CommitObject
   oid?: string
   repo?: string
-  threadId?: string
+  branches?: string[]
 }
-const Display: FC<Display> = ({ threadId, commit, oid, repo }) => {
+const Display: FC<Display> = ({ commit, oid, repo, branches }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -34,11 +34,25 @@ const Display: FC<Display> = ({ threadId, commit, oid, repo }) => {
   }, [timestamp])
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
-  const label = repo ? repo : <i>loading...</i>
-
+  const repoLabel = repo ? repo : <i>loading...</i>
+  const branchLabel = branches ? prettyBranches(branches) : <i>loading...</i>
   return (
     <Stack direction='row' spacing={1} padding={1} alignItems='center'>
-      <Chip clickable={false} label={label} color='warning' size='small' />
+      <Chip
+        clickable={true}
+        onClick={() => window.open(`https://github.com/${repo}`)}
+        label={repoLabel}
+        color='warning'
+        size='small'
+        title={'Github Repository: ' + repo}
+      />
+      <Chip
+        clickable={false}
+        label={branchLabel}
+        color='info'
+        size='small'
+        title={'Git Branches: ' + branches?.join('/')}
+      />
       <Typography mt={1} variant='caption' component='span'>
         {!commit || !oid ? (
           'loading commit...'
@@ -46,8 +60,6 @@ const Display: FC<Display> = ({ threadId, commit, oid, repo }) => {
           <>
             <i>commit: </i>
             <b>{oid.slice(0, 8)} </b>
-            <i>thread: </i>
-            <b>{threadId?.substring(0, 11)} </b>
             <i>when:</i> {since}
           </>
         )}
@@ -57,21 +69,20 @@ const Display: FC<Display> = ({ threadId, commit, oid, repo }) => {
 }
 
 interface ThreadInfo {
-  threadId?: string
   splice?: Splice
 }
-const ThreadInfo: FC<ThreadInfo> = ({ threadId, splice }) => {
-  if (!threadId) {
+const ThreadInfo: FC<ThreadInfo> = ({ splice }) => {
+  if (!splice) {
     return (
       <Typography mt={1} variant='caption'>
         loading...
       </Typography>
     )
   }
-  const { commit, oid, pid } = splice || {}
+  const { commit, oid, pid } = splice
   const repo = pid ? `${pid.account}/${pid.repository}` : undefined
   return (
-    <Display threadId={threadId || ''} commit={commit} oid={oid} repo={repo} />
+    <Display commit={commit} oid={oid} repo={repo} branches={pid.branches} />
   )
 }
 export default ThreadInfo
@@ -97,3 +108,5 @@ function formatElapsedTime(secondsElapsed: number) {
 
   return formattedString
 }
+const prettyBranches = (branches: string[]) =>
+  branches.map((b) => b.substring(0, 7)).join('/')

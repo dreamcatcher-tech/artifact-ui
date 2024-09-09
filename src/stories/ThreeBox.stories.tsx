@@ -1,12 +1,22 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import ThreeBox from './ThreeBox.tsx'
-import { splice, longThread, shortThread, blankThread } from '../data.ts'
+import {
+  filesStateboard,
+  splice,
+  longThread,
+  shortThread,
+  blankThread,
+} from '../data.ts'
 
 const meta: Meta<typeof ThreeBox> = {
   title: 'ThreeBox',
   component: ThreeBox,
+  parameters: {
+    layout: 'fullscreen',
+  },
   args: {
     thread: blankThread,
+    splice,
     inputProps: {
       prompt: async (text: string) => {
         console.log('prompt', text)
@@ -25,9 +35,13 @@ export const Short: Story = {
     splice,
   },
 }
-
-// stateboard should show underneath the thread, or next to, depending on screen
-// size
+export const FilesStateboard: Story = {
+  args: {
+    thread: filesStateboard,
+    splice,
+    stateboard: true,
+  },
+}
 
 export const Long: Story = {
   args: {
@@ -62,3 +76,5 @@ export const Preload: Story = {
     },
   },
 }
+
+// Show stateboard in a remote thread

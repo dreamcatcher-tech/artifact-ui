@@ -3,6 +3,7 @@ import {
   mermaidThread,
   mermaidErrorThread,
   testThread,
+  filesStateboard,
 } from '../data.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
@@ -18,6 +19,11 @@ type Story = StoryObj<typeof Messages>
 export const Chat: Story = {}
 export const Test: Story = {
   args: { thread: testThread },
+}
+export const FilesStateboard: Story = {
+  args: {
+    thread: filesStateboard,
+  },
 }
 export const Mermaid: Story = { args: { thread: mermaidThread } }
 
