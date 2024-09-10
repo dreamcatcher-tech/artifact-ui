@@ -14,15 +14,9 @@ export interface ThreeBoxProps {
   thread?: Thread
   splice?: Splice
   inputProps?: InputProps
-  stateboard?: boolean
 }
 
-const ThreeBox: FC<ThreeBoxProps> = ({
-  thread,
-  splice,
-  inputProps,
-  stateboard,
-}) => {
+const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
   const messages = thread?.messages || []
   log('messages', messages)
   return (
@@ -40,7 +34,9 @@ const ThreeBox: FC<ThreeBoxProps> = ({
         sx={{
           height: '100%',
           maxWidth: '800px',
-          width: '100%',
+          flexGrow: 0.5,
+          ml: 3,
+          mr: 3,
         }}
       >
         <Messages thread={thread} />
@@ -48,11 +44,20 @@ const ThreeBox: FC<ThreeBoxProps> = ({
         <Input {...inputProps} />
         <ThreadInfo splice={splice} />
       </Stack>
-      {stateboard && (
-        <Paper elevation={6} sx={{ height: '100%', flexGrow: 1 }}>
-          <Stateboard widgets={['FILE_EXPLORER']} />
-        </Paper>
-      )}
+      <Paper
+        elevation={6}
+        sx={{
+          flexGrow: 1,
+          maxHeight: '100%',
+          overflow: 'hidden',
+          p: 3,
+          mt: 3,
+          mr: 3,
+          mb: 3,
+        }}
+      >
+        <Stateboard widgets={['FILE_EXPLORER']} />
+      </Paper>
     </Box>
   )
 }
