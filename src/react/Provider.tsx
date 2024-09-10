@@ -50,6 +50,7 @@ const Provider: FC<Props> = ({ children, url }) => {
         }
         log('backchat: %s', print(backchat.pid))
         setBackchat(backchat)
+        sessionStorage.setItem('backchatId', backchat.id)
       })
       .catch((error) => active && setError(error))
     return () => {
@@ -81,6 +82,7 @@ const recoverBackchatId = () => {
     const existing = sessionStorage.getItem('backchatId')
     if (existing) {
       if (backchatIdRegex.test(existing)) {
+        console.log('recovered backchat id:', existing)
         return existing
       }
     }
@@ -98,7 +100,7 @@ const recoverPrivateKey = () => {
     assert.falsy(localStorage.getItem('privateKey'), 'privateKey race')
     localStorage.setItem('privateKey', privateKey)
   } else {
-    log('recovered private key')
+    console.log('recovered private key')
   }
   return privateKey
 }
