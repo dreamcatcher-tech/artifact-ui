@@ -7,13 +7,20 @@ import {
   shortThread,
   blankThread,
 } from '../data.ts'
+import { Box } from '@mui/material'
 
 const meta: Meta<typeof ThreeBox> = {
   title: 'ThreeBox',
   component: ThreeBox,
   parameters: {
     layout: 'fullscreen',
+    parameters: { viewport: { defaultViewport: 'tablet' } },
   },
+  render: (args) => (
+    <Box sx={{ height: '100vh' }}>
+      <ThreeBox {...args} />
+    </Box>
+  ),
   args: {
     thread: blankThread,
     splice,

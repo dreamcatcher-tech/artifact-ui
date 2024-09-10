@@ -253,54 +253,67 @@ const Messages: FC<Messages> = ({ thread }) => {
     return null
   }
   return (
-    <Timeline
+    <Box
       sx={{
-        [`& .${timelineItemClasses.root}:before`]: {
-          flex: 0,
-          padding: 0,
+        flexGrow: 1,
+        overflow: 'hidden',
+        overflowY: 'scroll', // Allows vertical scrolling
+        '-ms-overflow-style': 'none', // Hide scrollbar for IE and Edge
+        'scrollbar-width': 'none', // Hide scrollbar for Firefox
+        '&::-webkit-scrollbar': {
+          display: 'none', // Hide scrollbar for Chrome, Safari
         },
       }}
     >
-      {messages.map((message, key) => {
-        const { role, content } = message
-        debug('role', role, 'content', content)
-        switch (role) {
-          case 'user':
-            assertString(content)
-            return <Dave key={key} content={content} />
-          case 'assistant':
-            if (message.tool_calls) {
-              return (
-                <Tool
-                  key={key}
-                  tool_calls={message.tool_calls}
-                  messages={messages}
-                />
-              )
-            } else {
-              if (!content) {
-                console.error('empty content:', message)
-              }
+      <Timeline
+        sx={{
+          [`& .${timelineItemClasses.root}:before`]: {
+            flex: 0,
+            padding: 0,
+          },
+        }}
+      >
+        {messages.map((message, key) => {
+          const { role, content } = message
+          debug('role', role, 'content', content)
+          switch (role) {
+            case 'user':
               assertString(content)
-              return (
-                <Assistant
-                  key={key}
-                  content={content || ''}
-                  name={message.name}
-                />
-              )
-            }
-          case 'system':
-            // TODO display the entire Agent
-            assertString(content)
-            return <System key={key} content={content} />
-          case 'tool':
-            return null
-          default:
-            throw new Error(`unknown type ${role}`)
-        }
-      })}
-    </Timeline>
+              return <Dave key={key} content={content} />
+            case 'assistant':
+              if (message.tool_calls) {
+                return (
+                  <Tool
+                    key={key}
+                    tool_calls={message.tool_calls}
+                    messages={messages}
+                  />
+                )
+              } else {
+                if (!content) {
+                  console.error('empty content:', message)
+                }
+                assertString(content)
+                return (
+                  <Assistant
+                    key={key}
+                    content={content || ''}
+                    name={message.name}
+                  />
+                )
+              }
+            case 'system':
+              // TODO display the entire Agent
+              assertString(content)
+              return <System key={key} content={content} />
+            case 'tool':
+              return null
+            default:
+              throw new Error(`unknown type ${role}`)
+          }
+        })}
+      </Timeline>
+    </Box>
   )
 }
 

@@ -29,15 +29,13 @@ const ThreeBox: FC<ThreeBoxProps> = ({
     <Box
       sx={{
         display: 'flex',
+        height: '100%',
         flexDirection: 'row',
-        flexGrow: 1,
         justifyContent: 'center',
-        backgroundColor: 'red',
       }}
     >
       <Stack
         direction='column'
-        alignItems='flex-start'
         justifyContent='flex-end'
         sx={{
           height: '100%',
@@ -45,15 +43,8 @@ const ThreeBox: FC<ThreeBoxProps> = ({
           width: '100%',
         }}
       >
-        <Box
-          sx={{
-            mb: 1,
-            backgroundColor: 'coral',
-            overflowY: 'auto',
-          }}
-        >
-          <Messages thread={thread} />
-        </Box>
+        <Messages thread={thread} />
+        <Box sx={{ height: (theme) => theme.spacing(2) }} />
         <Input {...inputProps} />
         <ThreadInfo splice={splice} />
       </Stack>

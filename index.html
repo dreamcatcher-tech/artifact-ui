@@ -1,13 +1,30 @@
 <!doctype html>
-<html lang="en" style="height: 100vh; margin: 0; display: flex">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DreamcatcherGPT</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .container {
+        height: 100%;
+      }
+    </style>
   </head>
-  <body style="flex-grow: 1">
-    <div id="root" style="height: 100%; display: flex; flex-flow: column"></div>
+  <body>
+    <div id="root" class="container"></div>
     <script type="module">
       import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/+esm'
       globalThis.mermaid = mermaid
