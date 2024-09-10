@@ -46,7 +46,6 @@ export const FilesStateboard: Story = {
   args: {
     thread: filesStateboard,
     splice,
-    stateboard: true,
   },
 }
 
