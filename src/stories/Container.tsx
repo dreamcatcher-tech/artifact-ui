@@ -1,6 +1,8 @@
 import ThreeBox, { type ThreeBoxProps } from './ThreeBox.tsx'
 import DeferredDialog from './DeferredThread.tsx'
 import { FC, useCallback, useEffect, useState } from 'react'
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 
 export interface ContainerProps {
   deferred: ThreeBoxProps
@@ -26,8 +28,10 @@ const Container: FC<ContainerProps> = ({
   const handleClose = useCallback(() => setOpen(false), [setOpen])
   return (
     <>
-      <ThreeBox {...backchat} />
-      <DeferredDialog {...{ open, handleClose, ...deferred }} />
+      <DndProvider backend={HTML5Backend}>
+        <ThreeBox {...backchat} />
+        <DeferredDialog {...{ open, handleClose, ...deferred }} />
+      </DndProvider>
     </>
   )
 }

@@ -15,7 +15,13 @@ const FileExplorer = () => {
     },
   ]
   const folderChain = [{ id: 'xcv', name: 'Demo', isDir: true }]
-  return <FullFileBrowser files={files} folderChain={folderChain} />
+  return (
+    <FullFileBrowser
+      files={files}
+      folderChain={folderChain}
+      disableDragAndDropProvider={true}
+    />
+  )
 }
 
 export default FileExplorer
