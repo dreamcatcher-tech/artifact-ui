@@ -34,10 +34,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
-import remarkGfm from 'remark-gfm'
-import frontmatter from 'remark-frontmatter'
-import Markdown, { Components } from 'react-markdown'
-import { Mermaid } from './Mermaid.tsx'
+import Markdown from './Markdown.tsx'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
@@ -112,12 +109,7 @@ const ChatType: FC<ChatType> = ({ content, type, name }) => {
           </ExpandMore>
         </Box>
         <Collapse in={expanded} timeout='auto'>
-          <Markdown
-            components={renderers}
-            remarkPlugins={[remarkGfm, frontmatter]}
-          >
-            {content || ''}
-          </Markdown>
+          <Markdown content={content || ''}></Markdown>
         </Collapse>
       </TimelineContent>
     </TimelineItem>
@@ -212,16 +204,7 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
                 <ListItemIcon>
                   <DraftsIcon />
                 </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Markdown
-                      components={renderers}
-                      remarkPlugins={[remarkGfm, frontmatter]}
-                    >
-                      {instructions}
-                    </Markdown>
-                  }
-                />
+                <ListItemText primary={<Markdown content={instructions} />} />
               </ListItem>
             </Tooltip>
           </List>
@@ -253,18 +236,7 @@ const Messages: FC<Messages> = ({ thread }) => {
     return null
   }
   return (
-    <Box
-      sx={{
-        flexGrow: 1,
-        overflow: 'hidden',
-        overflowY: 'scroll', // Allows vertical scrolling
-        '-ms-overflow-style': 'none', // Hide scrollbar for IE and Edge
-        'scrollbar-width': 'none', // Hide scrollbar for Firefox
-        '&::-webkit-scrollbar': {
-          display: 'none', // Hide scrollbar for Chrome, Safari
-        },
-      }}
-    >
+    <Box className='messages'>
       <Timeline
         sx={{
           [`& .${timelineItemClasses.root}:before`]: {
@@ -315,19 +287,6 @@ const Messages: FC<Messages> = ({ thread }) => {
       </Timeline>
     </Box>
   )
-}
-
-const renderers: Partial<Components> = {
-  code: ({ className, children, ...props }) => {
-    const match = /language-(mermaid)/.exec(className || '')
-    return match ? (
-      <Mermaid chart={String(children).replace(/\n$/, '')} />
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    )
-  },
 }
 
 export default Messages

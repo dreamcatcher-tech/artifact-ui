@@ -7,17 +7,15 @@ import {
   Backchat,
   PID,
   print,
-  getActorId,
-  freezePid,
   ApiFunctions,
   Triad,
   PathTriad,
   getThreadPath,
   threadSchema,
+  ioStruct,
+  backchatStateSchema,
 } from '../api/types.ts'
 import posix from 'path-browserify'
-import { ulid } from 'ulid'
-import { assertObject } from '@sindresorhus/is'
 import { z } from 'zod'
 const log = Debug('AI:hooks')
 
@@ -60,6 +58,17 @@ export const useArtifactJSON = <T extends z.ZodType>(
     }
   }
   return { splice, json }
+}
+export const useBranchState = <T extends z.ZodType>(schema: T, pid?: PID) => {
+  if (!pid) {
+    return
+  }
+  const triad = { pid, path: '.io.json' }
+  const { json } = useArtifactJSON(triad, ioStruct)
+  if (!json) {
+    return
+  }
+  return schema.parse(json.state) as z.infer<T>
 }
 
 export const useSplice = (triad?: Partial<Triad>) => {
@@ -119,30 +128,13 @@ export const useSplice = (triad?: Partial<Triad>) => {
 }
 export const useBackchatThread = () => {
   const backchat = useBackchat()
-  const [target, setTarget] = useState<PID>()
-  const setError = useError()
-
-  useEffect(() => {
-    // BUT this needs to be watching the state in backchat, to detect changes
-    // const path = '.io.json'
-    // const { pid } = backchat
-    // const io = useArtifactJSON({ pid, path }, ioSt)
-    let active = true
-    backchat
-      .readBaseThread()
-      .then((pid) => {
-        if (active) {
-          setTarget(pid)
-        }
-      })
-      .catch(setError)
-    return () => {
-      active = false
-    }
-  }, [setError, backchat])
-  const triad = target
-    ? { path: getThreadPath(target), pid: target }
-    : undefined
+  const state = useBranchState(backchatStateSchema, backchat.pid)
+  const triad = getThreadTriad(state?.target)
+  return useThread(triad)
+}
+export const useRemoteThread = () => {
+  const { thread } = useBackchatThread()
+  const triad = getThreadTriad(thread?.remote)
   return useThread(triad)
 }
 
@@ -160,30 +152,6 @@ export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
 export const usePing = () => {
   const backchat = useBackchat()
   return (...args: Parameters<typeof backchat.ping>) => backchat.ping(...args)
-}
-
-export const useDNS = (repo: string) => {
-  const backchat = useBackchat()
-  const [pid, setPid] = useState<PID>()
-  const setError = useError()
-  useEffect(() => {
-    let active = true
-    if (!backchat) {
-      return
-    }
-    backchat
-      .dns(repo)
-      .then((pid) => {
-        if (active) {
-          setPid(pid)
-        }
-      })
-      .catch(setError)
-    return () => {
-      active = false
-    }
-  }, [backchat, repo, setError])
-  return pid
 }
 
 export const useActions = (isolate: string, target?: PID) => {
@@ -254,39 +222,11 @@ export const useTranscribe = () => {
   return transcribe
 }
 
-// TODO recovery of sessions
-export const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
-  let fragment = parseHashFragment()
-  if (create) {
-    fragment = undefined
+export const getThreadTriad = (pid?: PID) => {
+  if (!pid) {
+    return
   }
-  if (!fragment) {
-    const sessionId = ulid()
-    const actorId = getActorId(terminalPid)
-    setFragment(actorId, sessionId)
-    log('new hal sessionId set')
-  } else {
-    log('recovered hal fragment')
-  }
-  assertObject(fragment, 'fragment error')
-  const { actorId, sessionId } = fragment
-  const branches = [...halPid.branches, actorId, sessionId]
-  const session = { ...halPid, branches }
-  freezePid(session)
-  return session
-}
-
-const parseHashFragment = () => {
-  const hash = window.location.hash.substring(1)
-  const params = new URLSearchParams(hash)
-  const actorId = params.get('actorId')
-  const sessionId = params.get('sessionId')
-  if (actorId && sessionId) {
-    return { actorId, sessionId }
-  }
-}
-
-const setFragment = (actor: string, thread: string) => {
-  const params = new URLSearchParams({ actor, thread })
-  window.location.hash = params.toString()
+  const path = getThreadPath(pid)
+  const triad: PathTriad = { path, pid }
+  return triad
 }

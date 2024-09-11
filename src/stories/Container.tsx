@@ -5,14 +5,14 @@ import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
 export interface ContainerProps {
-  deferred: ThreeBoxProps
+  remote: ThreeBoxProps
   backchat: ThreeBoxProps
-  showDeferred: boolean
+  showRemote: boolean
 }
 const Container: FC<ContainerProps> = ({
-  deferred,
+  remote: deferred,
   backchat,
-  showDeferred,
+  showRemote: showDeferred,
 }) => {
   const [open, setOpen] = useState(showDeferred)
 

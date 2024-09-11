@@ -1,6 +1,5 @@
 import { FC } from 'react'
-import remarkGfm from 'remark-gfm'
-import Markdown from 'react-markdown'
+import Markdown from './Markdown.tsx'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Terminal from '@mui/icons-material/Terminal'
@@ -82,7 +81,7 @@ const Output: FC<{ output: unknown }> = ({ output }) => {
     return <ReactJson src={output} quotesOnKeys={false} name={false} />
   }
   if (output && typeof output === 'string') {
-    return <Markdown remarkPlugins={[remarkGfm]}>{output + ''}</Markdown>
+    return <Markdown content={output + ''} />
   }
   if (output === undefined) {
     output = 'undefined'

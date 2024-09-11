@@ -123,9 +123,8 @@ export const ENTRY_BRANCH = 'main'
 export type PartialPID = Omit<PID, 'repoId'>
 
 export const threadSchema = z.object({
-  /** If this thread is deferring to another thread, rather than taking on the
-   * the current messages directly */
-  defer: pidSchema.optional(),
+  /** If this thread is deferring to a remote, send messages to it, rather than taking on the the current messages directly */
+  remote: pidSchema.optional(),
   /** If the messages were truncated, this is the offset count */
   messageOffset: z.number(),
   messages: z.array(completionMessage),
@@ -737,7 +736,7 @@ export type ToApiType<
 }
 
 export const serializableError = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   message: z.string(),
   stack: z.string().optional(),
 })

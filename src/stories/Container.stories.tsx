@@ -19,7 +19,7 @@ const meta: Meta<typeof Container> = {
   title: 'Container',
   component: Container,
   args: {
-    deferred,
+    remote: deferred,
     backchat: { ...deferred, thread: shortBackchat },
   },
 }
@@ -28,12 +28,12 @@ export default meta
 export const Basic: Story = {}
 export const Deferred: Story = {
   args: {
-    deferred: deferred,
+    remote: deferred,
     backchat: {
       thread: longThread,
       splice,
     },
-    showDeferred: true,
+    showRemote: true,
   },
 }
 export const Narrow: Story = {

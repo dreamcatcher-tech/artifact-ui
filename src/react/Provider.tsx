@@ -17,7 +17,11 @@ interface Props {
   children: React.ReactNode
   url?: string
 }
-
+enum Status {
+  EngineStarting = 'Starting Web Engine...',
+  LoadingBackchat = 'Loading Backchat...',
+  Showtime = 'Backchat Loaded - showtime starting...',
+}
 const Provider: FC<Props> = ({ children, url }) => {
   url = url || import.meta.env.VITE_API_URL
   if (!url) {
@@ -25,6 +29,7 @@ const Provider: FC<Props> = ({ children, url }) => {
   }
   const [backchat, setBackchat] = useState<Backchat>()
   const [error, setError] = useState<Error>()
+  const [status, setStatus] = useState<Status>(Status.EngineStarting)
 
   useEffect(() => {
     let active = true
@@ -34,6 +39,7 @@ const Provider: FC<Props> = ({ children, url }) => {
         if (!active) {
           return
         }
+        setStatus(Status.LoadingBackchat)
         log('engine home: %s', print(engine.homeAddress))
         toStop = engine
 
@@ -48,6 +54,7 @@ const Provider: FC<Props> = ({ children, url }) => {
         if (!backchat) {
           throw new Error('backchat not created')
         }
+        setStatus(Status.Showtime)
         log('backchat: %s', print(backchat.pid))
         setBackchat(backchat)
         sessionStorage.setItem('backchatId', backchat.id)
@@ -67,7 +74,7 @@ const Provider: FC<Props> = ({ children, url }) => {
   }
 
   if (!backchat) {
-    return <div>Loading backchat... </div>
+    return <div>{status}</div>
   }
   // TODO do crypto negotiations, then auth login
   return (

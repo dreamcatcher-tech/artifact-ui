@@ -4,13 +4,13 @@ import { FC, useEffect, useState } from 'react'
 import { CommitObject, Splice } from '../api/types.ts'
 import Chip from '@mui/material/Chip'
 
-interface Display {
-  commit?: CommitObject
-  oid?: string
-  repo?: string
-  branches?: string[]
+interface Chips {
+  commit: CommitObject
+  oid: string
+  repo: string
+  branches: string[]
 }
-const Display: FC<Display> = ({ commit, oid, repo, branches }) => {
+const Chips: FC<Chips> = ({ commit, oid, repo, branches }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -34,37 +34,51 @@ const Display: FC<Display> = ({ commit, oid, repo, branches }) => {
   }, [timestamp])
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
-  const repoLabel = repo ? repo : <i>loading...</i>
-  const branchLabel = branches ? prettyBranches(branches) : <i>loading...</i>
+  const location = window.location.origin + window.location.pathname
+  const repoUrl = `https://github.com/${repo}`
+  const branchUrl = `${location}#branches=${branches.join('/')}`
+  const branchLabel = prettyBranches(branches)
+  const commitUrl = `${branchUrl}&commit=${oid}`
   return (
-    <Stack direction='row' spacing={1} padding={1} alignItems='center'>
-      <Chip
-        clickable={true}
-        onClick={() => window.open(`https://github.com/${repo}`)}
-        label={repoLabel}
-        color='warning'
-        size='small'
-        title={'Github Repository: ' + repo}
-      />
-      <Chip
-        clickable={false}
-        label={branchLabel}
-        color='info'
-        size='small'
-        title={'Git Branches: ' + branches?.join('/')}
-      />
-      <Typography mt={1} variant='caption' component='span'>
-        {!commit || !oid ? (
-          'loading commit...'
-        ) : (
-          <>
-            <i>commit: </i>
-            <b>{oid.slice(0, 8)} </b>
-            <i>when:</i> {since}
-          </>
-        )}
+    <>
+      <a href={repoUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
+        <Chip
+          clickable={true}
+          onClick={() => window.open(repoUrl, '_blank', 'noopener')}
+          label={repo}
+          color='warning'
+          size='small'
+          title={'Open this repo on github.com'}
+        />
+      </a>
+      <a href={branchUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
+        <Chip
+          clickable={true}
+          label={branchLabel}
+          onClick={() => window.open(branchUrl, '_blank', 'noopener')}
+          color='info'
+          size='small'
+          title={'Open this thread remotely'}
+        />
+      </a>
+      <Typography
+        mt={1}
+        variant='caption'
+        component='span'
+        title='Open this commit remotely'
+      >
+        <i>commit: </i>
+        <a
+          href={commitUrl}
+          style={{ textDecoration: 'none' }}
+          target='_blank'
+          rel='noopener'
+        >
+          <b>{oid.slice(0, 8)} </b>
+        </a>
+        <i>when:</i> {since}
       </Typography>
-    </Stack>
+    </>
   )
 }
 
@@ -72,17 +86,27 @@ interface ThreadInfo {
   splice?: Splice
 }
 const ThreadInfo: FC<ThreadInfo> = ({ splice }) => {
+  let chips
   if (!splice) {
-    return (
-      <Typography mt={1} variant='caption'>
-        loading...
-      </Typography>
+    chips = (
+      <Chip
+        clickable={false}
+        label={<i>loading...</i>}
+        color='info'
+        size='small'
+      />
+    )
+  } else {
+    const { commit, oid, pid } = splice
+    const repo = `${pid.account}/${pid.repository}`
+    chips = (
+      <Chips commit={commit} oid={oid} repo={repo} branches={pid.branches} />
     )
   }
-  const { commit, oid, pid } = splice
-  const repo = pid ? `${pid.account}/${pid.repository}` : undefined
   return (
-    <Display commit={commit} oid={oid} repo={repo} branches={pid.branches} />
+    <Stack direction='row' spacing={1} padding={1} alignItems='center'>
+      {chips}
+    </Stack>
   )
 }
 export default ThreadInfo
@@ -110,3 +134,7 @@ function formatElapsedTime(secondsElapsed: number) {
 }
 const prettyBranches = (branches: string[]) =>
   branches.map((b) => b.substring(0, 7)).join('/')
+
+const onClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+  event.preventDefault()
+}

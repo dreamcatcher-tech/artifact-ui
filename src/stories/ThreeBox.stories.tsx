@@ -36,6 +36,9 @@ export default meta
 type Story = StoryObj<typeof ThreeBox>
 
 export const Basic: Story = {}
+export const Loading: Story = {
+  args: { splice: undefined },
+}
 export const Short: Story = {
   args: {
     thread: shortThread,
