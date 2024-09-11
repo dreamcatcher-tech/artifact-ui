@@ -25,11 +25,16 @@ const Container: FC<ContainerProps> = ({
     console.log('show backchat changed:', showRemoteInitially)
   }, [showRemoteInitially])
 
+  const showRemote = useCallback(() => setOpen(true), [setOpen])
+  if (backchat.thread?.remote) {
+    backchat.showRemote = showRemote
+  }
+
   const handleClose = useCallback(() => setOpen(false), [setOpen])
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        <ThreeBox {...{ ...backchat, showRemote: () => setOpen(true) }} />
+        <ThreeBox {...backchat} />
         <DeferredDialog {...{ open, handleClose, ...deferred }} />
       </DndProvider>
     </>
