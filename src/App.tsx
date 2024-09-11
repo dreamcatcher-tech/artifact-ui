@@ -64,7 +64,10 @@ function App() {
       .then(() => {
         console.log('remote changed')
       })
-      .catch(setError) // error should reset the fragment
+      .catch((error) => {
+        // TODO error should reset the fragment
+        log('error changing remote', error)
+      })
   }, [isThreadLoaded, remote, hash, backchat])
 
   return (
