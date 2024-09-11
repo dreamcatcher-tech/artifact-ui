@@ -6,7 +6,6 @@ import {
   useTranscribe,
   getThreadTriad,
   useBackchat,
-  useError,
 } from './react/hooks.ts'
 import Container from './stories/Container.tsx'
 import { useEffect, useState } from 'react'
@@ -17,7 +16,6 @@ Debug.enable('AI:App')
 
 function App() {
   const backchat = useBackchat()
-  const setError = useError()
   const { thread, splice } = useBackchatThread()
 
   const remoteTriad = getThreadTriad(thread?.remote)
