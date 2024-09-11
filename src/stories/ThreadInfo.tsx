@@ -9,8 +9,9 @@ interface Chips {
   oid: string
   repo: string
   branches: string[]
+  showRemote?: () => void
 }
-const Chips: FC<Chips> = ({ commit, oid, repo, branches }) => {
+const Chips: FC<Chips> = ({ commit, oid, repo, branches, showRemote }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
 
@@ -61,6 +62,16 @@ const Chips: FC<Chips> = ({ commit, oid, repo, branches }) => {
           title={'Open this thread remotely'}
         />
       </a>
+      {showRemote && (
+        <Chip
+          clickable={true}
+          onClick={showRemote}
+          label='remote'
+          color='secondary'
+          size='small'
+          title='Show the remote thread'
+        />
+      )}
       <Typography
         mt={1}
         variant='caption'
@@ -84,8 +95,9 @@ const Chips: FC<Chips> = ({ commit, oid, repo, branches }) => {
 
 interface ThreadInfo {
   splice?: Splice
+  showRemote?: () => void
 }
-const ThreadInfo: FC<ThreadInfo> = ({ splice }) => {
+const ThreadInfo: FC<ThreadInfo> = ({ splice, showRemote }) => {
   let chips
   if (!splice) {
     chips = (
@@ -100,7 +112,13 @@ const ThreadInfo: FC<ThreadInfo> = ({ splice }) => {
     const { commit, oid, pid } = splice
     const repo = `${pid.account}/${pid.repository}`
     chips = (
-      <Chips commit={commit} oid={oid} repo={repo} branches={pid.branches} />
+      <Chips
+        commit={commit}
+        oid={oid}
+        repo={repo}
+        branches={pid.branches}
+        showRemote={showRemote}
+      />
     )
   }
   return (

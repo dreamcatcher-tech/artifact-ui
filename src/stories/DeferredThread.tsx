@@ -47,7 +47,7 @@ const DeferredDialog: React.FC<DeferredDialogProps> = (props) => {
             <CloseIcon />
           </IconButton>
           <Typography sx={{ ml: 2, flex: 1 }} variant='h6' component='div'>
-            Deferred Thread 🤖
+            Remote Thread: {threeBox.splice?.pid.branches.join('/')}
           </Typography>
         </Toolbar>
       </AppBar>

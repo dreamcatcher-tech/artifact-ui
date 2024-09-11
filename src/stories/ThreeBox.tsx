@@ -14,9 +14,15 @@ export interface ThreeBoxProps {
   thread?: Thread
   splice?: Splice
   inputProps?: InputProps
+  showRemote?: () => void
 }
 
-const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
+const ThreeBox: FC<ThreeBoxProps> = ({
+  thread,
+  splice,
+  inputProps,
+  showRemote,
+}) => {
   const messages = thread?.messages || []
   log('messages', messages)
   return (
@@ -42,7 +48,7 @@ const ThreeBox: FC<ThreeBoxProps> = ({ thread, splice, inputProps }) => {
         <Messages thread={thread} />
         <Box sx={{ height: (theme) => theme.spacing(2) }} />
         <Input {...inputProps} />
-        <ThreadInfo splice={splice} />
+        <ThreadInfo splice={splice} showRemote={showRemote} />
       </Stack>
       <Paper
         elevation={6}

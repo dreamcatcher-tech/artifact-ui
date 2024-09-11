@@ -59,7 +59,6 @@ function App() {
     if (isFragmentSynced(branches, remote)) {
       return
     }
-    console.log('#################################')
     backchat
       .changeRemote({ ...backchat.pid, branches })
       .then(() => {
@@ -72,7 +71,7 @@ function App() {
     <Container
       backchat={backchatProps}
       remote={remoteProps}
-      showRemote={!!remoteThread.thread}
+      showRemoteInitially={!!remoteThread.thread}
     />
   )
 }

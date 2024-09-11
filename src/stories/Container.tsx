@@ -7,29 +7,29 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 export interface ContainerProps {
   remote: ThreeBoxProps
   backchat: ThreeBoxProps
-  showRemote: boolean
+  showRemoteInitially: boolean
 }
 const Container: FC<ContainerProps> = ({
   remote: deferred,
   backchat,
-  showRemote: showDeferred,
+  showRemoteInitially,
 }) => {
-  const [open, setOpen] = useState(showDeferred)
+  const [open, setOpen] = useState(showRemoteInitially)
 
   useEffect(() => {
-    if (showDeferred) {
+    if (showRemoteInitially) {
       setOpen(true)
     } else {
       setOpen(false)
     }
-    console.log('show backchat changed:', showDeferred)
-  }, [showDeferred])
+    console.log('show backchat changed:', showRemoteInitially)
+  }, [showRemoteInitially])
 
   const handleClose = useCallback(() => setOpen(false), [setOpen])
   return (
     <>
       <DndProvider backend={HTML5Backend}>
-        <ThreeBox {...backchat} />
+        <ThreeBox {...{ ...backchat, showRemote: () => setOpen(true) }} />
         <DeferredDialog {...{ open, handleClose, ...deferred }} />
       </DndProvider>
     </>

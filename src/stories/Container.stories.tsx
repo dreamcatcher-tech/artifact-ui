@@ -33,7 +33,7 @@ export const Deferred: Story = {
       thread: longThread,
       splice,
     },
-    showRemote: true,
+    showRemoteInitially: true,
   },
 }
 export const Narrow: Story = {

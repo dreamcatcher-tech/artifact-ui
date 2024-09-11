@@ -5,7 +5,6 @@ import CardContent from '@mui/material/CardContent'
 import Terminal from '@mui/icons-material/Terminal'
 import { MessageParam } from '../constants.ts'
 import Debug from 'debug'
-// import { createTheme, ThemeProvider } from '@mui/material/styles'
 import CardHeader from '@mui/material/CardHeader'
 import { assertString } from '@sindresorhus/is'
 import ReactJson from '@microlink/react-json-view'
@@ -18,12 +17,6 @@ export interface ToolAction {
   messages: MessageParam[]
 }
 export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
-  // const noDisabled = createTheme({ palette: { text: { disabled: '0 0 0' } }
-  // })
-
-  // need to get the isolate from the caller
-  // then get the schema from the api
-  // THEN somehow format the output or have a schema for it ?
   return tool_calls.map((tool_call, key) => {
     debug('tool_call', tool_call)
     const { id, function: func } = tool_call
