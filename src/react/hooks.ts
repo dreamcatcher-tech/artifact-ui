@@ -60,11 +60,11 @@ export const useArtifactJSON = <T extends z.ZodType>(
   return { splice, json }
 }
 export const useBranchState = <T extends z.ZodType>(schema: T, pid?: PID) => {
+  const triad = { pid, path: '.io.json' }
+  const { json } = useArtifactJSON(triad, ioStruct)
   if (!pid) {
     return
   }
-  const triad = { pid, path: '.io.json' }
-  const { json } = useArtifactJSON(triad, ioStruct)
   if (!json) {
     return
   }
