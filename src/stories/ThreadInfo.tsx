@@ -48,6 +48,13 @@ const Chips: FC<Chips> = ({
   const branchUrl = `${location}#branches=${branches.join('/')}`
   const branchLabel = prettyBranches(branches)
   const commitUrl = `${branchUrl}&commit=${oid}`
+  let remoteLabel = ''
+  if (remote) {
+    remoteLabel = 'loading...'
+    if (remote.splice) {
+      remoteLabel = `Show the remote thread: ${remote.splice.pid.branches.join('/')}`
+    }
+  }
   return (
     <>
       <a href={repoUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
@@ -77,7 +84,7 @@ const Chips: FC<Chips> = ({
           label='remote'
           color='secondary'
           size='small'
-          title={`Show the remote thread: ${branchLabel}`}
+          title={remoteLabel}
         />
       )}
       <Typography

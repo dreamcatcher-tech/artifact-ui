@@ -7,8 +7,15 @@ import {
 } from './react/hooks.ts'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ThreeBox from './stories/ThreeBox.tsx'
+import equal from 'fast-deep-equal'
+import { PID } from './constants.ts'
+import {
+  isNewHashFragment,
+  parseHashFragment,
+  setHashFragment,
+} from './react/fragment.ts'
 const log = Debug('AI:App')
 Debug.enable('AI:App')
 
@@ -20,20 +27,14 @@ function App() {
   const transcribe = useTranscribe()
 
   useEffect(() => {
-    if (!splice) {
-      return
-    }
-    const { branches } = parseHashFragment()
-    if (!branches.length) {
-      setFragment(splice.pid.branches)
-    }
-  }, [splice])
-
-  useEffect(() => {
     const { branches } = parseHashFragment()
     if (!branches.length) {
       return
     }
+    if (!isNewHashFragment()) {
+      return
+    }
+    console.log('new hash fragment', branches)
 
     backchat
       .changeRemote({ ...backchat.pid, branches })
@@ -46,26 +47,22 @@ function App() {
       })
   }, [backchat])
 
+  const [pid, setPid] = useState<PID>()
+  if (splice && splice.pid && !equal(splice.pid, pid)) {
+    setPid(splice.pid)
+  }
+  useEffect(() => {
+    if (!pid) {
+      return
+    }
+    setHashFragment(pid.branches)
+  }, [pid])
+
   return (
     <DndProvider backend={HTML5Backend}>
       <ThreeBox {...{ prompt, transcribe, thread, splice, remote }} />
     </DndProvider>
   )
-}
-
-const parseHashFragment = () => {
-  const hash = window.location.hash.substring(1)
-  const params = new URLSearchParams(hash)
-  const string = params.get('branches')
-  if (!string) {
-    return { branches: [] }
-  }
-  return { branches: string.split('/') }
-}
-
-const setFragment = (branches: string[]) => {
-  window.location.hash = 'branches=' + branches.join('/')
-  console.log('setFragment', window.location.hash)
 }
 
 export default App

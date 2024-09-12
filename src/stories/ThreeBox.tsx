@@ -10,6 +10,7 @@ import { Paper } from '@mui/material'
 import Stateboard from './Stateboard.tsx'
 import { RemoteTree } from '../react/thread-tree-watcher.ts'
 import RemoteThread from './RemoteThread.tsx'
+import { setHashFragment } from '../react/fragment.ts'
 
 const log = Debug('AI:ThreeBox')
 export interface ThreeBoxProps {
@@ -44,21 +45,30 @@ const ThreeBox: FC<ThreeBoxProps> = ({
   )
 
   const [open, setOpen] = useState(false)
+
+  const onRemote = useCallback(() => {
+    if (!remote) {
+      return
+    }
+    setHashFragment(remote?.splice.pid.branches)
+    setOpen(true)
+  }, [setOpen, remote])
+  const handleClose = useCallback(() => {
+    if (!splice) {
+      return
+    }
+    setHashFragment(splice.pid.branches)
+    setOpen(false)
+  }, [setOpen, splice])
+
   const [initialOpen, setInitialOpen] = useState(false)
   useEffect(() => {
     if (!remote || initialOpen) {
       return
     }
     setInitialOpen(true)
-    setOpen(true)
-  }, [initialOpen, remote])
-
-  const onRemote = useCallback(() => {
-    setOpen(true)
-  }, [setOpen])
-  const handleClose = useCallback(() => {
-    setOpen(false)
-  }, [setOpen])
+    onRemote()
+  }, [initialOpen, remote, onRemote])
 
   return (
     <>
