@@ -2,61 +2,39 @@ import Debug from 'debug'
 import {
   useBackchatThread,
   usePrompt,
-  useThread,
   useTranscribe,
-  getThreadTriad,
   useBackchat,
 } from './react/hooks.ts'
-import Container from './stories/Container.tsx'
-import { useEffect, useState } from 'react'
-import { PID } from './constants.ts'
-import equal from 'fast-deep-equal'
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
+import { useEffect } from 'react'
+import ThreeBox from './stories/ThreeBox.tsx'
 const log = Debug('AI:App')
 Debug.enable('AI:App')
 
 function App() {
   const backchat = useBackchat()
-  const { thread, splice } = useBackchatThread()
-
-  const remoteTriad = getThreadTriad(thread?.remote)
-  const remoteThread = useThread(remoteTriad)
+  const { thread, splice, remote } = useBackchatThread()
 
   const prompt = usePrompt()
   const transcribe = useTranscribe()
 
-  const backchatProps = { inputProps: { prompt, transcribe }, thread, splice }
-  const remoteProps = { ...remoteThread, inputProps: { prompt, transcribe } }
-
-  const [hash, setHash] = useState(window.location.hash)
   useEffect(() => {
-    const abort = new AbortController()
-    window.addEventListener(
-      'hashchange',
-      () => {
-        log('hashchange', window.location.hash)
-        setHash(window.location.hash)
-      },
-      abort
-    )
-    return () => abort.abort()
-  }, [])
-
-  const [remote, setRemote] = useState<PID | undefined>(thread?.remote)
-  if (!equal(remote, thread?.remote)) {
-    setRemote(thread?.remote)
-  }
-
-  const isThreadLoaded = !!thread
-  useEffect(() => {
-    if (!isThreadLoaded) {
+    if (!splice) {
       return
     }
-    // but if there's no remote, the fragment should be current thread
-
     const { branches } = parseHashFragment()
-    if (isFragmentSynced(branches, remote)) {
+    if (!branches.length) {
+      setFragment(splice.pid.branches)
+    }
+  }, [splice])
+
+  useEffect(() => {
+    const { branches } = parseHashFragment()
+    if (!branches.length) {
       return
     }
+
     backchat
       .changeRemote({ ...backchat.pid, branches })
       .then(() => {
@@ -66,14 +44,12 @@ function App() {
         // TODO error should reset the fragment
         log('error changing remote', error)
       })
-  }, [isThreadLoaded, remote, hash, backchat])
+  }, [backchat])
 
   return (
-    <Container
-      backchat={backchatProps}
-      remote={remoteProps}
-      showRemoteInitially={!!remoteThread.thread}
-    />
+    <DndProvider backend={HTML5Backend}>
+      <ThreeBox {...{ prompt, transcribe, thread, splice, remote }} />
+    </DndProvider>
   )
 }
 
@@ -87,16 +63,9 @@ const parseHashFragment = () => {
   return { branches: string.split('/') }
 }
 
-// const setFragment = (branches: string[]) => {
-//   const params = new URLSearchParams({ branches: branches.join('/') })
-//   window.location.hash = params.toString()
-//   console.log('setFragment', window.location.hash)
-// }
-const isFragmentSynced = (branches: string[], remote?: PID) => {
-  if (!remote) {
-    return !branches.length
-  }
-  return equal(remote.branches, branches)
+const setFragment = (branches: string[]) => {
+  window.location.hash = 'branches=' + branches.join('/')
+  console.log('setFragment', window.location.hash)
 }
 
 export default App

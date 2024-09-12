@@ -7,6 +7,7 @@ import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
 import { FC, useCallback, useEffect, useRef, useState } from 'react'
+import { ThreeBoxProps } from './ThreeBox'
 import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
@@ -96,8 +97,8 @@ const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
 }
 
 export interface InputProps {
-  prompt?: (text: string) => Promise<void>
-  transcribe?: (audio: File) => Promise<string>
+  prompt?: (content: string) => Promise<void>
+  transcribe?: ThreeBoxProps['transcribe']
   onRecording?: (isRecording: boolean) => void
   preload?: string
   presubmit?: boolean

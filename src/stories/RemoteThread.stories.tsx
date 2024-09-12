@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import DeferredDialog from './DeferredThread.tsx'
+import RemoteThread from './RemoteThread.tsx'
 import { splice, longThread } from '../data.ts'
 import { useEffect, useState } from 'react'
 
-type Story = StoryObj<typeof DeferredDialog>
+type Story = StoryObj<typeof RemoteThread>
 
-const meta: Meta<typeof DeferredDialog> = {
-  title: 'Deferred Thread',
-  component: DeferredDialog,
+const meta: Meta<typeof RemoteThread> = {
+  title: 'Remote Thread',
+  component: RemoteThread,
   args: { open: true, thread: longThread, splice },
 }
 export default meta
@@ -43,7 +43,7 @@ export const Slideshow: Story = {
     })
 
     return (
-      <DeferredDialog
+      <RemoteThread
         handleClose={() => setOpen(false)}
         open={open}
         thread={thread}

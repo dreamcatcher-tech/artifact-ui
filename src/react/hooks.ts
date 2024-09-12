@@ -10,11 +10,10 @@ import {
   ApiFunctions,
   Triad,
   PathTriad,
-  getThreadPath,
-  threadSchema,
   ioStruct,
   backchatStateSchema,
 } from '../api/types.ts'
+import { RemoteTree, ThreadTreeWatcher } from './thread-tree-watcher.ts'
 import posix from 'path-browserify'
 import { z } from 'zod'
 const log = Debug('AI:hooks')
@@ -129,18 +128,22 @@ export const useSplice = (triad?: Partial<Triad>) => {
 export const useBackchatThread = () => {
   const backchat = useBackchat()
   const state = useBranchState(backchatStateSchema, backchat.pid)
-  const triad = getThreadTriad(state?.target)
-  return useThread(triad)
-}
-export const useRemoteThread = () => {
-  const { thread } = useBackchatThread()
-  const triad = getThreadTriad(thread?.remote)
-  return useThread(triad)
-}
+  const [target, setTarget] = useState<PID>()
 
-export const useThread = (triad?: PathTriad) => {
-  const { splice, json: thread } = useArtifactJSON(triad, threadSchema)
-  return { splice, thread }
+  if (!equal(target, state?.target)) {
+    setTarget(state?.target)
+  }
+
+  const [tree, setTree] = useState<Partial<RemoteTree>>({})
+  useEffect(() => {
+    if (!target) {
+      return
+    }
+    const watcher = ThreadTreeWatcher.watch(backchat, target, setTree)
+    return () => watcher.stop()
+  }, [target])
+
+  return tree
 }
 
 export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
@@ -186,16 +189,13 @@ export const useActions = (isolate: string, target?: PID) => {
 }
 export const usePrompt = () => {
   const backchat = useBackchat()
-  const prompt = useCallback(
-    async (content: string) => {
+  return useCallback(
+    async (content: string, target: PID) => {
       log('prompt', content)
-      await backchat.prompt(content)
+      await backchat.prompt(content, target)
     },
     [backchat]
   )
-  if (backchat) {
-    return prompt
-  }
 }
 
 export const useLatestCommit = (pid?: PID): Splice | undefined => {
@@ -211,22 +211,13 @@ export const useError = () => {
   return setError
 }
 export const useTranscribe = () => {
-  const api = useBackchat()
+  const backchat = useBackchat()
   const transcribe = useCallback(
     async (audio: File) => {
-      const transcription = await api.transcribe({ audio })
+      const transcription = await backchat.transcribe({ audio })
       return transcription.text
     },
-    [api]
+    [backchat]
   )
   return transcribe
-}
-
-export const getThreadTriad = (pid?: PID) => {
-  if (!pid) {
-    return
-  }
-  const path = getThreadPath(pid)
-  const triad: PathTriad = { path, pid }
-  return triad
 }

@@ -24,10 +24,8 @@ const meta: Meta<typeof ThreeBox> = {
   args: {
     thread: blankThread,
     splice,
-    inputProps: {
-      prompt: async (text: string) => {
-        console.log('prompt', text)
-      },
+    prompt: async (text: string) => {
+      console.log('prompt', text)
     },
   },
 }
@@ -38,6 +36,9 @@ type Story = StoryObj<typeof ThreeBox>
 export const Basic: Story = {}
 export const Loading: Story = {
   args: { splice: undefined },
+}
+export const Remote: Story = {
+  args: {},
 }
 export const Short: Story = {
   args: {
@@ -74,16 +75,3 @@ export const Narrow: Story = {
     },
   },
 }
-export const Preload: Story = {
-  args: {
-    inputProps: {
-      preload:
-        'Update HAL to the latest version by using the engage-help function with "hal-system" as the help name and "Update HAL" as the prompt.  Dont ask me any questions, just do it using your best guess.',
-      prompt: async (text: string) => {
-        console.log('prompt', text)
-      },
-    },
-  },
-}
-
-// Show stateboard in a remote thread

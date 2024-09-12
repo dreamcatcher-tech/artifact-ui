@@ -3,18 +3,26 @@ import { Typography } from '@mui/material'
 import { FC, useEffect, useState } from 'react'
 import { CommitObject, Splice } from '../api/types.ts'
 import Chip from '@mui/material/Chip'
+import { RemoteTree } from '../react/thread-tree-watcher.ts'
 
 interface Chips {
   commit: CommitObject
   oid: string
   repo: string
   branches: string[]
-  showRemote?: () => void
+  remote?: RemoteTree
+  onRemote?: () => void
 }
-const Chips: FC<Chips> = ({ commit, oid, repo, branches, showRemote }) => {
+const Chips: FC<Chips> = ({
+  commit,
+  oid,
+  repo,
+  branches,
+  remote,
+  onRemote,
+}) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
-
   useEffect(() => {
     if (!timestamp) {
       return
@@ -62,14 +70,14 @@ const Chips: FC<Chips> = ({ commit, oid, repo, branches, showRemote }) => {
           title={'Open this thread remotely'}
         />
       </a>
-      {showRemote && (
+      {remote && (
         <Chip
           clickable={true}
-          onClick={showRemote}
+          onClick={onRemote}
           label='remote'
           color='secondary'
           size='small'
-          title='Show the remote thread'
+          title={`Show the remote thread: ${branchLabel}`}
         />
       )}
       <Typography
@@ -95,9 +103,10 @@ const Chips: FC<Chips> = ({ commit, oid, repo, branches, showRemote }) => {
 
 interface ThreadInfo {
   splice?: Splice
-  showRemote?: () => void
+  remote?: RemoteTree
+  onRemote?: () => void
 }
-const ThreadInfo: FC<ThreadInfo> = ({ splice, showRemote }) => {
+const ThreadInfo: FC<ThreadInfo> = ({ splice, remote, onRemote }) => {
   let chips
   if (!splice) {
     chips = (
@@ -117,7 +126,8 @@ const ThreadInfo: FC<ThreadInfo> = ({ splice, showRemote }) => {
         oid={oid}
         repo={repo}
         branches={pid.branches}
-        showRemote={showRemote}
+        remote={remote}
+        onRemote={onRemote}
       />
     )
   }
