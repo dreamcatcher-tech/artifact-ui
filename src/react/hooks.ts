@@ -141,7 +141,7 @@ export const useBackchatThread = () => {
     }
     const watcher = ThreadTreeWatcher.watch(backchat, target, setTree)
     return () => watcher.stop()
-  }, [target])
+  }, [backchat, target])
 
   return tree
 }

@@ -6,7 +6,10 @@ import Stack from '@mui/material/Stack'
 
 const debug = Debug('AI:Stateboard')
 
-type WidgetComponent = FC<unknown>
+export interface WidgetProps {
+  api: unknown
+}
+type WidgetComponent = FC<WidgetProps>
 
 type WidgetMap = {
   [key in STATEBOARD_WIDGETS]: WidgetComponent
@@ -45,7 +48,7 @@ const Stateboard: FC<StateboardProps> = ({ widgets }) => {
     <Stack>
       {widgets.map((widget, key) => {
         const Component = map[widget]
-        return <Component key={key} />
+        return <Component key={key} api='' />
       })}
     </Stack>
   )

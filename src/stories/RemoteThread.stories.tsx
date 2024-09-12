@@ -1,14 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import RemoteThread from './RemoteThread.tsx'
 import { splice, longThread } from '../data.ts'
-import { useEffect, useState } from 'react'
 
 type Story = StoryObj<typeof RemoteThread>
 
 const meta: Meta<typeof RemoteThread> = {
   title: 'Remote Thread',
   component: RemoteThread,
-  args: { open: true, thread: longThread, splice },
+  args: {
+    thread: longThread,
+    splice,
+    remote: undefined,
+    prompt: async () => {},
+    transcribe: async () => '',
+  },
 }
 export default meta
 
@@ -27,28 +32,5 @@ export const Narrow: Story = {
       },
       defaultViewport: 'narrow',
     },
-  },
-}
-export const Long: Story = {}
-export const Slideshow: Story = {
-  render: ({ thread, splice }) => {
-    const [open, setOpen] = useState(true)
-    useEffect(() => {
-      let state = true
-      const interval = setInterval(() => {
-        state = !state
-        setOpen(state)
-      }, 800)
-      return () => clearInterval(interval)
-    })
-
-    return (
-      <RemoteThread
-        handleClose={() => setOpen(false)}
-        open={open}
-        thread={thread}
-        splice={splice}
-      />
-    )
   },
 }
