@@ -50,7 +50,7 @@ const RemoteThread: FC<RemoteThread> = (props) => {
           </Typography>
         </Toolbar>
       </AppBar>
-      <DialogContent>
+      <DialogContent sx={{ p: 0 }}>
         <ThreeBox {...threeBox} />
       </DialogContent>
     </Dialog>
