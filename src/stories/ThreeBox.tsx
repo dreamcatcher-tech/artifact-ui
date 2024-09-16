@@ -108,7 +108,7 @@ const ThreeBox: FC<ThreeBoxProps> = ({
             mb: 3,
           }}
         >
-          <Stateboard widgets={['FILE_EXPLORER']} />
+          <Stateboard widgets={['FILE_EXPLORER']} pid={splice?.pid} />
         </Paper>
       </Box>
       {remote && (

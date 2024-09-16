@@ -1,7 +1,12 @@
-import { FC, useEffect, useState } from 'react'
+import { FC, useCallback, useEffect, useState } from 'react'
 import Debug from 'debug'
 import { Backchat } from '../api/client-backchat.ts'
-import { Splice, TreeEntry, type STATEBOARD_WIDGETS } from '../constants.ts'
+import {
+  PID,
+  Splice,
+  TreeEntry,
+  type STATEBOARD_WIDGETS,
+} from '../constants.ts'
 import FileExplorer from '../widgets/FileExplorer.tsx'
 import Stack from '@mui/material/Stack'
 import { useBackchat } from '../react/hooks.ts'
@@ -33,11 +38,15 @@ const map: WidgetMap = {
 
 interface StateboardProps {
   widgets: STATEBOARD_WIDGETS[]
+  pid?: PID
 }
 
-const Stateboard: FC<StateboardProps> = ({ widgets }) => {
+const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
   const backchat = useBackchat()
-  const api = makeApi(backchat)
+  const api = useApi(backchat, pid)
+  if (!pid) {
+    return <div>no pid</div>
+  }
   return (
     <Stack sx={{ height: '100%' }}>
       {widgets.map((widget, key) => {
@@ -57,26 +66,25 @@ export interface api {
   useWorkingDir: () => (FileData | null)[]
   useSelection: () => FileData[]
   useFile: (path: string) => FileData | null
-  useFiles: () => FileData[]
+  useFiles: () => (FileData | null)[]
 }
-const makeApi = (backchat: Backchat) => {
+const useApi = (backchat: Backchat, pid?: PID) => {
   const [selection, setSelection] = useState<FileData[]>([])
   const [cwd, setCwd] = useState<(FileData | null)[]>([null])
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
-  const [files, setFiles] = useState<FileData[]>([])
+  const [files, setFiles] = useState<(FileData | null)[]>([])
   const [splice, setSplice] = useState<Splice>()
 
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
-      mock(cwd, setFiles)
-      log('MOCK root effect')
+      log('backchat not found')
       return
     }
-    log('root effect')
+    log('splice effect')
     const aborter = new AbortController()
     const watch = async () => {
       for await (const splice of backchat.watch(
-        backchat.pid,
+        pid || backchat.pid,
         undefined,
         undefined,
         aborter.signal
@@ -89,22 +97,35 @@ const makeApi = (backchat: Backchat) => {
     return () => {
       aborter.abort()
     }
-  }, [backchat])
+  }, [backchat, pid])
 
   useEffect(() => {
     if (!splice) {
       return
     }
     log('begin cwd reconciliation', splice, nextCwd)
+
     const watcher = TreeWatcher.start(backchat, splice, nextCwd)
     watcher.drill().then((result) => {
       log('drill result', result)
+      if (watcher.aborted) {
+        return
+      }
       const { cwd, files } = result
       setCwd(cwd)
       setFiles(files)
     })
     return () => watcher.stop()
-  }, [splice, nextCwd])
+  }, [backchat, splice, nextCwd])
+
+  const changeCwd = useCallback((nextCwd: (FileData | null)[]) => {
+    setNextCwd(nextCwd)
+    const temp = [...nextCwd]
+    temp.pop()
+    temp.push(null)
+    setCwd(temp)
+    setFiles([null])
+  }, [])
 
   const api: api = {
     setSelection(selection) {
@@ -116,9 +137,9 @@ const makeApi = (backchat: Backchat) => {
       if (file.isDir) {
         const search = cwd.lastIndexOf(file)
         if (search === -1) {
-          setNextCwd([...cwd, file])
+          changeCwd([...cwd, file])
         } else {
-          setNextCwd(cwd.slice(0, search + 1))
+          changeCwd(cwd.slice(0, search + 1))
         }
       } else {
         console.log('open file', file)
@@ -138,33 +159,35 @@ const makeApi = (backchat: Backchat) => {
       return files
     },
     useFile: (path: string) => {
+      log('useFile', path)
       return null
     },
   }
   return api
 }
-const mock = (
-  cwd: (FileData | null)[],
-  setFiles: (files: FileData[]) => void
-) => {
-  if (cwd.length <= 1) {
-    setFiles([
-      { id: 'lht', name: 'Projects', isDir: true },
-      {
-        id: 'mcd',
-        name: 'chonky-sphere-v2.png',
-        thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
-      },
-    ])
-  } else {
-    setFiles([{ id: 'lhtlht', name: 'Nested', ext: '' }])
-  }
-}
+// const mock = (
+//   cwd: (FileData | null)[],
+//   setFiles: (files: FileData[]) => void
+// ) => {
+//   if (cwd.length <= 1) {
+//     setFiles([
+//       { id: 'lht', name: 'Projects', isDir: true },
+//       {
+//         id: 'mcd',
+//         name: 'chonky-sphere-v2.png',
+//         thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
+//       },
+//     ])
+//   } else {
+//     setFiles([{ id: 'lhtlht', name: 'Nested', ext: '' }])
+//   }
+// }
 
 class TreeWatcher {
   #backchat: Backchat
   #cwd: (FileData | null)[]
   #splice: Splice
+  #aborter = new AbortController()
   static start(backchat: Backchat, splice: Splice, cwd: (FileData | null)[]) {
     if (cwd.length < 1) {
       throw new Error('cwd must have at least one item')
@@ -187,10 +210,12 @@ class TreeWatcher {
     this.#splice = splice
     this.#cwd = cwd
   }
+  get aborted() {
+    return this.#aborter.signal.aborted
+  }
   stop() {
     this.#aborter.abort()
   }
-  #aborter = new AbortController()
   async drill() {
     let path = '.'
     const promises = this.#cwd.map(async (item) => {
@@ -200,6 +225,7 @@ class TreeWatcher {
       log('drill', path)
       try {
         const { pid, oid } = this.#splice
+        // TODO make this abortable
         return this.#backchat.readTree(path, pid, oid)
       } catch (err) {
         console.error('error reading tree', item, err)
