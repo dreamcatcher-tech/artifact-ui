@@ -1,6 +1,6 @@
 import { WebClientEngine } from '../api/client-engine.ts'
 import { Backchat } from '../api/client-backchat.ts'
-import Provider from '../react/Provider.tsx'
+import ArtifactProvider from '../react/ArtifactProvider.tsx'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
@@ -50,14 +50,14 @@ const PingButton = () => {
 }
 const APIHarness = () => {
   return (
-    <Provider>
+    <ArtifactProvider>
       <div>
         <h1>API</h1>
         <p>url: {url}</p>
         <p>import.meta.env.VITE_API_URL: {import.meta.env.VITE_API_URL}</p>
       </div>
       <PingButton />
-    </Provider>
+    </ArtifactProvider>
   )
 }
 

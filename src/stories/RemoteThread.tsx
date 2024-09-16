@@ -19,12 +19,12 @@ const Transition = forwardRef(function Transition(
   return <Slide direction='up' ref={ref} {...props} />
 })
 
-interface RemoteThread extends ThreeBoxProps {
+interface RemoteThreadProps extends ThreeBoxProps {
   open: boolean
   handleClose: () => void
 }
 
-const RemoteThread: FC<RemoteThread> = (props) => {
+const RemoteThread: FC<RemoteThreadProps> = (props) => {
   const { open, handleClose, ...threeBox } = props
 
   return (

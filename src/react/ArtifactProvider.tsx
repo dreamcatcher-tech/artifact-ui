@@ -5,7 +5,7 @@ import { Backchat } from '../api/client-backchat.ts'
 import { print, EngineInterface, backchatIdRegex } from '../api/types.ts'
 import { assert } from '@sindresorhus/is'
 import Debug from 'debug'
-const log = Debug('AI:Provider')
+const log = Debug('AI:ArtifactProvider')
 
 interface ContextType {
   backchat: Backchat
@@ -22,7 +22,7 @@ enum Status {
   LoadingBackchat = 'Loading Backchat...',
   Showtime = 'Backchat Loaded - showtime starting...',
 }
-const Provider: FC<Props> = ({ children, url }) => {
+const ArtifactProvider: FC<Props> = ({ children, url }) => {
   url = url || import.meta.env.VITE_API_URL
   if (!url) {
     throw new Error('API URL not set')
@@ -112,4 +112,4 @@ const recoverPrivateKey = () => {
   return privateKey
 }
 
-export default Provider
+export default ArtifactProvider

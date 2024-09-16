@@ -248,11 +248,13 @@ const Input: FC<InputProps> = (props) => {
         e.preventDefault()
         // ctrl + y for a new tab / window without the hash
         // ctrl + shift + y to get a new session in the current window
-        const urlWithoutHash = window.location.href.split('#')[0]
+
+        const urlWithoutHash = window.location.origin + window.location.pathname
         if (e.shiftKey) {
-          window.location.assign(urlWithoutHash)
+          // TODO do a backchat call to make a new thread, and don't allow
+          // another one until this has finished
         } else {
-          window.open(urlWithoutHash, '_blank')
+          window.open(urlWithoutHash, '_blank', 'noopener')
         }
       }
     }

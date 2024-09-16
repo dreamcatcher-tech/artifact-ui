@@ -14,7 +14,6 @@ const meta: Meta<typeof ThreeBox> = {
   component: ThreeBox,
   parameters: {
     layout: 'fullscreen',
-    parameters: { viewport: { defaultViewport: 'tablet' } },
   },
   render: (args) => (
     <Box sx={{ height: '100vh' }}>
@@ -38,7 +37,9 @@ export const Loading: Story = {
   args: { splice: undefined },
 }
 export const Remote: Story = {
-  args: {},
+  args: {
+    remote: { thread: longThread, splice },
+  },
 }
 export const Short: Story = {
   args: {

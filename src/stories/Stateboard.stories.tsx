@@ -1,5 +1,8 @@
+import Debug from 'debug'
 import type { Meta, StoryObj } from '@storybook/react'
 import Stateboard from './Stateboard.tsx'
+import ArtifactProvider from '../react/ArtifactProvider.tsx'
+import { Box } from '@mui/material'
 // import { STATEBOARD_WIDGETS } from '../constants.ts'
 // import { splice, longThread, shortThread, blankThread } from '../data.ts'
 
@@ -22,9 +25,17 @@ export const Empty: Story = {}
 //   'COMMIT_INFO',
 //   'THREADS',
 //   'REPOS',
-export const Files: Story = {
-  args: {
-    widgets: ['FILE_EXPLORER'],
+export const Files: Story = {}
+export const FilesWithApi: Story = {
+  render: (args) => {
+    Debug.enable('AI:Stateboard')
+    return (
+      <ArtifactProvider>
+        <Box sx={{ height: '90vh' }}>
+          <Stateboard {...args} />
+        </Box>
+      </ArtifactProvider>
+    )
   },
 }
 export const Short: Story = {

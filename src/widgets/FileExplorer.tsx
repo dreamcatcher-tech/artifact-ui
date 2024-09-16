@@ -6,19 +6,35 @@ import { WidgetProps } from '../stories/Stateboard.tsx'
 
 setChonkyDefaults({ iconComponent: ChonkyIconFA })
 
-const FileExplorer: FC<WidgetProps> = () => {
-  const files = [
-    { id: 'lht', name: 'Projects', isDir: true },
-    { id: 'ht', name: 'Projects/smojects', isDir: true },
-    {
-      id: 'mcd',
-      name: 'chonky-sphere-v2.png',
-      thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
-    },
-  ]
-  const folderChain = [{ id: 'xcv', name: 'Demo', isDir: true }]
+const FileExplorer: FC<WidgetProps> = ({ api }) => {
+  const folderChain = api.useWorkingDir()
+  const files = api.useFiles()
   return (
     <FullFileBrowser
+      onFileAction={(action) => {
+        console.log(action)
+        if (action.id === 'change_selection') {
+          api.setSelection(action.state.selectedFiles)
+        }
+        if (action.id === 'clear_selection') {
+          api.setSelection([])
+        }
+        if (action.id === 'open_parent_folder') {
+          api.openParent()
+        }
+        if (action.id === 'open_selection') {
+          console.log('open_selection', action)
+        }
+        if (action.id === 'open_files') {
+          const { targetFile } = action.payload
+          if (!targetFile) {
+            console.error('No target file found')
+            return
+          }
+          api.open(targetFile)
+        }
+        // console.log('action', action)
+      }}
       files={files}
       folderChain={folderChain}
       disableDragAndDropProvider={true}
@@ -27,7 +43,3 @@ const FileExplorer: FC<WidgetProps> = () => {
 }
 
 export default FileExplorer
-
-// need to be given access to a backchat like thing, that has a files interface
-
-// or, use hooks to get files and dirs ?

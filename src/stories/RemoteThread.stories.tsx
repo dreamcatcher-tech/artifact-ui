@@ -13,6 +13,7 @@ const meta: Meta<typeof RemoteThread> = {
     remote: undefined,
     prompt: async () => {},
     transcribe: async () => '',
+    open: true,
   },
 }
 export default meta

@@ -1,5 +1,5 @@
 import equal from 'fast-deep-equal'
-import { ArtifactContext } from '../react/Provider.tsx'
+import { ArtifactContext } from './ArtifactProvider.tsx'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {

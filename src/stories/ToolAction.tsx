@@ -31,7 +31,13 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
           avatar={<Terminal />}
         />
         <CardContent sx={{ pt: 0, pb: 0 }}>
-          <ReactJson src={data} quotesOnKeys={false} name={false} />
+          <ReactJson
+            src={data}
+            quotesOnKeys={false}
+            name={false}
+            displayDataTypes={false}
+            collapsed={true}
+          />
         </CardContent>
         <CardHeader
           title='Output:'
@@ -71,7 +77,15 @@ const tryParse = (value: string) => {
 
 const Output: FC<{ output: unknown }> = ({ output }) => {
   if (output !== null && typeof output === 'object') {
-    return <ReactJson src={output} quotesOnKeys={false} name={false} />
+    return (
+      <ReactJson
+        src={output}
+        quotesOnKeys={false}
+        name={false}
+        displayDataTypes={false}
+        collapsed={true}
+      />
+    )
   }
   if (output && typeof output === 'string') {
     return <Markdown content={output + ''} />
