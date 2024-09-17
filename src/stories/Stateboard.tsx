@@ -8,9 +8,11 @@ import {
   type STATEBOARD_WIDGETS,
 } from '../constants.ts'
 import FileExplorer from '../widgets/FileExplorer.tsx'
+import CommitGraph from '../widgets/CommitGraph.tsx'
+import Editor from '../widgets/Editor.tsx'
 import Stack from '@mui/material/Stack'
 import { useBackchat } from '../react/hooks.ts'
-import { FileData } from '@aperturerobotics/chonky'
+import { type FileData } from '@aperturerobotics/chonky'
 
 const log = Debug('AI:Stateboard')
 
@@ -27,13 +29,13 @@ const blank = (name: string) => () => <div>blank: {name}</div>
 
 const map: WidgetMap = {
   FILE_EXPLORER: FileExplorer,
+  COMMIT_GRAPH: CommitGraph,
+  MARKDOWN_EDITOR: Editor,
   BRANCH_EXPLORER: blank('BRANCH_EXPLORER'),
-  COMMIT_GRAPH: blank('COMMIT_GRAPH'),
   COMMIT_INFO: blank('COMMIT_INFO'),
   THREADS: blank('THREADS'),
   REPOS: blank('REPOS'),
   TPS_REPORT: blank('TPS_REPORT'),
-  MARKDOWN_EDITOR: blank('MARKDOWN_EDITOR'),
 }
 
 interface StateboardProps {
@@ -44,8 +46,8 @@ interface StateboardProps {
 const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
   const backchat = useBackchat()
   const api = useApi(backchat, pid)
-  if (!pid) {
-    return <div>no pid</div>
+  if (!api) {
+    return <div>loading stateboard...</div>
   }
   return (
     <Stack sx={{ height: '100%' }}>
@@ -183,7 +185,17 @@ const useApi = (backchat: Backchat, pid?: PID) => {
 //   }
 // }
 
+// class GitWatcher {
+//   // used to get the logs of a given branch ?
+//   // somehow get the head commit of a given pid ?
+//   // then get all the logs, in batches
+// }
+
 class TreeWatcher {
+  // TODO store the trees for each path so we can instantly display back
+  // navigation
+  // or just use a local cache so they are instantly available when backchat
+  // calls, with caches named by the repo
   #backchat: Backchat
   #cwd: (FileData | null)[]
   #splice: Splice

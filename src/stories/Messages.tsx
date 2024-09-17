@@ -246,7 +246,7 @@ const Messages: FC<Messages> = ({ thread }) => {
         }}
       >
         {messages.map((message, key) => {
-          const { role, content } = message
+          const { role, content = '' } = message
           debug('role', role, 'content', content)
           switch (role) {
             case 'user':
@@ -262,16 +262,9 @@ const Messages: FC<Messages> = ({ thread }) => {
                   />
                 )
               } else {
-                if (!content) {
-                  console.error('empty content:', message)
-                }
                 assertString(content)
                 return (
-                  <Assistant
-                    key={key}
-                    content={content || ''}
-                    name={message.name}
-                  />
+                  <Assistant key={key} content={content} name={message.name} />
                 )
               }
             case 'system':

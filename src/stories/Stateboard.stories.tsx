@@ -3,15 +3,11 @@ import type { Meta, StoryObj } from '@storybook/react'
 import Stateboard from './Stateboard.tsx'
 import ArtifactProvider from '../react/ArtifactProvider.tsx'
 import { Box } from '@mui/material'
-// import { STATEBOARD_WIDGETS } from '../constants.ts'
-// import { splice, longThread, shortThread, blankThread } from '../data.ts'
 
 const meta: Meta<typeof Stateboard> = {
   title: 'Stateboard',
   component: Stateboard,
-  args: {
-    widgets: ['FILE_EXPLORER'],
-  },
+  args: { widgets: ['FILE_EXPLORER'] },
 }
 export default meta
 
@@ -28,7 +24,7 @@ export const Empty: Story = {}
 export const Files: Story = {}
 export const FilesWithApi: Story = {
   render: (args) => {
-    Debug.enable('AI:Stateboard')
+    Debug.enable('AI:Stateboard AI:FileExplorer')
     return (
       <ArtifactProvider>
         <Box sx={{ height: '90vh' }}>
@@ -37,6 +33,32 @@ export const FilesWithApi: Story = {
       </ArtifactProvider>
     )
   },
+}
+export const CommitsWithApi: Story = {
+  render: (args) => {
+    Debug.enable('AI:Stateboard AI:ArtifactCommitGraph')
+    return (
+      <ArtifactProvider>
+        <Box sx={{ height: '90vh' }}>
+          <Stateboard {...args} />
+        </Box>
+      </ArtifactProvider>
+    )
+  },
+  args: { widgets: ['COMMIT_GRAPH'] },
+}
+export const EditorWithApi: Story = {
+  render: (args) => {
+    Debug.enable('AI:Stateboard AI:Editor')
+    return (
+      <ArtifactProvider>
+        <Box sx={{ height: '90vh' }}>
+          <Stateboard {...args} />
+        </Box>
+      </ArtifactProvider>
+    )
+  },
+  args: { widgets: ['MARKDOWN_EDITOR'] },
 }
 export const Short: Story = {
   args: {},

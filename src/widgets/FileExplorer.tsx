@@ -1,6 +1,13 @@
 import { setChonkyDefaults } from '@aperturerobotics/chonky'
 import { ChonkyIconFA } from '@aperturerobotics/chonky-icon-fontawesome'
-import { FullFileBrowser } from '@aperturerobotics/chonky'
+import {
+  FullFileBrowser,
+  // FileBrowser,
+  // FileList,
+  // FileNavbar,
+  // FileToolbar,
+  // FileContextMenu,
+} from '@aperturerobotics/chonky'
 import { FC } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 
@@ -38,6 +45,7 @@ const FileExplorer: FC<WidgetProps> = ({ api }) => {
       files={files}
       folderChain={folderChain}
       disableDragAndDropProvider={true}
+      disableDragAndDrop={true}
     />
   )
 }
