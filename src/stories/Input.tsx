@@ -301,9 +301,11 @@ const Input: FC<InputProps> = (props) => {
 
   return (
     <TextField
+      autoFocus={true}
       inputRef={ref}
       value={disabled ? '' : value}
       multiline
+      maxRows={10}
       fullWidth
       variant='outlined'
       placeholder={placeholder}

@@ -1,4 +1,4 @@
-import { CommitGraph } from 'commit-graph'
+import { CommitGraph } from '@dreamcatcher-tech/commit-graph/src/index.ts'
 import { FC } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'
@@ -6,6 +6,9 @@ const log = Debug('AI:ArtifactCommitGraph')
 
 const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   log('ArtifactCommitGraph', api)
+
+  // the api has a target / scoped PID
+
   const commits = threeBranches
   const branchHeads = [
     {
@@ -27,10 +30,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
       },
     },
   ]
-  // const selected = [
-  //   'bgpqkjvf2mqoi9lq4upamdj0ke7e8iuo',
-  //   'r26g8v5vo7c82c5o1tt9hcleef924tp2',
-  // ]
+  const selected = [
+    'bgpqkjvf2mqoi9lq4upamdj0ke7e8iuo',
+    'r26g8v5vo7c82c5o1tt9hcleef924tp2',
+  ]
   const graphStyle = {
     commitSpacing: 60,
     branchSpacing: 20,
@@ -54,6 +57,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
       commits={commits}
       branchHeads={branchHeads}
       graphStyle={graphStyle}
+      onClick={(commit, event) => {
+        console.log('onClick', commit, event)
+      }}
+      selected={selected}
     />
   )
 }
