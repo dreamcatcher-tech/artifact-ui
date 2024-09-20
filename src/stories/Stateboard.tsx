@@ -156,6 +156,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     temp.push(null)
     setCwd(temp)
     setFiles([null])
+    setSelection([])
   }, [])
 
   const [contents, setContents] = useState<string | null | undefined>()
@@ -164,7 +165,6 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   let selectedFilePath = undefined
   if (selectedFile && !selectedFile.isDir) {
     selectedFilePath = ''
-
     selectedFilePath =
       cwd.map((item) => item?.name).join('/') + '/' + selectedFile.name
   }
