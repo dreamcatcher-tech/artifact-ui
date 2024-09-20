@@ -74,7 +74,9 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               {widget}
             </AccordionSummary>
-            <AccordionDetails sx={{ height: '30vh', overflowY: 'auto' }}>
+            <AccordionDetails
+              sx={{ height: 100 / widgets.length + 'vh', overflowY: 'auto' }}
+            >
               <Component api={api} />
             </AccordionDetails>
           </Accordion>
