@@ -1,4 +1,4 @@
-import { CommitGraph } from '@dreamcatcher-tech/commit-graph/src/index.ts'
+import { CommitGraph } from '@dreamcatcher-tech/commit-graph'
 import { FC } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'

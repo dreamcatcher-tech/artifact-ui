@@ -9,10 +9,15 @@ import {
 } from '../constants.ts'
 import FileExplorer from '../widgets/FileExplorer.tsx'
 import CommitGraph from '../widgets/CommitGraph.tsx'
-import Editor from '../widgets/Editor.tsx'
-import Stack from '@mui/material/Stack'
+import MarkdownEditor from '../widgets/MarkdownEditor.tsx'
+import Box from '@mui/material/Box'
 import { useBackchat } from '../react/hooks.ts'
 import { type FileData } from '@aperturerobotics/chonky'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { useResizeDetector } from 'react-resize-detector'
 
 const log = Debug('AI:Stateboard')
 
@@ -30,7 +35,7 @@ const blank = (name: string) => () => <div>blank: {name}</div>
 const map: WidgetMap = {
   FILE_EXPLORER: FileExplorer,
   COMMIT_GRAPH: CommitGraph,
-  MARKDOWN_EDITOR: Editor,
+  MARKDOWN_EDITOR: MarkdownEditor,
   BRANCH_EXPLORER: blank('BRANCH_EXPLORER'),
   COMMIT_INFO: blank('COMMIT_INFO'),
   THREADS: blank('THREADS'),
@@ -46,16 +51,36 @@ interface StateboardProps {
 const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
   const backchat = useBackchat()
   const api = useApi(backchat, pid)
+  const { width, height, ref } = useResizeDetector()
+  log('resize', width, height)
   if (!api) {
     return <div>loading stateboard...</div>
   }
   return (
-    <Stack sx={{ height: '100%' }}>
+    <Box
+      sx={{
+        height: '100%',
+        overflow: 'hidden',
+        p: 1,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      ref={ref}
+    >
       {widgets.map((widget, key) => {
         const Component = map[widget]
-        return <Component key={key} api={api} />
+        return (
+          <Accordion key={key} disableGutters={false} defaultExpanded={true}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              {widget}
+            </AccordionSummary>
+            <AccordionDetails sx={{ height: '30vh', overflowY: 'auto' }}>
+              <Component api={api} />
+            </AccordionDetails>
+          </Accordion>
+        )
       })}
-    </Stack>
+    </Box>
   )
 }
 
@@ -66,9 +91,11 @@ export interface api {
   open: (file: FileData) => void
   openParent: () => void
   useWorkingDir: () => (FileData | null)[]
+  useFilesList: () => (FileData | null)[]
   useSelection: () => FileData[]
-  useFile: (path: string) => FileData | null
-  useFiles: () => (FileData | null)[]
+  useSelectedFile: () => FileData | undefined
+  useSelectedFileContents: () => string | null | undefined
+  usePID: () => PID | undefined
 }
 const useApi = (backchat: Backchat, pid?: PID) => {
   const [selection, setSelection] = useState<FileData[]>([])
@@ -129,6 +156,40 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     setFiles([null])
   }, [])
 
+  const [contents, setContents] = useState<string | null | undefined>()
+  const selectedFile: FileData = selection[0]
+
+  let selectedFilePath = undefined
+  if (selectedFile && !selectedFile.isDir) {
+    selectedFilePath = ''
+
+    selectedFilePath =
+      cwd.map((item) => item?.name).join('/') + '/' + selectedFile.name
+  }
+
+  useEffect(() => {
+    if (!selectedFilePath) {
+      setContents(undefined)
+      return
+    }
+    if (!splice) {
+      return
+    }
+    let active = true
+    log('selected file changed', selectedFilePath)
+    setContents(null)
+    const { pid, oid } = splice
+    backchat.read(selectedFilePath, pid, oid).then((contents) => {
+      if (!active) {
+        return
+      }
+      setContents(contents)
+    })
+    return () => {
+      active = false
+    }
+  }, [selectedFilePath, splice, backchat])
+
   const api: api = {
     setSelection(selection) {
       console.log('setSelection', selection)
@@ -157,12 +218,17 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     useSelection: () => {
       return selection
     },
-    useFiles: () => {
+    useFilesList: () => {
       return files
     },
-    useFile: (path: string) => {
-      log('useFile', path)
-      return null
+    useSelectedFile: () => {
+      return selectedFile
+    },
+    useSelectedFileContents: () => {
+      return contents
+    },
+    usePID: () => {
+      return splice?.pid
     },
   }
   return api

@@ -15,9 +15,10 @@ setChonkyDefaults({ iconComponent: ChonkyIconFA })
 
 const FileExplorer: FC<WidgetProps> = ({ api }) => {
   const folderChain = api.useWorkingDir()
-  const files = api.useFiles()
+  const files = api.useFilesList()
   return (
     <FullFileBrowser
+      clearSelectionOnOutsideClick={false}
       onFileAction={(action) => {
         console.log(action)
         if (action.id === 'change_selection') {

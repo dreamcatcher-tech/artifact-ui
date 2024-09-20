@@ -102,13 +102,15 @@ const ThreeBox: FC<ThreeBoxProps> = ({
             flexGrow: 1,
             maxHeight: '100%',
             overflow: 'hidden',
-            p: 3,
             mt: 3,
             mr: 3,
             mb: 3,
           }}
         >
-          <Stateboard widgets={['FILE_EXPLORER']} pid={splice?.pid} />
+          <Stateboard
+            widgets={['COMMIT_GRAPH', 'FILE_EXPLORER', 'MARKDOWN_EDITOR']}
+            pid={splice?.pid}
+          />
         </Paper>
       </Box>
       {remote && (

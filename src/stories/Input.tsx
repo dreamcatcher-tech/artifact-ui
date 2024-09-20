@@ -194,7 +194,12 @@ const Input: FC<InputProps> = (props) => {
         ) : (
           <>
             {mediaRecorder && (
-              <LiveAudioVisualizer height={50} mediaRecorder={mediaRecorder} />
+              <LiveAudioVisualizer
+                height={50}
+                mediaRecorder={mediaRecorder}
+                width={47}
+                barWidth={15}
+              />
             )}
             <Mic
               onEvent={mediaRecorder ? stopRecording : start}
@@ -305,7 +310,6 @@ const Input: FC<InputProps> = (props) => {
       inputRef={ref}
       value={disabled ? '' : value}
       multiline
-      maxRows={10}
       fullWidth
       variant='outlined'
       placeholder={placeholder}

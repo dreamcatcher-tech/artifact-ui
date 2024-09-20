@@ -60,6 +60,21 @@ export const EditorWithApi: Story = {
   },
   args: { widgets: ['MARKDOWN_EDITOR'] },
 }
+export const Party: Story = {
+  render: (args) => {
+    Debug.enable(
+      'AI:Stateboard AI:Editor AI:FileExplorer AI:ArtifactCommitGraph'
+    )
+    return (
+      <ArtifactProvider>
+        <Box sx={{ height: '90vh' }}>
+          <Stateboard {...args} />
+        </Box>
+      </ArtifactProvider>
+    )
+  },
+  args: { widgets: ['COMMIT_GRAPH', 'FILE_EXPLORER', 'MARKDOWN_EDITOR'] },
+}
 export const Short: Story = {
   args: {},
 }
