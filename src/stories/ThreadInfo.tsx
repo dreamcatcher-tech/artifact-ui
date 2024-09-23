@@ -1,11 +1,12 @@
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
 import { FC, useEffect, useState } from 'react'
-import { CommitObject, Splice } from '../api/types.ts'
+import { CommitObject, Splice, Thread } from '../api/types.ts'
 import Chip from '@mui/material/Chip'
 import { RemoteTree } from '../react/thread-tree-watcher.ts'
 
 interface Chips {
+  agent: string
   commit: CommitObject
   oid: string
   repo: string
@@ -14,6 +15,7 @@ interface Chips {
   onRemote?: () => void
 }
 const Chips: FC<Chips> = ({
+  agent,
   commit,
   oid,
   repo,
@@ -47,6 +49,8 @@ const Chips: FC<Chips> = ({
   const repoUrl = `https://github.com/${repo}`
   const branchUrl = `${location}#branches=${branches.join('/')}`
   const branchLabel = prettyBranches(branches)
+  const agentUrl = `${repoUrl}/blob/main/${agent}`
+  const agentLabel = agent.split('/').pop()?.split('.').shift() || ''
   const commitUrl = `${branchUrl}&commit=${oid}`
   let remoteLabel = ''
   if (remote) {
@@ -75,6 +79,16 @@ const Chips: FC<Chips> = ({
           color='info'
           size='small'
           title={'Open this thread remotely'}
+        />
+      </a>
+      <a href={agentUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
+        <Chip
+          clickable={true}
+          label={agentLabel}
+          onClick={() => window.open(agentUrl, '_blank', 'noopener')}
+          color='default'
+          size='small'
+          title={'Open this agent file on github.com'}
         />
       </a>
       {remote && (
@@ -110,10 +124,11 @@ const Chips: FC<Chips> = ({
 
 interface ThreadInfo {
   splice?: Splice
+  thread?: Thread
   remote?: RemoteTree
   onRemote?: () => void
 }
-const ThreadInfo: FC<ThreadInfo> = ({ splice, remote, onRemote }) => {
+const ThreadInfo: FC<ThreadInfo> = ({ splice, thread, remote, onRemote }) => {
   let chips
   if (!splice) {
     chips = (
@@ -129,6 +144,7 @@ const ThreadInfo: FC<ThreadInfo> = ({ splice, remote, onRemote }) => {
     const repo = `${pid.account}/${pid.repository}`
     chips = (
       <Chips
+        agent={thread?.agent || '...'}
         commit={commit}
         oid={oid}
         repo={repo}

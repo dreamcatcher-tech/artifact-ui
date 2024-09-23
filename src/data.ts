@@ -2,6 +2,7 @@ import { TestFile } from './api/tps-report.ts'
 import { Splice, Thread } from './constants.ts'
 
 export const longThread: Thread = {
+  agent: 'agents/hal2.md',
   toolCommits: {},
   messageOffset: 0,
   focusedFiles: [],
@@ -284,6 +285,7 @@ export const tpsReport: TestFile = {
 }
 
 export const testThread: Thread = {
+  agent: 'agents/o1.md',
   messageOffset: 0,
   messages: [
     {
@@ -443,6 +445,7 @@ export const testThread: Thread = {
 }
 
 export const filesStateboard: Thread = {
+  agent: 'agents/files.md',
   messageOffset: 0,
   messages: [
     {

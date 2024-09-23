@@ -58,7 +58,10 @@ export const EditorWithApi: Story = {
       </ArtifactProvider>
     )
   },
-  args: { widgets: ['MARKDOWN_EDITOR'] },
+  args: {
+    widgets: ['MARKDOWN_EDITOR'],
+    selection: [{ id: '1', name: 'README.md' }],
+  },
 }
 export const Party: Story = {
   render: (args) => {

@@ -22,10 +22,10 @@ const FileExplorer: FC<WidgetProps> = ({ api }) => {
       onFileAction={(action) => {
         console.log(action)
         if (action.id === 'change_selection') {
-          api.setSelection(action.state.selectedFiles)
+          api.setFileSelections(action.state.selectedFiles)
         }
         if (action.id === 'clear_selection') {
-          api.setSelection([])
+          api.setFileSelections([])
         }
         if (action.id === 'open_parent_folder') {
           api.openParent()

@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useState } from 'react'
+import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import Debug from 'debug'
 import { Backchat } from '../api/client-backchat.ts'
 import {
@@ -18,6 +18,7 @@ import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useResizeDetector } from 'react-resize-detector'
+import equal from 'fast-deep-equal'
 
 const log = Debug('AI:Stateboard')
 
@@ -46,11 +47,18 @@ const map: WidgetMap = {
 interface StateboardProps {
   widgets: STATEBOARD_WIDGETS[]
   pid?: PID
+  selection?: FileData[]
 }
 
-const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
+const Stateboard: FC<StateboardProps> = ({ widgets, pid, selection }) => {
   const backchat = useBackchat()
   const api = useApi(backchat, pid)
+  useEffect(() => {
+    if (selection) {
+      log('set selection from stateboard props', selection)
+      api.setFileSelections(selection)
+    }
+  }, [selection, api])
   const { width, height, ref } = useResizeDetector()
   log('resize', width, height)
   if (!api) {
@@ -89,22 +97,27 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid }) => {
 export default Stateboard
 
 export interface api {
-  setSelection: (selection: FileData[]) => void
+  setFileSelections: (selection: FileData[]) => void
+  setTextSelection: (contents: string | undefined) => void
   open: (file: FileData) => void
   openParent: () => void
   useWorkingDir: () => (FileData | null)[]
   useFilesList: () => (FileData | null)[]
-  useSelection: () => FileData[]
+  useFileSelections: () => FileData[]
   useSelectedFile: () => FileData | undefined
   useSelectedFileContents: () => string | null | undefined
+  useTextSelection: () => string | undefined
   usePID: () => PID | undefined
+  useCommits: () => Splice[]
 }
 const useApi = (backchat: Backchat, pid?: PID) => {
   const [selection, setSelection] = useState<FileData[]>([])
+  const [textSelection, setTextSelection] = useState<string | undefined>()
   const [cwd, setCwd] = useState<(FileData | null)[]>([null])
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
   const [files, setFiles] = useState<(FileData | null)[]>([])
   const [splice, setSplice] = useState<Splice>()
+  const [commits, setCommits] = useState<Splice[]>([])
 
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
@@ -163,10 +176,11 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   const selectedFile: FileData = selection[0]
 
   let selectedFilePath = undefined
+  let selectedFileOid = undefined
   if (selectedFile && !selectedFile.isDir) {
-    selectedFilePath = ''
     selectedFilePath =
       cwd.map((item) => item?.name).join('/') + '/' + selectedFile.name
+    selectedFileOid = selectedFile.id
   }
 
   useEffect(() => {
@@ -175,13 +189,23 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       return
     }
     if (!splice) {
+      setContents(null)
       return
     }
     let active = true
     log('selected file changed', selectedFilePath)
     setContents(null)
-    const { pid, oid } = splice
-    backchat.read(selectedFilePath, pid, oid).then((contents) => {
+
+    const { pid, oid: commit } = splice
+
+    // want to read using the oid of the object, if known
+    // also want to do this for directories, as well
+
+    // if the oid is unchanged, then don't set contents null
+    // only if the oid changed, and we haven't loaded the new contents, then do
+    // the loading
+
+    backchat.read(selectedFilePath, pid, commit).then((contents) => {
       if (!active) {
         return
       }
@@ -190,49 +214,73 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     return () => {
       active = false
     }
-  }, [selectedFilePath, splice, backchat])
+  }, [selectedFilePath, selectedFileOid, splice, backchat])
 
-  const api: api = {
-    setSelection(selection) {
-      console.log('setSelection', selection)
-      setSelection(selection)
-    },
-    open: (file: FileData) => {
-      console.log('setOpen', file)
-      if (file.isDir) {
-        const search = cwd.lastIndexOf(file)
-        if (search === -1) {
-          changeCwd([...cwd, file])
-        } else {
-          changeCwd(cwd.slice(0, search + 1))
+  useEffect(() => {
+    // when the head splice changes, change the commits
+    if (!splice) {
+      return
+    }
+    setCommits([splice])
+    // if select the head, then stay on the head, else lock on the commit
+  }, [splice])
+
+  const api: api = useMemo<api>(
+    () => ({
+      setFileSelections(nextSelection) {
+        if (equal(nextSelection, selection)) {
+          return
         }
-      } else {
-        console.log('open file', file)
-      }
-    },
-    openParent: () => {
-      console.log('openParent', cwd)
-      setCwd(cwd.slice(0, cwd.length - 1))
-    },
-    useWorkingDir: () => {
-      return cwd
-    },
-    useSelection: () => {
-      return selection
-    },
-    useFilesList: () => {
-      return files
-    },
-    useSelectedFile: () => {
-      return selectedFile
-    },
-    useSelectedFileContents: () => {
-      return contents
-    },
-    usePID: () => {
-      return splice?.pid
-    },
-  }
+        setSelection(nextSelection)
+      },
+      setTextSelection: (contents: string | undefined) => {
+        log('setTextSelection', contents)
+        setTextSelection(contents)
+      },
+      open: (file: FileData) => {
+        console.log('setOpen', file)
+        if (file.isDir) {
+          const search = cwd.lastIndexOf(file)
+          if (search === -1) {
+            changeCwd([...cwd, file])
+          } else {
+            changeCwd(cwd.slice(0, search + 1))
+          }
+        } else {
+          console.log('open file', file)
+        }
+      },
+      openParent: () => {
+        console.log('openParent', cwd)
+        setCwd(cwd.slice(0, cwd.length - 1))
+      },
+      useWorkingDir: () => {
+        return cwd
+      },
+      useFileSelections: () => {
+        return selection
+      },
+      useFilesList: () => {
+        return files
+      },
+      useSelectedFile: () => {
+        return selectedFile
+      },
+      useSelectedFileContents: () => {
+        return contents
+      },
+      useTextSelection: () => {
+        return textSelection
+      },
+      usePID: () => {
+        return splice?.pid || undefined
+      },
+      useCommits: () => {
+        return commits
+      },
+    }),
+    [selection, cwd, files, contents, textSelection, splice, commits]
+  )
   return api
 }
 // const mock = (

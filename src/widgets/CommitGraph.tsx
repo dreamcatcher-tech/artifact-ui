@@ -2,6 +2,7 @@ import { CommitGraph } from '@dreamcatcher-tech/commit-graph'
 import { FC } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'
+import { Splice } from '../constants.ts'
 const log = Debug('AI:ArtifactCommitGraph')
 
 const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
@@ -9,7 +10,24 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
 
   // the api has a target / scoped PID
 
-  const commits = threeBranches
+  // read pid
+  // set pid
+  // loads of the pid, up to some limit
+  // watch so the tip is always up to date
+  // plug the holes in the graph between last known version, so ask for logs
+  // using time and then dedupe
+
+  const splices = api.useCommits()
+  const commits = mapSplices(splices)
+  // const commits = threeBranches
+  log('commits', commits)
+
+  // when click on one, want to set the commit in the api, and watch the files
+  // change below it
+
+  // when select the parent commit, then all the child branches with their
+  // respective heads should be shown, but not before
+
   const branchHeads = [
     {
       name: 'main',
@@ -284,3 +302,22 @@ const threeBranches = [
     parents: [],
   },
 ]
+
+const mapSplices = (splices: Splice[]) => {
+  return splices.map((splice) => {
+    const commit = {
+      author: {
+        name: splice.commit.author.name,
+        date: splice.commit.author.timestamp * 1000,
+      },
+      message: splice.commit.message,
+    }
+    return {
+      sha: splice.oid,
+      commit,
+      parents: splice.commit.parent.map((parent) => {
+        return { sha: parent }
+      }),
+    }
+  })
+}

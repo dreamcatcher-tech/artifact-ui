@@ -94,7 +94,12 @@ const ThreeBox: FC<ThreeBoxProps> = ({
           <Messages thread={thread} />
           <Box sx={{ height: (theme) => theme.spacing(2) }} />
           <Input prompt={scopedPrompt} transcribe={transcribe} />
-          <ThreadInfo splice={splice} remote={remote} onRemote={onRemote} />
+          <ThreadInfo
+            splice={splice}
+            thread={thread}
+            remote={remote}
+            onRemote={onRemote}
+          />
         </Stack>
         <Paper
           elevation={6}
