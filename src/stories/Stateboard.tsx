@@ -279,7 +279,17 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         return commits
       },
     }),
-    [selection, cwd, files, contents, textSelection, splice, commits]
+    [
+      selection,
+      cwd,
+      files,
+      contents,
+      textSelection,
+      splice,
+      commits,
+      changeCwd,
+      selectedFile,
+    ]
   )
   return api
 }
