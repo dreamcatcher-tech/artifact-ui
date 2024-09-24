@@ -18,8 +18,7 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   // using time and then dedupe
 
   const splices = api.useCommits()
-  const commits = mapSplices(splices)
-  // const commits = threeBranches
+  const { commits, branchHeads } = mapSplices(splices)
   log('commits', commits)
 
   // when click on one, want to set the commit in the api, and watch the files
@@ -28,26 +27,6 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   // when select the parent commit, then all the child branches with their
   // respective heads should be shown, but not before
 
-  const branchHeads = [
-    {
-      name: 'main',
-      commit: {
-        sha: 'bgpqkjvf2mqoi9lq4upamdj0ke7e8iuo',
-      },
-    },
-    {
-      name: 'feature-branch',
-      commit: {
-        sha: 'bgpv9t0smfear03um03737mrkggb84o2',
-      },
-    },
-    {
-      name: 'another-branch',
-      commit: {
-        sha: 'r26g8v5vo7c82c5o1tt9hcleef924tp2',
-      },
-    },
-  ]
   const selected = [
     'bgpqkjvf2mqoi9lq4upamdj0ke7e8iuo',
     'r26g8v5vo7c82c5o1tt9hcleef924tp2',
@@ -86,7 +65,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
 export default ArtifactCommitGraph
 
 const mapSplices = (splices: Splice[]) => {
-  return splices.map((splice) => {
+  const heads = new Map<string, Splice>()
+  const commits = splices.map((splice) => {
+    const path = toPath(splice)
+    heads.set(path, splice)
     const commit = {
       author: {
         name: splice.commit.author.name,
@@ -102,4 +84,19 @@ const mapSplices = (splices: Splice[]) => {
       }),
     }
   })
+  const branchHeads = []
+  for (const [path, splice] of heads.entries()) {
+    branchHeads.push({
+      name: path,
+      commit: {
+        sha: splice.oid,
+      },
+    })
+  }
+
+  return { commits, branchHeads }
+}
+
+const toPath = (splice: Splice) => {
+  return splice.pid.branches.map((string) => string.substring(0, 7)).join('/')
 }

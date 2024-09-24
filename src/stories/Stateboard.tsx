@@ -17,7 +17,7 @@ import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useResizeDetector } from 'react-resize-detector'
+import useResizeObserver from 'use-resize-observer'
 import equal from 'fast-deep-equal'
 
 const log = Debug('AI:Stateboard')
@@ -59,7 +59,7 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid, selection }) => {
       api.setFileSelections(selection)
     }
   }, [selection, api])
-  const { width, height, ref } = useResizeDetector()
+  const { width, height, ref } = useResizeObserver()
   log('resize', width, height)
   if (!api) {
     return <div>loading stateboard...</div>
