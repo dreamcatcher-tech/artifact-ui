@@ -4,6 +4,8 @@ import {
   mermaidErrorThread,
   testThread,
   filesStateboard,
+  router,
+  parallelToolCalls,
 } from '../data.ts'
 import type { Meta, StoryObj } from '@storybook/react'
 import Messages from './Messages'
@@ -17,6 +19,12 @@ export default meta
 type Story = StoryObj<typeof Messages>
 
 export const Chat: Story = {}
+export const Router: Story = {
+  args: { thread: router },
+}
+export const ParallelToolCalls: Story = {
+  args: { thread: parallelToolCalls },
+}
 export const Test: Story = {
   args: { thread: testThread },
 }

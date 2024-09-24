@@ -1,5 +1,5 @@
 import { Agent, Thread } from '../api/types.ts'
-import { FC, useState } from 'react'
+import { FC, useMemo, useState } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
@@ -35,6 +35,8 @@ import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
 import Markdown from './Markdown.tsx'
+import RouterIcon from '@mui/icons-material/AltRoute'
+import { MessageParam } from '../constants.ts'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
@@ -101,14 +103,14 @@ const ChatType: FC<ChatType> = ({ content, type, name }) => {
           sx={{ display: 'flex', alignItems: 'center' }}
           onClick={handleExpandClick}
         >
-          <Typography variant='h6' component='span' sx={{ width: 100 }}>
+          <Typography variant='h6' component='span'>
             {title}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
           </ExpandMore>
         </Box>
-        <Collapse in={expanded} timeout='auto'>
+        <Collapse in={expanded} timeout={200}>
           <Markdown content={content || ''}></Markdown>
         </Collapse>
       </TimelineContent>
@@ -213,19 +215,94 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
     </TimelineItem>
   )
 }
-const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
-  <TimelineItem>
-    <TimelineSeparator>
-      <TimelineDot color='secondary' sx={{ position: 'relative' }}>
-        <ToolIcon />
-      </TimelineDot>
-      <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
-    </TimelineSeparator>
-    <TimelineContent>
-      <ToolAction tool_calls={tool_calls} messages={messages} />
-    </TimelineContent>
-  </TimelineItem>
-)
+
+interface Tool extends ToolAction {
+  name?: string
+}
+const Tool: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+  if (isSwitch(tool_calls)) {
+    return <Router tool_calls={tool_calls} messages={messages} name={name} />
+  }
+  return <ToolCall tool_calls={tool_calls} messages={messages} name={name} />
+}
+const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  const handleExpandClick = () => {
+    setExpanded(!expanded)
+  }
+  const title = name.replace(' ', '\u00a0')
+  const isInProgress = useIsInProgress(messages, tool_calls)
+  return (
+    <TimelineItem>
+      <TimelineSeparator>
+        <TimelineDot
+          color='secondary'
+          sx={{ position: 'relative' }}
+          onClick={handleExpandClick}
+        >
+          <ToolIcon />
+          {isInProgress && <Progress />}
+        </TimelineDot>
+        <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
+      </TimelineSeparator>
+      <TimelineContent className='parent'>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center' }}
+          onClick={handleExpandClick}
+        >
+          <Typography variant='h6' component='span'>
+            {title}
+          </Typography>
+          <ExpandMore expand={expanded}>
+            <ExpandMoreIcon />
+          </ExpandMore>
+        </Box>
+        <Collapse in={expanded} timeout={200}>
+          <ToolAction tool_calls={tool_calls} messages={messages} />
+        </Collapse>
+      </TimelineContent>
+    </TimelineItem>
+  )
+}
+
+const Router: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  const handleExpandClick = () => {
+    setExpanded(!expanded)
+  }
+  const title = name.replace(' ', '\u00a0')
+  const isInProgress = useIsInProgress(messages, tool_calls)
+  const switchPath = useSwitchPath(tool_calls)
+  return (
+    <TimelineItem>
+      <TimelineSeparator>
+        <TimelineDot color='error' sx={{ position: 'relative' }}>
+          <RouterIcon />
+          {isInProgress && <Progress />}
+        </TimelineDot>
+        <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
+      </TimelineSeparator>
+      <TimelineContent>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center' }}
+          onClick={handleExpandClick}
+        >
+          <Typography variant='h6' component='span'>
+            {title + ' ➡️ ' + switchPath}
+          </Typography>
+          <ExpandMore expand={expanded}>
+            <ExpandMoreIcon />
+          </ExpandMore>
+        </Box>
+        <Collapse in={expanded} timeout={200}>
+          <ToolAction tool_calls={tool_calls} messages={messages} />
+        </Collapse>
+      </TimelineContent>
+    </TimelineItem>
+  )
+}
 
 interface Messages {
   thread?: Thread
@@ -259,6 +336,7 @@ const Messages: FC<Messages> = ({ thread }) => {
                     key={key}
                     tool_calls={message.tool_calls}
                     messages={messages}
+                    name={message.name}
                   />
                 )
               } else {
@@ -283,3 +361,36 @@ const Messages: FC<Messages> = ({ thread }) => {
 }
 
 export default Messages
+
+const useIsInProgress = (
+  messages: MessageParam[],
+  tool_calls: { id: string }[]
+) => {
+  return useMemo(() => {
+    return !isCompleted(messages, tool_calls)
+  }, [messages, tool_calls])
+}
+const isCompleted = (messages: MessageParam[], tool_calls: { id: string }[]) =>
+  tool_calls.every(({ id }) =>
+    messages.some((message) => {
+      if ('tool_call_id' in message) {
+        return message.tool_call_id === id
+      }
+    })
+  )
+const isSwitch = (tool_calls: { function: { name: string } }[]) => {
+  return tool_calls[0].function.name === 'agents_switch'
+}
+const useSwitchPath = (tool_calls: { function: { arguments: string } }[]) => {
+  return useMemo(() => {
+    try {
+      const args = JSON.parse(tool_calls[0].function.arguments)
+      const path = args.path || ''
+      return path.replace(' ', '\u00a0')
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return '(parse error...)'
+      }
+    }
+  }, [tool_calls])
+}

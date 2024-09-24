@@ -9,47 +9,52 @@ import CardHeader from '@mui/material/CardHeader'
 import { assertString } from '@sindresorhus/is'
 import ReactJson from '@microlink/react-json-view'
 import { Typography } from '@mui/material'
+import Stack from '@mui/material/Stack'
 
 const debug = Debug('AI:ToolAction')
+const IN_PROGRESS = Symbol('IN_PROGRESS')
 
 export interface ToolAction {
   tool_calls: { id: string; function: { name: string; arguments: string } }[]
   messages: MessageParam[]
 }
 export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
-  return tool_calls.map((tool_call, key) => {
-    debug('tool_call', tool_call)
-    const { id, function: func } = tool_call
-    const { name, arguments: args } = func
-    const data = tryParse(args)
-    const output = findOutput(messages, id)
-    return (
-      <Card key={key}>
-        <CardHeader
-          title={name}
-          titleTypographyProps={{ variant: 'h6' }}
-          avatar={<Terminal />}
-        />
-        <CardContent sx={{ pt: 0, pb: 0 }}>
-          <ReactJson
-            src={data}
-            quotesOnKeys={false}
-            name={false}
-            displayDataTypes={false}
-            collapsed={true}
-          />
-        </CardContent>
-        <CardHeader
-          title='Output:'
-          titleTypographyProps={{ variant: 'h6' }}
-          avatar={<Terminal />}
-        />
-        <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
-          <Output output={output} />
-        </CardContent>
-      </Card>
-    )
-  })
+  return (
+    <Stack spacing={1}>
+      {tool_calls.map((tool_call, key) => {
+        debug('tool_call', tool_call)
+        const { id, function: func } = tool_call
+        const { name, arguments: args } = func
+        const data = tryParse(args)
+        const output = findOutput(messages, id)
+        return (
+          <Card key={key}>
+            <CardHeader
+              title={name}
+              titleTypographyProps={{ variant: 'h6' }}
+              avatar={<Terminal />}
+            />
+            <CardContent sx={{ pt: 0, pb: 0 }}>
+              <ReactJson
+                src={data}
+                quotesOnKeys={false}
+                name={false}
+                displayDataTypes={false}
+              />
+            </CardContent>
+            <CardHeader
+              title='Output:'
+              titleTypographyProps={{ variant: 'h6' }}
+              avatar={<Terminal />}
+            />
+            <CardContent sx={{ pt: 0, pb: 0, fontFamily: 'sans-serif' }}>
+              <Output output={output} />
+            </CardContent>
+          </Card>
+        )
+      })}
+    </Stack>
+  )
 }
 const findOutput = (messages: MessageParam[], id: string) => {
   const message = messages.find((message) => {
@@ -58,12 +63,10 @@ const findOutput = (messages: MessageParam[], id: string) => {
     }
   })
   if (message) {
-    if ('content' in message) {
-      assertString(message.content)
-      return tryParse(message.content)
-    }
+    assertString(message.content)
+    return tryParse(message.content)
   }
-  return null
+  return IN_PROGRESS
 }
 const tryParse = (value: string) => {
   try {
@@ -83,7 +86,6 @@ const Output: FC<{ output: unknown }> = ({ output }) => {
         quotesOnKeys={false}
         name={false}
         displayDataTypes={false}
-        collapsed={true}
       />
     )
   }
@@ -98,6 +100,9 @@ const Output: FC<{ output: unknown }> = ({ output }) => {
   }
   if (output === '') {
     output = '(empty)'
+  }
+  if (output === IN_PROGRESS) {
+    output = '(in progress...)'
   }
   return (
     <Typography fontWeight='bold' fontStyle='italic'>

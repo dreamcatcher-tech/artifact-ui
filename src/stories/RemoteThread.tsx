@@ -16,7 +16,7 @@ const Transition = forwardRef(function Transition(
   },
   ref: Ref<unknown>
 ) {
-  return <Slide direction='up' ref={ref} {...props} />
+  return <Slide direction='up' ref={ref} timeout={200} {...props} />
 })
 
 interface RemoteThreadProps extends ThreeBoxProps {

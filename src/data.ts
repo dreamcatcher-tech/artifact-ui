@@ -19,7 +19,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
-      name: 'test/agent name.md',
+      name: 'test/agent-name.md',
       tool_calls: [
         {
           id: 'call_i8C8lqCmSfYzOqYa9YCxDkON',
@@ -58,7 +58,7 @@ export const longThread: Thread = {
     },
     {
       role: 'assistant',
-      name: 'test/agent name.md',
+      name: 'test/agent-name.md',
       content:
         'To create a new markdown (md) file, could you please clarify if you need guidance on the markdown syntax for creating specific content or if you are looking to generate a blank md file?',
     },
@@ -568,4 +568,130 @@ export const filesStateboard: Thread = {
   },
   stateboards: [],
   focusedFiles: [],
+}
+
+export const router: Thread = {
+  agent: 'agents/o1.md',
+  messageOffset: 0,
+  messages: [
+    {
+      content: '/o1',
+      role: 'user',
+      name: 'act_8MZX5A3WYDQY1QCV',
+    },
+    {
+      role: 'assistant',
+      content: null,
+      name: 'agents/router.md',
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'call_is6HbJm6fkYcZwlTAQdubNnx',
+          type: 'function',
+          function: {
+            name: 'agents_switch',
+            arguments:
+              '{"reasoning":["The user is trying to switch agents, which indicates they want a different focus or capabilities than the current agent offers."],"path":"agents/o1.md","swallowPrompt":true}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'call_is6HbJm6fkYcZwlTAQdubNnx',
+      content: 'null',
+    },
+  ],
+  toolCommits: {
+    call_is6HbJm6fkYcZwlTAQdubNnx: 'e6a57684e974a1851d0bc181a58f39fd92c0e044',
+  },
+  stateboards: [],
+  focusedFiles: [],
+}
+export const parallelToolCalls: Thread = {
+  agent: 'agents/hal2.md',
+  toolCommits: {},
+  messageOffset: 0,
+  focusedFiles: [],
+  stateboards: [],
+  messages: [
+    {
+      role: 'user',
+      content: 'create a new md file',
+    },
+    {
+      role: 'assistant',
+      name: 'test/agent-name.md',
+      tool_calls: [
+        {
+          id: 'call_i8C8lqCmSfYzOqYa9YCxDkON',
+          type: 'function',
+          function: {
+            name: 'help-finder',
+            arguments: '{"text":"create a new md file"}',
+          },
+        },
+        {
+          id: 'call_kShQuzYlpAQenLDbZIcwCgF2',
+          type: 'function',
+          function: {
+            name: 'load',
+            arguments: '{"help":"create-help"}',
+          },
+        },
+        {
+          id: 'call_tmkLJN3yDs63QXkH3imrZlRe',
+          type: 'function',
+          function: {
+            name: 'engage',
+            arguments:
+              '{"help":"create-help","text":"I need to create a blank markdown file."}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'call_i8C8lqCmSfYzOqYa9YCxDkON',
+      content: 'create-help',
+    },
+    {
+      role: 'tool',
+      tool_call_id: 'call_kShQuzYlpAQenLDbZIcwCgF2',
+      content:
+        '{\n  "config": {},\n  "runner": "ai-prompt",\n  "commands": [],\n  "prerequisites": [],\n  "instructions": [\n    "\\nGive it the format of a blank file.\\nTeach it how to write these files out.\\nOnce written, it is automatically picked up by the help-finder.\\nWe should guide the user thru how to run some tests, and show the default tests that are automatically running on it, with the examples being used to test its outputs and expectations.\\n"\n  ],\n  "done": "",\n  "examples": [],\n  "tests": []\n}',
+    },
+    {
+      role: 'assistant',
+      name: 'test/agent-name.md',
+      content:
+        'To create a new markdown (md) file, could you please clarify if you need guidance on the markdown syntax for creating specific content or if you are looking to generate a blank md file?',
+    },
+    {
+      role: 'user',
+      content: 'just a blank on thanks',
+    },
+    {
+      role: 'assistant',
+      name: 'test/agent name.md',
+      tool_calls: [
+        {
+          id: 'call_tmkLJN3yDs63QXkH3imrZlRe',
+          type: 'function',
+          function: {
+            name: 'engage',
+            arguments:
+              '{"help":"create-help","text":"I need to create a blank markdown file."}',
+          },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+
+      name: 'test/agent name.md',
+      content:
+        'You now have the instructions on how to create a blank Markdown file. If you have any additional questions or need further assistance, feel free to ask.',
+    },
+  ],
 }
