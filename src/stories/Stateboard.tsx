@@ -1,4 +1,5 @@
-import { FC, useCallback, useEffect, useMemo, useState } from 'react'
+import useResizeObserver from 'use-resize-observer'
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Debug from 'debug'
 import { Backchat } from '../api/client-backchat.ts'
 import {
@@ -17,7 +18,6 @@ import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import useResizeObserver from 'use-resize-observer'
 import equal from 'fast-deep-equal'
 
 const log = Debug('AI:Stateboard')
@@ -59,31 +59,54 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid, selection }) => {
       api.setFileSelections(selection)
     }
   }, [selection, api])
-  const { width, height, ref } = useResizeObserver()
-  log('resize', width, height)
+
+  const [expanded, setExpanded] = useState<boolean[]>(widgets.map(() => true))
+
+  const handleChange =
+    (panelIndex: number) => (_: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpanded((prevExpanded) => {
+        const newExpanded = [...prevExpanded]
+        newExpanded[panelIndex] = isExpanded
+        return newExpanded
+      })
+    }
+
+  const expandedCount = expanded.filter(Boolean).length || 1
+  const { ref, height = 1 } = useResizeObserver()
+  const heightPerExpanded = (height - widgets.length * 48) / expandedCount
+
   if (!api) {
     return <div>loading stateboard...</div>
   }
+
   return (
     <Box
+      ref={ref}
       sx={{
+        backgroundColor: 'lightgoldenrodyellow',
         height: '100%',
         overflow: 'hidden',
         p: 1,
-        display: 'flex',
-        flexDirection: 'column',
       }}
-      ref={ref}
     >
       {widgets.map((widget, key) => {
         const Component = map[widget]
         return (
-          <Accordion key={key} disableGutters={false} defaultExpanded={true}>
+          <Accordion
+            disableGutters
+            key={key}
+            expanded={expanded[key]}
+            onChange={handleChange(key)}
+          >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               {widget}
             </AccordionSummary>
             <AccordionDetails
-              sx={{ height: 100 / widgets.length + 'vh', overflowY: 'auto' }}
+              sx={{
+                overflow: 'hidden',
+                height: expanded[key] ? heightPerExpanded : undefined,
+                p: 0,
+              }}
             >
               <Component api={api} />
             </AccordionDetails>
@@ -108,7 +131,8 @@ export interface api {
   useSelectedFileContents: () => string | null | undefined
   useTextSelection: () => string | undefined
   usePID: () => PID | undefined
-  useCommits: () => Splice[]
+  useSplices: () => Splice[]
+  expandCommits: (count: number) => void
 }
 const useApi = (backchat: Backchat, pid?: PID) => {
   const [selection, setSelection] = useState<FileData[]>([])
@@ -117,7 +141,8 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
   const [files, setFiles] = useState<(FileData | null)[]>([])
   const [splice, setSplice] = useState<Splice>()
-  const [commits, setCommits] = useState<Splice[]>([])
+  const [splices, setSplices] = useState<Splice[]>([])
+  const [spliceDepth, setSpliceDepth] = useState(20)
 
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
@@ -221,9 +246,59 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     if (!splice) {
       return
     }
-    setCommits([splice])
+    setSplices((current) => {
+      return [splice, ...current]
+    })
+
     // if select the head, then stay on the head, else lock on the commit
   }, [splice])
+
+  const isMountedRef = useRef(true)
+  const isSplicesFetching = useRef(false)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!splices.length) {
+      return
+    }
+    let retries = 0
+
+    const fetchSplices = async () => {
+      try {
+        isSplicesFetching.current = true
+
+        const { pid, oid } = splices[splices.length - 1]
+        const count = spliceDepth - splices.length
+        const next = await backchat.splices(pid, { commit: oid, count })
+
+        if (isMountedRef.current) {
+          setSplices((prev) => [...prev, ...next])
+        }
+      } catch (error) {
+        console.error('Error fetching commits:', error)
+
+        if (isMountedRef.current) {
+          if (retries >= 10) {
+            throw new Error(`Failed to fetch commits after ${retries} attempts`)
+          }
+          retries++
+          await fetchSplices()
+        }
+      } finally {
+        isSplicesFetching.current = false
+      }
+    }
+
+    if (!isSplicesFetching.current && splices.length < spliceDepth) {
+      fetchSplices()
+    }
+  }, [splices, spliceDepth, backchat])
 
   const api: api = useMemo<api>(
     () => ({
@@ -275,8 +350,14 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       usePID: () => {
         return splice?.pid || undefined
       },
-      useCommits: () => {
-        return commits
+      useSplices: () => {
+        return splices
+      },
+      expandCommits: (count: number) => {
+        if (count < 1) {
+          throw new Error('count must be greater than 0')
+        }
+        setSpliceDepth((current) => current + count)
       },
     }),
     [
@@ -286,7 +367,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       contents,
       textSelection,
       splice,
-      commits,
+      splices,
       changeCwd,
       selectedFile,
     ]
@@ -309,12 +390,6 @@ const useApi = (backchat: Backchat, pid?: PID) => {
 //   } else {
 //     setFiles([{ id: 'lhtlht', name: 'Nested', ext: '' }])
 //   }
-// }
-
-// class GitWatcher {
-//   // used to get the logs of a given branch ?
-//   // somehow get the head commit of a given pid ?
-//   // then get all the logs, in batches
 // }
 
 class TreeWatcher {

@@ -54,6 +54,7 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
 
   return (
     <MdEditor
+      style={{ height: '100%' }}
       ref={ref}
       preview={false}
       modelValue={text || ''}

@@ -3,6 +3,7 @@ import { FC } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'
 import { Splice } from '../constants.ts'
+import Box from '@mui/material/Box'
 const log = Debug('AI:ArtifactCommitGraph')
 
 const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
@@ -17,7 +18,7 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   // plug the holes in the graph between last known version, so ask for logs
   // using time and then dedupe
 
-  const splices = api.useCommits()
+  const splices = api.useSplices()
   const { commits, branchHeads } = mapSplices(splices)
   log('commits', commits)
 
@@ -50,15 +51,17 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   }
 
   return (
-    <CommitGraph
-      commits={commits}
-      branchHeads={branchHeads}
-      graphStyle={graphStyle}
-      onClick={(commit, event) => {
-        console.log('onClick', commit, event)
-      }}
-      selected={selected}
-    />
+    <Box sx={{ pt: 2, pl: 2, height: '100%', overflowY: 'auto' }}>
+      <CommitGraph
+        commits={commits}
+        branchHeads={branchHeads}
+        graphStyle={graphStyle}
+        onClick={(commit, event) => {
+          console.log('onClick', commit, event)
+        }}
+        selected={selected}
+      />
+    </Box>
   )
 }
 
@@ -68,7 +71,10 @@ const mapSplices = (splices: Splice[]) => {
   const heads = new Map<string, Splice>()
   const commits = splices.map((splice) => {
     const path = toPath(splice)
-    heads.set(path, splice)
+    if (!heads.has(path)) {
+      heads.set(path, splice)
+    }
+
     const commit = {
       author: {
         name: splice.commit.author.name,
