@@ -58,7 +58,14 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
     <Box
       id={id}
       // must reset the zIndex so the mouse over and select works
-      sx={{ pt: 2, pl: 2, height: '100%', position: 'relative', zIndex: 0 }}
+      sx={{
+        pt: 2,
+        pl: 2,
+        height: '100%',
+        position: 'relative',
+        zIndex: 0,
+        overflow: 'auto',
+      }}
     >
       <WithInfiniteScroll
         parentID={id}
