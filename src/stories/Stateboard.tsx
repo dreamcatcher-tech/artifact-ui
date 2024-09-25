@@ -133,6 +133,10 @@ export interface api {
   usePID: () => PID | undefined
   useSplices: () => Splice[]
   expandCommits: (count: number) => void
+  saveFile: (
+    file: FileData,
+    contents: string
+  ) => Promise<{ charactersWritten: number }>
 }
 const useApi = (backchat: Backchat, pid?: PID) => {
   const [selection, setSelection] = useState<FileData[]>([])
@@ -140,7 +144,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   const [cwd, setCwd] = useState<(FileData | null)[]>([null])
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
   const [files, setFiles] = useState<(FileData | null)[]>([])
-  const [splice, setSplice] = useState<Splice>()
+  const [latest, setLatest] = useState<Splice>()
   const [splices, setSplices] = useState<Splice[]>([])
   const [spliceDepth, setSpliceDepth] = useState(20)
 
@@ -159,7 +163,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         aborter.signal
       )) {
         log('splice', splice)
-        setSplice(splice)
+        setLatest(splice)
       }
     }
     watch()
@@ -169,12 +173,12 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   }, [backchat, pid])
 
   useEffect(() => {
-    if (!splice) {
+    if (!latest) {
       return
     }
-    log('begin cwd reconciliation', splice, nextCwd)
+    log('begin cwd reconciliation', latest, nextCwd)
 
-    const watcher = TreeWatcher.start(backchat, splice, nextCwd)
+    const watcher = TreeWatcher.start(backchat, latest, nextCwd)
     watcher.drill().then((result) => {
       log('drill result', result)
       if (watcher.aborted) {
@@ -185,7 +189,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       setFiles(files)
     })
     return () => watcher.stop()
-  }, [backchat, splice, nextCwd])
+  }, [backchat, latest, nextCwd])
 
   const changeCwd = useCallback((nextCwd: (FileData | null)[]) => {
     setNextCwd(nextCwd)
@@ -204,16 +208,30 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   let selectedFileOid = undefined
   if (selectedFile && !selectedFile.isDir) {
     selectedFilePath =
-      cwd.map((item) => item?.name).join('/') + '/' + selectedFile.name
+      cwd.map((i) => i?.name).join('/') + '/' + selectedFile.name
     selectedFileOid = selectedFile.id
   }
+  const saveFile = useCallback(
+    (file: FileData, content: string) => {
+      if (!latest) {
+        throw new Error('no splice')
+      }
+      if (file.isDir) {
+        throw new Error('cannot save directory')
+      }
+      const { pid } = latest
+      const path = cwd.map((i) => i?.name).join('/') + '/' + file.name
+      return backchat.write(path, content, pid)
+    },
+    [latest, cwd, backchat]
+  )
 
   useEffect(() => {
     if (!selectedFilePath) {
       setContents(undefined)
       return
     }
-    if (!splice) {
+    if (!latest) {
       setContents(null)
       return
     }
@@ -221,7 +239,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     log('selected file changed', selectedFilePath)
     setContents(null)
 
-    const { pid, oid: commit } = splice
+    const { pid, oid: commit } = latest
 
     // want to read using the oid of the object, if known
     // also want to do this for directories, as well
@@ -239,19 +257,19 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     return () => {
       active = false
     }
-  }, [selectedFilePath, selectedFileOid, splice, backchat])
+  }, [selectedFilePath, selectedFileOid, latest, backchat])
 
   useEffect(() => {
     // when the head splice changes, change the commits
-    if (!splice) {
+    if (!latest) {
       return
     }
     setSplices((current) => {
-      return [splice, ...current]
+      return [latest, ...current]
     })
 
     // if select the head, then stay on the head, else lock on the commit
-  }, [splice])
+  }, [latest])
 
   const isMountedRef = useRef(true)
   const isSplicesFetching = useRef(false)
@@ -348,7 +366,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         return textSelection
       },
       usePID: () => {
-        return splice?.pid || undefined
+        return latest?.pid || undefined
       },
       useSplices: () => {
         return splices
@@ -359,6 +377,9 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         }
         setSpliceDepth((current) => current + count)
       },
+      saveFile: async (file: FileData, contents: string) => {
+        return saveFile(file, contents)
+      },
     }),
     [
       selection,
@@ -366,10 +387,11 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       files,
       contents,
       textSelection,
-      splice,
+      latest,
       splices,
       changeCwd,
       selectedFile,
+      saveFile,
     ]
   )
   return api

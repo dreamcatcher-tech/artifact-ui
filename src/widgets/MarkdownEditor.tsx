@@ -1,3 +1,5 @@
+import Backdrop from '@mui/material/Backdrop'
+import CircularProgress from '@mui/material/CircularProgress'
 import { MdEditor, ExposeParam } from 'md-editor-rt'
 import 'md-editor-rt/lib/style.css'
 import { FC, useEffect, useRef } from 'react'
@@ -23,7 +25,7 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
       setText(undefined)
     }
   }, [contents])
-
+  const [isSaving, setIsSaving] = useState(false)
   const [text, setText] = useState<string>()
   if (typeof contents === 'string' && !text && contents !== text) {
     setText(contents)
@@ -52,21 +54,34 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
     return <div>no contents</div>
   }
 
+  // TODO externalize this library
+  // TODO disable save if no changes
+  // TODO make save go via the prompt
   return (
-    <MdEditor
-      style={{ height: '100%' }}
-      ref={ref}
-      preview={false}
-      modelValue={text || ''}
-      onChange={setText}
-      showCodeRowNumber={true}
-      language='en-US'
-      toolbarsExclude={['github', 'htmlPreview', 'pageFullscreen']}
-      onSave={(editor) => {
-        log('onSave', editor)
-        alert('saving is not implemented')
-      }}
-    />
+    <>
+      <Backdrop
+        sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })}
+        open={isSaving}
+      >
+        <CircularProgress color='inherit' />
+      </Backdrop>
+      <MdEditor
+        style={{ height: '100%' }}
+        ref={ref}
+        preview={false}
+        modelValue={text || ''}
+        onChange={setText}
+        showCodeRowNumber={true}
+        language='en-US'
+        toolbarsExclude={['github', 'htmlPreview', 'pageFullscreen']}
+        noUploadImg={true}
+        onSave={(contents) => {
+          log('onSave', contents)
+          setIsSaving(true)
+          api.saveFile(file, contents).finally(() => setIsSaving(false))
+        }}
+      />
+    </>
   )
 }
 
