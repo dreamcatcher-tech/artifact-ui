@@ -20,7 +20,7 @@
     "@aperturerobotics/chonky": "^0.2.8",
     "@aperturerobotics/chonky-icon-fontawesome": "^0.2.8",
     "@deepgram/sdk": "^3.6.0",
-    "@dreamcatcher-tech/commit-graph": "^2.2.6",
+    "@dreamcatcher-tech/commit-graph": "^2.2.7",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@microlink/react-json-view": "^1.23.1",

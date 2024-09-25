@@ -1,5 +1,5 @@
-import { CommitGraph } from '@dreamcatcher-tech/commit-graph'
-import { FC } from 'react'
+import { WithInfiniteScroll } from '@dreamcatcher-tech/commit-graph'
+import { FC, useId } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'
 import { Splice } from '../constants.ts'
@@ -21,6 +21,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   const splices = api.useSplices()
   const { commits, branchHeads } = mapSplices(splices)
   log('commits', commits)
+  let hasMore = false
+  if (splices && splices.length) {
+    hasMore = splices[splices.length - 1].commit.parent.length > 0
+  }
 
   // when click on one, want to set the commit in the api, and watch the files
   // change below it
@@ -28,10 +32,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   // when select the parent commit, then all the child branches with their
   // respective heads should be shown, but not before
 
-  const selected = [
-    'bgpqkjvf2mqoi9lq4upamdj0ke7e8iuo',
-    'r26g8v5vo7c82c5o1tt9hcleef924tp2',
-  ]
+  let selected: string[] = []
+  if (commits.length) {
+    selected = [commits[0].sha]
+  }
   const graphStyle = {
     commitSpacing: 60,
     branchSpacing: 20,
@@ -49,15 +53,25 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
       '#EB7340',
     ],
   }
-
+  const id = useId()
   return (
-    <Box sx={{ pt: 2, pl: 2, height: '100%', overflowY: 'auto' }}>
-      <CommitGraph
+    <Box
+      id={id}
+      // must reset the zIndex so the mouse over and select works
+      sx={{ pt: 2, pl: 2, height: '100%', position: 'relative', zIndex: 0 }}
+    >
+      <WithInfiniteScroll
+        parentID={id}
         commits={commits}
         branchHeads={branchHeads}
         graphStyle={graphStyle}
         onClick={(commit, event) => {
           console.log('onClick', commit, event)
+        }}
+        hasMore={hasMore}
+        loadMore={() => {
+          log('loadMore')
+          api.expandCommits(10)
         }}
         selected={selected}
       />
