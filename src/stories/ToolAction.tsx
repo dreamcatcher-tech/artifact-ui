@@ -40,6 +40,8 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
                 quotesOnKeys={false}
                 name={false}
                 displayDataTypes={false}
+                enableClipboard={false}
+                indentWidth={2}
               />
             </CardContent>
             <CardHeader
@@ -86,6 +88,8 @@ const Output: FC<{ output: unknown }> = ({ output }) => {
         quotesOnKeys={false}
         name={false}
         displayDataTypes={false}
+        enableClipboard={false}
+        indentWidth={2}
       />
     )
   }

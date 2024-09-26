@@ -15,6 +15,7 @@ const TpsReport: React.FC<TpsReport> = ({ tpsReport }) => {
       collapseStringsAfterLength={50}
       displayDataTypes={false}
       indentWidth={2}
+      enableClipboard={false}
     />
   )
 }

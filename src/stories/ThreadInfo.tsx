@@ -1,3 +1,4 @@
+import { Menu, MenuItem } from '@mui/material'
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
 import { FC, useEffect, useState } from 'react'
@@ -13,6 +14,7 @@ interface Chips {
   branches: string[]
   remote?: RemoteTree
   onRemote?: () => void
+  agents?: string[]
 }
 const Chips: FC<Chips> = ({
   agent,
@@ -22,6 +24,7 @@ const Chips: FC<Chips> = ({
   branches,
   remote,
   onRemote,
+  agents,
 }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
@@ -43,15 +46,15 @@ const Chips: FC<Chips> = ({
     const interval = setInterval(updateElapsedTime, 1000)
     return () => clearInterval(interval)
   }, [timestamp])
+
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
   const location = window.location.origin + window.location.pathname
   const repoUrl = `https://github.com/${repo}`
   const branchUrl = `${location}#branches=${branches.join('/')}`
   const branchLabel = prettyBranches(branches)
-  const agentUrl = `${repoUrl}/blob/main/${agent}`
-  const agentLabel = agent.split('/').pop()?.split('.').shift() || ''
   const commitUrl = `${branchUrl}&commit=${oid}`
+
   let remoteLabel = ''
   if (remote) {
     remoteLabel = 'loading...'
@@ -81,16 +84,7 @@ const Chips: FC<Chips> = ({
           title={'Open this thread remotely'}
         />
       </a>
-      <a href={agentUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
-        <Chip
-          clickable={true}
-          label={agentLabel}
-          onClick={() => window.open(agentUrl, '_blank', 'noopener')}
-          color='default'
-          size='small'
-          title={'Open this agent file on github.com'}
-        />
-      </a>
+      <ChipMenu agents={agents} agent={agent} />
       {remote && (
         <Chip
           clickable={true}
@@ -127,9 +121,17 @@ interface ThreadInfo {
   thread?: Thread
   remote?: RemoteTree
   onRemote?: () => void
+  agents?: string[]
 }
-const ThreadInfo: FC<ThreadInfo> = ({ splice, thread, remote, onRemote }) => {
+const ThreadInfo: FC<ThreadInfo> = ({
+  splice,
+  thread,
+  remote,
+  onRemote,
+  agents,
+}) => {
   let chips
+
   if (!splice) {
     chips = (
       <Chip
@@ -151,6 +153,7 @@ const ThreadInfo: FC<ThreadInfo> = ({ splice, thread, remote, onRemote }) => {
         branches={pid.branches}
         remote={remote}
         onRemote={onRemote}
+        agents={agents}
       />
     )
   }
@@ -189,3 +192,84 @@ const prettyBranches = (branches: string[]) =>
 const onClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
   event.preventDefault()
 }
+
+const ChipMenu: FC<{ agents?: string[]; agent?: string }> = ({
+  agents = [],
+  agent,
+}) => {
+  if (!agents || agents.length === 0) {
+    if (agent) {
+      agents = [agent]
+    }
+  }
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLButtonElement>(null)
+  const [selectedOption, setSelectedOption] = useState(agents[0])
+
+  const handleBaseChipClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleOptionClick = (option: string) => () => {
+    setSelectedOption(option)
+    setAnchorEl(null)
+  }
+
+  return (
+    <>
+      <Chip
+        label={toName(selectedOption)}
+        onClick={handleBaseChipClick}
+        component='button'
+        size='small'
+        title={`Agent: ${selectedOption}`}
+      />
+      <Menu
+        anchorEl={anchorEl}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        MenuListProps={{
+          style: {
+            padding: 0,
+            backgroundColor: 'transparent',
+          },
+        }}
+        slotProps={{
+          paper: {
+            style: {
+              backgroundColor: 'transparent',
+              boxShadow: 'none',
+            },
+          },
+        }}
+      >
+        {agents.map((path, index) => (
+          <MenuItem
+            key={index}
+            onClick={handleOptionClick(path)}
+            style={{ padding: 0 }}
+          >
+            <Chip
+              size='small'
+              label={toName(path)}
+              color={path === agent ? 'warning' : 'default'}
+              style={{ margin: 4 }}
+              title={`Agent: ${path}`}
+            />
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  )
+}
+
+const toName = (agent: string) =>
+  agent.split('/').pop()?.split('.').shift() || ''

@@ -57,6 +57,8 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   // TODO externalize this library
   // TODO disable save if no changes
   // TODO make save go via the prompt
+  // TODO handle contents changing server side during editing
+
   return (
     <>
       <Backdrop
