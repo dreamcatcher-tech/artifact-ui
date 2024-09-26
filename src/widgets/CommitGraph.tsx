@@ -71,16 +71,15 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
         parentID={id}
         commits={commits}
         branchHeads={branchHeads}
+        currentBranch={branchHeads[0]?.name}
         graphStyle={graphStyle}
         onClick={(commit, event) => {
           console.log('onClick', commit, event)
         }}
         hasMore={hasMore}
-        loadMore={() => {
-          log('loadMore')
-          api.expandCommits(10)
-        }}
+        loadMore={() => api.expandCommits(10)}
         selected={selected}
+        dateFormatFn={(date) => new Date(date).toLocaleString()}
       />
     </Box>
   )
@@ -90,7 +89,13 @@ export default ArtifactCommitGraph
 
 const mapSplices = (splices: Splice[]) => {
   const heads = new Map<string, Splice>()
-  const commits = splices.map((splice) => {
+  const seen = new Set()
+  const commits: Commit[] = []
+  splices.forEach((splice) => {
+    if (seen.has(splice.oid)) {
+      return
+    }
+    seen.add(splice.oid)
     const path = toPath(splice)
     if (!heads.has(path)) {
       heads.set(path, splice)
@@ -103,13 +108,15 @@ const mapSplices = (splices: Splice[]) => {
       },
       message: splice.commit.message,
     }
-    return {
+    commits.push({
       sha: splice.oid,
       commit,
-      parents: splice.commit.parent.map((parent) => {
-        return { sha: parent }
-      }),
-    }
+      parents: splice.commit.parent
+        .map((parent) => {
+          return { sha: parent }
+        })
+        .reverse(),
+    })
   })
   const branchHeads = []
   for (const [path, splice] of heads.entries()) {
@@ -126,4 +133,21 @@ const mapSplices = (splices: Splice[]) => {
 
 const toPath = (splice: Splice) => {
   return splice.pid.branches.map((string) => string.substring(0, 7)).join('/')
+}
+
+type ParentCommit = {
+  sha: string
+}
+type Commit = {
+  sha: string
+  commit: {
+    author: {
+      name: string
+      date: string | number | Date
+      email?: string
+    }
+    message: string
+  }
+  parents: ParentCommit[]
+  html_url?: string
 }

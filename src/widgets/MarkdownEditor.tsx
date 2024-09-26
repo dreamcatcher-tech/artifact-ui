@@ -74,6 +74,8 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
         modelValue={text || ''}
         onChange={setText}
         showCodeRowNumber={true}
+        autoDetectCode={true}
+        autoFoldThreshold={1000}
         language='en-US'
         toolbarsExclude={['github', 'htmlPreview', 'pageFullscreen']}
         noUploadImg={true}
