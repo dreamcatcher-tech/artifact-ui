@@ -199,7 +199,7 @@ const ChipMenu: FC<{ agents?: string[]; agent?: string }> = ({
 }) => {
   if (!agents || agents.length === 0) {
     if (agent) {
-      agents = [agent]
+      agents = ['agents/hamr.md', agent, 'agents/o1.md', 'agents/gpt-4o.md']
     }
   }
 
@@ -255,13 +255,13 @@ const ChipMenu: FC<{ agents?: string[]; agent?: string }> = ({
           <MenuItem
             key={index}
             onClick={handleOptionClick(path)}
-            style={{ padding: 0 }}
+            sx={{ padding: 0 }}
           >
             <Chip
               size='small'
               label={toName(path)}
-              color={path === agent ? 'warning' : 'default'}
-              style={{ margin: 4 }}
+              color={path === agent ? 'success' : 'default'}
+              sx={{ margin: 0.5 }}
               title={`Agent: ${path}`}
             />
           </MenuItem>
