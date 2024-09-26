@@ -193,7 +193,7 @@ const onClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
   event.preventDefault()
 }
 
-const ChipMenu: FC<{ agents?: string[]; agent?: string }> = ({
+const ChipMenu: FC<{ agent: string; agents?: string[] }> = ({
   agents = [],
   agent,
 }) => {
@@ -204,7 +204,7 @@ const ChipMenu: FC<{ agents?: string[]; agent?: string }> = ({
   }
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLButtonElement>(null)
-  const [selectedOption, setSelectedOption] = useState(agents[0])
+  const [selectedOption, setSelectedOption] = useState(agent)
 
   const handleBaseChipClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget)

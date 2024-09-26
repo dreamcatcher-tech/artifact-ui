@@ -83,7 +83,6 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid, selection }) => {
     <Box
       ref={ref}
       sx={{
-        backgroundColor: 'lightgoldenrodyellow',
         height: '100%',
         overflow: 'hidden',
         p: 1,
@@ -148,6 +147,8 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   const [splices, setSplices] = useState<Splice[]>([])
   const [spliceDepth, setSpliceDepth] = useState(20)
 
+  log('spliceDepth', spliceDepth)
+
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
       log('backchat not found')
@@ -163,7 +164,14 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         aborter.signal
       )) {
         log('splice', splice)
-        setLatest(splice)
+        setLatest((current) => {
+          if (equal(current, splice)) {
+            log('duplicate splice', splice)
+            return current
+          }
+
+          return splice
+        })
       }
     }
     watch()
@@ -375,7 +383,12 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         if (count < 1) {
           throw new Error('count must be greater than 0')
         }
-        setSpliceDepth((current) => current + count)
+        setSpliceDepth((current) => {
+          if (splices.length + count <= current) {
+            return current
+          }
+          return current + count
+        })
       },
       saveFile: async (file: FileData, contents: string) => {
         return saveFile(file, contents)
