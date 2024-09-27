@@ -76,9 +76,9 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
         graphStyle={graphStyle}
         onClick={(commit, event) => {
           log('onClick', commit, event)
-          const splice = splices.find((splice) => splice.oid === commit.sha)
+          const splice = splices.find((splice) => splice.oid === commit)
           if (!splice) {
-            throw new Error('splice not found: ' + commit.sha)
+            throw new Error('splice not found: ' + commit)
           }
           api.setSelectedSplice(splice)
         }}
@@ -95,13 +95,15 @@ export default ArtifactCommitGraph
 
 const mapSplices = (splices: Splice[]) => {
   const heads = new Map<string, Splice>()
-  const seen = new Set()
+  const seen = new Set<string>()
   const commits: Commit[] = []
+
   splices.forEach((splice) => {
     if (seen.has(splice.oid)) {
       return
     }
     seen.add(splice.oid)
+
     const path = toPath(splice)
     if (!heads.has(path)) {
       heads.set(path, splice)
@@ -117,11 +119,10 @@ const mapSplices = (splices: Splice[]) => {
     commits.push({
       sha: splice.oid,
       commit,
-      parents: splice.commit.parent
-        .map((parent) => {
-          return { sha: parent }
-        })
-        .reverse(),
+      parents: splice.commit.parent.map((parent) => {
+        return { sha: parent }
+      }),
+      // .reverse(),
     })
   })
   const branchHeads = []

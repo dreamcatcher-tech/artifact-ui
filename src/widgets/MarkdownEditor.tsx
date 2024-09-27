@@ -14,7 +14,10 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   log('Editor', api)
   const cwd = api.useWorkingDir()
   const file = api.useSelectedFile()
-  const contents = api.useSelectedFileContents()
+  let contents = api.useSelectedFileContents()
+  if (file?.name.endsWith('.json')) {
+    contents = '```json\n' + contents + '\n```'
+  }
   log('file selection', file)
   log('cwd', cwd)
 
