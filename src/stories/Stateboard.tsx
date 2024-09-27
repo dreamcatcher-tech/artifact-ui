@@ -136,17 +136,21 @@ export interface api {
     file: FileData,
     contents: string
   ) => Promise<{ charactersWritten: number }>
+  setSelectedSplice: (splice: Splice) => void
+  useSelectedSplice: () => Splice | undefined
 }
 const useApi = (backchat: Backchat, pid?: PID) => {
-  const [selection, setSelection] = useState<FileData[]>([])
+  const [fileSelections, setFileSelections] = useState<FileData[]>([])
   const [textSelection, setTextSelection] = useState<string | undefined>()
   const [cwd, setCwd] = useState<(FileData | null)[]>([null])
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
-  const [files, setFiles] = useState<(FileData | null)[]>([])
+  const [cwdFiles, setCwdFiles] = useState<(FileData | null)[]>([])
   const [latest, setLatest] = useState<Splice>()
   const [splices, setSplices] = useState<Splice[]>([])
   const [spliceDepth, setSpliceDepth] = useState(20)
-
+  const [selectedSplice, setSelectedSplice] = useState<Splice>()
+  // const [isLatestSelected, setIsLatestSelected] = useState(true)
+  const isLatestSelected = true
   log('spliceDepth', spliceDepth)
 
   useEffect(() => {
@@ -169,7 +173,6 @@ const useApi = (backchat: Backchat, pid?: PID) => {
             log('duplicate splice', splice)
             return current
           }
-
           return splice
         })
       }
@@ -181,12 +184,19 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   }, [backchat, pid])
 
   useEffect(() => {
-    if (!latest) {
+    if (!latest || !isLatestSelected) {
       return
     }
-    log('begin cwd reconciliation', latest, nextCwd)
+    setSelectedSplice(latest)
+  }, [latest, isLatestSelected])
 
-    const watcher = TreeWatcher.start(backchat, latest, nextCwd)
+  useEffect(() => {
+    if (!selectedSplice) {
+      return
+    }
+    log('begin cwd reconciliation', selectedSplice, nextCwd)
+
+    const watcher = TreeWatcher.start(backchat, selectedSplice, nextCwd)
     watcher.drill().then((result) => {
       log('drill result', result)
       if (watcher.aborted) {
@@ -194,10 +204,10 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       }
       const { cwd, files } = result
       setCwd(cwd)
-      setFiles(files)
+      setCwdFiles(files)
     })
     return () => watcher.stop()
-  }, [backchat, latest, nextCwd])
+  }, [backchat, selectedSplice, nextCwd])
 
   const changeCwd = useCallback((nextCwd: (FileData | null)[]) => {
     setNextCwd(nextCwd)
@@ -205,12 +215,12 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     temp.pop()
     temp.push(null)
     setCwd(temp)
-    setFiles([null])
-    setSelection([])
+    setCwdFiles([null])
+    setFileSelections([])
   }, [])
 
   const [contents, setContents] = useState<string | null | undefined>()
-  const selectedFile: FileData = selection[0]
+  const selectedFile: FileData = fileSelections[0]
 
   let selectedFilePath = undefined
   let selectedFileOid = undefined
@@ -239,7 +249,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       setContents(undefined)
       return
     }
-    if (!latest) {
+    if (!selectedSplice) {
       setContents(null)
       return
     }
@@ -247,7 +257,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     log('selected file changed', selectedFilePath)
     setContents(null)
 
-    const { pid, oid: commit } = latest
+    const { pid, oid: commit } = selectedSplice
 
     // want to read using the oid of the object, if known
     // also want to do this for directories, as well
@@ -265,7 +275,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     return () => {
       active = false
     }
-  }, [selectedFilePath, selectedFileOid, latest, backchat])
+  }, [selectedFilePath, selectedFileOid, selectedSplice, backchat])
 
   useEffect(() => {
     // when the head splice changes, change the commits
@@ -275,9 +285,12 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     setSplices((current) => {
       return [latest, ...current]
     })
+    if (isLatestSelected) {
+      setSelectedSplice(latest)
+    }
 
     // if select the head, then stay on the head, else lock on the commit
-  }, [latest])
+  }, [latest, isLatestSelected])
 
   const isMountedRef = useRef(true)
   const isSplicesFetching = useRef(false)
@@ -329,10 +342,10 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   const api: api = useMemo<api>(
     () => ({
       setFileSelections(nextSelection) {
-        if (equal(nextSelection, selection)) {
+        if (equal(nextSelection, fileSelections)) {
           return
         }
-        setSelection(nextSelection)
+        setFileSelections(nextSelection)
       },
       setTextSelection: (contents: string | undefined) => {
         log('setTextSelection', contents)
@@ -359,10 +372,10 @@ const useApi = (backchat: Backchat, pid?: PID) => {
         return cwd
       },
       useFileSelections: () => {
-        return selection
+        return fileSelections
       },
       useFilesList: () => {
-        return files
+        return cwdFiles
       },
       useSelectedFile: () => {
         return selectedFile
@@ -393,11 +406,22 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       saveFile: async (file: FileData, contents: string) => {
         return saveFile(file, contents)
       },
+      setSelectedSplice: (splice: Splice) => {
+        setSelectedSplice((current) => {
+          if (equal(current, splice)) {
+            return current
+          }
+          return splice
+        })
+      },
+      useSelectedSplice: () => {
+        return selectedSplice
+      },
     }),
     [
-      selection,
+      fileSelections,
       cwd,
-      files,
+      cwdFiles,
       contents,
       textSelection,
       latest,
@@ -405,6 +429,8 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       changeCwd,
       selectedFile,
       saveFile,
+      selectedSplice,
+      setSelectedSplice,
     ]
   )
   return api

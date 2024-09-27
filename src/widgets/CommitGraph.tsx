@@ -32,9 +32,10 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   // when select the parent commit, then all the child branches with their
   // respective heads should be shown, but not before
 
+  const selectedSplice = api.useSelectedSplice()
   let selected: string[] = []
-  if (commits.length) {
-    selected = [commits[0].sha]
+  if (selectedSplice) {
+    selected = [selectedSplice.oid]
   }
   const graphStyle = {
     commitSpacing: 60,
@@ -74,7 +75,12 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
         currentBranch={branchHeads[0]?.name}
         graphStyle={graphStyle}
         onClick={(commit, event) => {
-          console.log('onClick', commit, event)
+          log('onClick', commit, event)
+          const splice = splices.find((splice) => splice.oid === commit.sha)
+          if (!splice) {
+            throw new Error('splice not found: ' + commit.sha)
+          }
+          api.setSelectedSplice(splice)
         }}
         hasMore={hasMore}
         loadMore={() => api.expandCommits(10)}
