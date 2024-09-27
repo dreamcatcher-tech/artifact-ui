@@ -8,6 +8,7 @@ import { useState } from 'react'
 // import fm from 'markdown-it-front-matter'
 
 import Debug from 'debug'
+import delay from 'delay'
 const log = Debug('AI:Editor')
 
 const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
@@ -15,7 +16,7 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   const cwd = api.useWorkingDir()
   const file = api.useSelectedFile()
   let contents = api.useSelectedFileContents()
-  if (file?.name.endsWith('.json')) {
+  if (file?.name.endsWith('.json') && typeof contents === 'string') {
     contents = '```json\n' + contents + '\n```'
   }
   log('file selection', file)
@@ -43,6 +44,19 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
     document.addEventListener('selectionchange', callback)
     return () => document.removeEventListener('selectionchange', callback)
   }, [api])
+
+  useEffect(() => {
+    let active = true
+    delay(100).then(() => {
+      if (!active || !file?.name.endsWith('.json')) {
+        return
+      }
+      ref.current?.togglePreviewOnly(true)
+    })
+    return () => {
+      active = false
+    }
+  }, [file])
 
   if (!file) {
     return <div>nothing selected</div>
