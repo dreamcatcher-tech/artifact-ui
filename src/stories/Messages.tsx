@@ -374,7 +374,7 @@ const isCompleted = (messages: MessageParam[], tool_calls: { id: string }[]) =>
   tool_calls.every(({ id }) =>
     messages.some((message) => {
       if ('tool_call_id' in message) {
-        return message.tool_call_id === id
+        return message.tool_call_id === id && !!message.content
       }
     })
   )
