@@ -419,6 +419,7 @@ export interface EngineInterface {
   read(path: string, pid: PID, commit?: string): Promise<string>
   readTree(path: string, pid: PID, commit?: string): Promise<TreeEntry[]>
   readJSON<T>(path: string, pid: PID, commit?: string): Promise<T>
+  readBinary(path: string, pid?: PID, commit?: string): Promise<Uint8Array>
   exists(path: string, pid: PID): Promise<boolean>
 }
 export const isPID = (value: unknown): value is PID => {
@@ -742,12 +743,13 @@ export const backchatStateSchema = z.object({
   /** The base thread that this backchat session points to - the thread of last resort */
   target: pidSchema,
 })
-export type Returns<T extends Record<string, z.ZodTypeAny>> = {
-  [K in keyof T]: z.ZodTypeAny
+export type Returns<T extends Record<string, ZodSchema>> = {
+  [K in keyof T]: ZodSchema
 }
+// TODO ensure that function return types are inferred from returns object
 export type ToApiType<
   P extends Record<string, ZodSchema>,
-  R extends { [K in keyof P]: ZodSchema },
+  R extends Returns<P>,
 > = {
   [K in keyof P]: (
     params: z.infer<P[K]>,

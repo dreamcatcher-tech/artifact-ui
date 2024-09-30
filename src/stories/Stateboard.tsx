@@ -23,7 +23,7 @@ import equal from 'fast-deep-equal'
 const log = Debug('AI:Stateboard')
 
 export interface WidgetProps {
-  api: api
+  api: StateboardApi
 }
 type WidgetComponent = FC<WidgetProps>
 
@@ -118,30 +118,36 @@ const Stateboard: FC<StateboardProps> = ({ widgets, pid, selection }) => {
 
 export default Stateboard
 
-export interface api {
+export interface StateboardApi {
   setFileSelections: (selection: FileData[]) => void
-  setTextSelection: (contents: string | undefined) => void
+  setTextSelection: (selection: string | undefined) => void
   open: (file: FileData) => void
   openParent: () => void
   useWorkingDir: () => (FileData | null)[]
   useFilesList: () => (FileData | null)[]
   useFileSelections: () => FileData[]
   useSelectedFile: () => FileData | undefined
-  useSelectedFileContents: () => string | null | undefined
+  useSelectedFileText: () => string | null | undefined
   useTextSelection: () => string | undefined
+  useSelectedFileBinary: () => Uint8Array | null | undefined
+  setPID: (pid: PID) => void
   usePID: () => PID | undefined
   useSplices: () => Splice[]
   expandCommits: (count: number) => void
-  saveFile: (
+  saveTextFile: (
     file: FileData,
     contents: string
   ) => Promise<{ charactersWritten: number }>
   setSelectedSplice: (splice: Splice) => void
   useSelectedSplice: () => Splice | undefined
 }
-const useApi = (backchat: Backchat, pid?: PID) => {
+const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
+  const [pid, setPID] = useState<PID>(initialPid)
   const [fileSelections, setFileSelections] = useState<FileData[]>([])
   const [textSelection, setTextSelection] = useState<string | undefined>()
+  const [textContents, setContents] = useState<string | null | undefined>()
+  const [binary, setBinary] = useState<Uint8Array | null | undefined>()
+
   const [cwd, setCwd] = useState<(FileData | null)[]>([null])
   const [nextCwd, setNextCwd] = useState<(FileData | null)[]>(cwd)
   const [cwdFiles, setCwdFiles] = useState<(FileData | null)[]>([])
@@ -152,6 +158,16 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   // const [isLatestSelected, setIsLatestSelected] = useState(true)
   const isLatestSelected = true
   log('spliceDepth', spliceDepth)
+
+  useEffect(() => {
+    log('initialPid', initialPid)
+    setPID((current) => {
+      if (equal(current, initialPid)) {
+        return current
+      }
+      return initialPid
+    })
+  }, [initialPid])
 
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
@@ -219,7 +235,6 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     setFileSelections([])
   }, [])
 
-  const [contents, setContents] = useState<string | null | undefined>()
   const selectedFile: FileData = fileSelections[0]
 
   let selectedFilePath = undefined
@@ -247,15 +262,18 @@ const useApi = (backchat: Backchat, pid?: PID) => {
   useEffect(() => {
     if (!selectedFilePath) {
       setContents(undefined)
+      setBinary(undefined)
       return
     }
     if (!selectedSplice) {
       setContents(null)
+      setBinary(null)
       return
     }
     let active = true
     log('selected file changed', selectedFilePath)
     setContents(null)
+    setBinary(null)
 
     const { pid, oid: commit } = selectedSplice
 
@@ -266,11 +284,14 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     // only if the oid changed, and we haven't loaded the new contents, then do
     // the loading
 
-    backchat.read(selectedFilePath, pid, commit).then((contents) => {
+    backchat.readBinary(selectedFilePath, pid, commit).then((binary) => {
       if (!active) {
         return
       }
-      setContents(contents)
+      console.log('loaded binary', binary)
+      setBinary(binary)
+      const string = new TextDecoder().decode(binary)
+      setContents(string)
     })
     return () => {
       active = false
@@ -339,7 +360,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
     }
   }, [splices, spliceDepth, backchat])
 
-  const api: api = useMemo<api>(
+  const api: StateboardApi = useMemo<StateboardApi>(
     () => ({
       setFileSelections(nextSelection) {
         if (equal(nextSelection, fileSelections)) {
@@ -380,14 +401,26 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       useSelectedFile: () => {
         return selectedFile
       },
-      useSelectedFileContents: () => {
-        return contents
+      useSelectedFileText: () => {
+        return textContents
+      },
+      useSelectedFileBinary: () => {
+        return binary
       },
       useTextSelection: () => {
         return textSelection
       },
+      setPID: (next: PID) => {
+        if (equal(next, pid)) {
+          return
+        }
+        setPID(next)
+        setLatest(undefined)
+        setSplices([])
+        setSelectedSplice(undefined)
+      },
       usePID: () => {
-        return latest?.pid || undefined
+        return pid
       },
       useSplices: () => {
         return splices
@@ -403,7 +436,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
           return current + count
         })
       },
-      saveFile: async (file: FileData, contents: string) => {
+      saveTextFile: async (file: FileData, contents: string) => {
         return saveFile(file, contents)
       },
       setSelectedSplice: (splice: Splice) => {
@@ -422,7 +455,7 @@ const useApi = (backchat: Backchat, pid?: PID) => {
       fileSelections,
       cwd,
       cwdFiles,
-      contents,
+      textContents,
       textSelection,
       latest,
       splices,

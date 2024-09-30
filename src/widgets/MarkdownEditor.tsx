@@ -1,6 +1,6 @@
 import Backdrop from '@mui/material/Backdrop'
 import CircularProgress from '@mui/material/CircularProgress'
-import { MdEditor, ExposeParam } from 'md-editor-rt'
+import { MdEditor, ExposeParam, ToolbarNames } from 'md-editor-rt'
 import 'md-editor-rt/lib/style.css'
 import { FC, useEffect, useRef } from 'react'
 import { WidgetProps } from '../stories/Stateboard.tsx'
@@ -9,13 +9,14 @@ import { useState } from 'react'
 
 import Debug from 'debug'
 import delay from 'delay'
+import { ImageViewer } from './ImageViewer.tsx'
 const log = Debug('AI:Editor')
 
 const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   log('Editor', api)
   const cwd = api.useWorkingDir()
   const file = api.useSelectedFile()
-  let contents = api.useSelectedFileContents()
+  let contents = api.useSelectedFileText()
   if (file?.name.endsWith('.json') && typeof contents === 'string') {
     contents = '```json\n' + contents + '\n```'
   }
@@ -47,12 +48,21 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
 
   useEffect(() => {
     let active = true
-    delay(100).then(() => {
-      if (!active || !file?.name.endsWith('.json')) {
-        return
-      }
-      ref.current?.togglePreviewOnly(true)
-    })
+    if (!file?.name.endsWith('.json')) {
+      return
+    }
+    const toggle = async () => {
+      do {
+        await delay(0)
+        if (!active) {
+          return
+        }
+      } while (!ref.current)
+      log('togglePreviewOnly to true', file)
+      ref.current.togglePreviewOnly(true)
+    }
+    toggle()
+
     return () => {
       active = false
     }
@@ -63,6 +73,10 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   }
   if (file.isDir) {
     return <div>Directory selected</div>
+  }
+
+  if (file.name.endsWith('.jpg')) {
+    return <ImageViewer api={api} />
   }
   if (contents === null) {
     return <div>loading...</div>
@@ -76,6 +90,17 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
   // TODO make save go via the prompt
   // TODO handle contents changing server side during editing
 
+  const toolbarsExclude: ToolbarNames[] = [
+    'github',
+    'htmlPreview',
+    'pageFullscreen',
+  ]
+  if (file.name.endsWith('.json')) {
+    toolbarsExclude.push('save')
+  }
+
+  log('typeof ', typeof contents)
+
   return (
     <>
       <Backdrop
@@ -85,6 +110,7 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
         <CircularProgress color='inherit' />
       </Backdrop>
       <MdEditor
+        readOnly={file?.name.endsWith('.json')}
         style={{ height: '100%' }}
         ref={ref}
         preview={false}
@@ -94,12 +120,12 @@ const MarkdownEditor: FC<WidgetProps> = ({ api }) => {
         autoDetectCode={true}
         autoFoldThreshold={1000}
         language='en-US'
-        toolbarsExclude={['github', 'htmlPreview', 'pageFullscreen']}
+        toolbarsExclude={toolbarsExclude}
         noUploadImg={true}
         onSave={(contents) => {
           log('onSave', contents)
           setIsSaving(true)
-          api.saveFile(file, contents).finally(() => setIsSaving(false))
+          api.saveTextFile(file, contents).finally(() => setIsSaving(false))
         }}
       />
     </>
