@@ -1,3 +1,5 @@
+import Slide from '@mui/material/Slide'
+import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom'
 import { Agent, Thread } from '../api/types.ts'
 import { FC, useMemo, useState } from 'react'
 import './messages.css'
@@ -37,6 +39,7 @@ import Collapse from '@mui/material/Collapse'
 import Markdown from './Markdown.tsx'
 import RouterIcon from '@mui/icons-material/AltRoute'
 import { MessageParam } from '../constants.ts'
+import KeyboardDownIcon from '@mui/icons-material/KeyboardArrowDown'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
@@ -56,7 +59,7 @@ const ExpandMore = styled((props: ExpandMoreProps) => {
   }),
 }))
 
-const debug = Debug('AI:ThreeBox')
+const log = Debug('AI:ThreeBox')
 const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
 
 const Progress = () => (
@@ -309,54 +312,61 @@ interface Messages {
 }
 const Messages: FC<Messages> = ({ thread }) => {
   const messages = thread?.messages || []
+
   if (!messages.length) {
     return null
   }
   return (
-    <Box className='messages'>
-      <Timeline
-        sx={{
-          [`& .${timelineItemClasses.root}:before`]: {
-            flex: 0,
-            padding: 0,
-          },
-        }}
-      >
-        {messages.map((message, key) => {
-          const { role, content = '' } = message
-          debug('role', role, 'content', content)
-          switch (role) {
-            case 'user':
-              assertString(content)
-              return <Dave key={key} content={content} />
-            case 'assistant':
-              if (message.tool_calls) {
-                return (
-                  <Tool
-                    key={key}
-                    tool_calls={message.tool_calls}
-                    messages={messages}
-                    name={message.name}
-                  />
-                )
-              } else {
+    <StickToBottom className='messages'>
+      <StickToBottom.Content>
+        <Timeline
+          sx={{
+            [`& .${timelineItemClasses.root}:before`]: {
+              flex: 0,
+              padding: 0,
+            },
+          }}
+        >
+          {messages.map((message, key) => {
+            const { role, content = '' } = message
+            switch (role) {
+              case 'user':
                 assertString(content)
-                return (
-                  <Assistant key={key} content={content} name={message.name} />
-                )
-              }
-            case 'system':
-              // TODO display the entire Agent
-              assertString(content)
-              return <System key={key} content={content} />
-            case 'tool':
-              return null
-            default:
-              throw new Error(`unknown type ${role}`)
-          }
-        })}
-      </Timeline>
-    </Box>
+                return <Dave key={key} content={content} />
+              case 'assistant':
+                if (message.tool_calls) {
+                  return (
+                    <Tool
+                      key={key}
+                      tool_calls={message.tool_calls}
+                      messages={messages}
+                      name={message.name}
+                    />
+                  )
+                } else {
+                  assertString(content)
+                  return (
+                    <Assistant
+                      key={key}
+                      content={content}
+                      name={message.name}
+                    />
+                  )
+                }
+              case 'system':
+                // TODO display the entire Agent
+                assertString(content)
+                return <System key={key} content={content} />
+              case 'tool':
+                return null
+              default:
+                throw new Error(`unknown type ${role}`)
+            }
+          })}
+        </Timeline>
+      </StickToBottom.Content>
+      <ScrollToBottom />
+    </StickToBottom>
   )
 }
 
@@ -393,4 +403,30 @@ const useSwitchPath = (tool_calls: { function: { arguments: string } }[]) => {
       }
     }
   }, [tool_calls])
+}
+
+function ScrollToBottom() {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext()
+
+  return (
+    <Slide direction='up' in={!isAtBottom} mountOnEnter unmountOnExit>
+      <IconButton
+        size='large'
+        sx={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          bottom: '0',
+          bgcolor: 'grey.300',
+          color: 'common.white',
+          '&:hover': {
+            bgcolor: 'grey.800',
+          },
+        }}
+        onClick={() => scrollToBottom()}
+      >
+        <KeyboardDownIcon />
+      </IconButton>
+    </Slide>
+  )
 }
