@@ -6,7 +6,6 @@ import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
 import Chip from '@mui/material/Chip'
-import Debug from 'debug'
 import AgentIcon from '@mui/icons-material/SupportAgent'
 import DaveIcon from '@mui/icons-material/SentimentDissatisfied'
 import ToolIcon from '@mui/icons-material/Construction'
@@ -59,7 +58,6 @@ const ExpandMore = styled((props: ExpandMoreProps) => {
   }),
 }))
 
-const log = Debug('AI:ThreeBox')
 const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
 
 const Progress = () => (
