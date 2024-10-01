@@ -3,18 +3,18 @@ import { WithInfiniteScroll } from '@dreamcatcher-tech/commit-graph'
 import { FC, useId } from 'react'
 import { StateboardApi, WidgetProps } from '../stories/Stateboard.tsx'
 import Debug from 'debug'
-import { Splice } from '../constants.ts'
+import { PID, Splice } from '../constants.ts'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Link from '@mui/material/Link'
 import Breadcrumbs from '@mui/material/Breadcrumbs'
 const log = Debug('AI:ArtifactCommitGraph')
 
-const useBreadcrumbs = (splice: Splice | undefined, api: StateboardApi) => {
-  if (!splice) {
-    return ['(loading...)']
+const useBreadcrumbs = (pid: PID | undefined, api: StateboardApi) => {
+  if (!pid) {
+    return '(loading...)'
   }
-  const branches = splice.pid.branches
+  const { branches } = pid
   const accumulator: string[] = []
   const breadcrumbs = branches.map((branch, index) => {
     accumulator.push(branch)
@@ -23,7 +23,7 @@ const useBreadcrumbs = (splice: Splice | undefined, api: StateboardApi) => {
       event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
     ) => {
       event.preventDefault()
-      const next = { ...splice.pid, branches: path }
+      const next = { ...pid, branches: path }
       api.setPID(next)
     }
     return (
@@ -64,7 +64,7 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   const splices = api.useSplices()
   const { commits, branchHeads } = mapSplices(splices)
   log('commits', commits)
-  let hasMore = false
+  let hasMore = true
   if (splices.length) {
     hasMore = splices[splices.length - 1].commit.parent.length > 0
   }
@@ -74,7 +74,8 @@ const ArtifactCommitGraph: FC<WidgetProps> = ({ api }) => {
   if (selectedSplice) {
     selected = [selectedSplice.oid]
   }
-  const breadcrumbs = useBreadcrumbs(selectedSplice, api)
+  const pid = api.usePID()
+  const breadcrumbs = useBreadcrumbs(pid, api)
 
   const id = useId()
   return (

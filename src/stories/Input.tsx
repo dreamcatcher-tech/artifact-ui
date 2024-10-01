@@ -232,8 +232,6 @@ const Input: FC<InputProps> = (props) => {
     [send]
   )
 
-  const ref = useRef<HTMLTextAreaElement>(null)
-
   useEffect(() => {
     // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
@@ -276,6 +274,7 @@ const Input: FC<InputProps> = (props) => {
     send() // Remove the argument passed to the send function
   }, [prompt, doPreSubmit, send, value])
 
+  const ref = useRef<HTMLTextAreaElement>(null)
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLDivElement>) => {
       event.preventDefault()
@@ -303,24 +302,32 @@ const Input: FC<InputProps> = (props) => {
     },
     [value]
   )
+  const [hasFocus, setHasFocus] = useState(true)
+  useEffect(() => {
+    if (!disabled && hasFocus) {
+      ref.current?.focus()
+    }
+  }, [disabled, hasFocus])
 
   return (
-    <TextField
-      autoFocus={true}
-      inputRef={ref}
-      value={disabled ? '' : value}
-      multiline
-      fullWidth
-      variant='outlined'
-      placeholder={placeholder}
-      onChange={(e) => setValue(e.target.value)}
-      disabled={disabled}
-      onKeyDown={onKeyDown}
-      onPaste={handlePaste}
-      slotProps={{
-        input: inputProps,
-      }}
-    />
+    <ClickAwayListener onClickAway={() => setHasFocus(false)}>
+      <TextField
+        autoFocus={true}
+        inputRef={ref}
+        value={disabled ? '' : value}
+        multiline
+        fullWidth
+        variant='outlined'
+        placeholder={placeholder}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={disabled}
+        onKeyDown={onKeyDown}
+        onPaste={handlePaste}
+        slotProps={{
+          input: inputProps,
+        }}
+      />
+    </ClickAwayListener>
   )
 }
 
