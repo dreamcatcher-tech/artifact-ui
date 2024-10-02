@@ -1,3 +1,4 @@
+import { tryParse } from '../react/utils.ts'
 import Slide from '@mui/material/Slide'
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom'
 import { Agent, Thread } from '../api/types.ts'
@@ -29,7 +30,7 @@ import DraftsIcon from '@mui/icons-material/Drafts'
 import FolderIcon from '@mui/icons-material/Folder'
 import Tooltip from '@mui/material/Tooltip'
 import { ToolAction } from './ToolAction.tsx'
-import { assertString } from '@sindresorhus/is'
+import { assertInteger, assertString } from '@sindresorhus/is'
 import Box from '@mui/material/Box'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { styled } from '@mui/material/styles'
@@ -220,20 +221,34 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
 interface Tool extends ToolAction {
   name?: string
 }
-const Tool: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+const Tool: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
   if (isSwitch(tool_calls)) {
-    return <Router tool_calls={tool_calls} messages={messages} name={name} />
+    return (
+      <Router
+        tool_calls={tool_calls}
+        messages={messages}
+        name={name}
+        index={index}
+      />
+    )
   }
-  return <ToolCall tool_calls={tool_calls} messages={messages} name={name} />
+  return (
+    <ToolCall
+      tool_calls={tool_calls}
+      messages={messages}
+      name={name}
+      index={index}
+    />
+  )
 }
-const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
   const [expanded, setExpanded] = useState(false)
 
   const handleExpandClick = () => {
     setExpanded(!expanded)
   }
   const title = name.replace(' ', '\u00a0')
-  const isInProgress = useIsInProgress(messages, tool_calls)
+  const { isInProgress, status } = useIsInProgress(messages, tool_calls, index)
   return (
     <TimelineItem>
       <TimelineSeparator>
@@ -253,28 +268,32 @@ const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
           onClick={handleExpandClick}
         >
           <Typography variant='h6' component='span'>
-            {title}
+            {title} {status}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
           </ExpandMore>
         </Box>
         <Collapse in={expanded} timeout={200}>
-          <ToolAction tool_calls={tool_calls} messages={messages} />
+          <ToolAction
+            tool_calls={tool_calls}
+            messages={messages}
+            index={index}
+          />
         </Collapse>
       </TimelineContent>
     </TimelineItem>
   )
 }
 
-const Router: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
+const Router: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
   const [expanded, setExpanded] = useState(false)
 
   const handleExpandClick = () => {
     setExpanded(!expanded)
   }
   const title = name.replace(' ', '\u00a0')
-  const isInProgress = useIsInProgress(messages, tool_calls)
+  const { isInProgress } = useIsInProgress(messages, tool_calls, index)
   const switchPath = useSwitchPath(tool_calls)
   return (
     <TimelineItem>
@@ -298,7 +317,11 @@ const Router: FC<Tool> = ({ tool_calls, messages, name = '' }) => {
           </ExpandMore>
         </Box>
         <Collapse in={expanded} timeout={200}>
-          <ToolAction tool_calls={tool_calls} messages={messages} />
+          <ToolAction
+            tool_calls={tool_calls}
+            messages={messages}
+            index={index}
+          />
         </Collapse>
       </TimelineContent>
     </TimelineItem>
@@ -339,6 +362,7 @@ const Messages: FC<Messages> = ({ thread }) => {
                       tool_calls={message.tool_calls}
                       messages={messages}
                       name={message.name}
+                      index={key}
                     />
                   )
                 } else {
@@ -372,22 +396,54 @@ export default Messages
 
 const useIsInProgress = (
   messages: MessageParam[],
-  tool_calls: { id: string }[]
+  tool_calls: { id: string }[],
+  index: number
 ) => {
   return useMemo(() => {
-    return !isCompleted(messages, tool_calls)
-  }, [messages, tool_calls])
-}
-const isCompleted = (messages: MessageParam[], tool_calls: { id: string }[]) =>
-  tool_calls.every(({ id }) =>
-    messages.some((message) => {
-      if ('tool_call_id' in message) {
-        return (
-          message.tool_call_id === id && typeof message.content === 'string'
-        )
-      }
+    enum Status {
+      RUNNING = '⏱',
+      DONE = '✅',
+      ERROR = '❌',
+    }
+    const states: Status[] = tool_calls.map(() => Status.RUNNING)
+    const toolsMap = new Map<string, number>()
+    tool_calls.forEach(({ id }, index) => {
+      toolsMap.set(id, index)
     })
-  )
+
+    let hits = 0
+
+    for (; index < messages.length; index++) {
+      const assistantMessage = messages[index]
+      if ('tool_call_id' in assistantMessage) {
+        if (typeof assistantMessage.content === 'string') {
+          if (toolsMap.has(assistantMessage.tool_call_id)) {
+            const toolIndex = toolsMap.get(assistantMessage.tool_call_id)
+            assertInteger(toolIndex)
+
+            states[toolIndex] = Status.DONE
+
+            const parsed = tryParse(assistantMessage.content)
+            if (typeof parsed === 'object' && parsed !== null) {
+              const { name, message } = parsed
+              if (typeof name === 'string' && name.includes('Error')) {
+                if (typeof message === 'string') {
+                  states[toolIndex] = Status.ERROR
+                }
+              }
+            }
+          }
+          if (++hits === tool_calls.length) {
+            break
+          }
+        }
+      }
+    }
+    const isInProgress = states.some((state) => state === Status.RUNNING)
+    return { isInProgress, status: states.join(' ') }
+  }, [messages, tool_calls, index])
+}
+
 const isSwitch = (tool_calls: { function: { name: string } }[]) => {
   return tool_calls[0].function.name === 'agents_switch'
 }

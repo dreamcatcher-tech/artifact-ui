@@ -1,3 +1,4 @@
+import { tryParse } from '../react/utils.ts'
 import { FC } from 'react'
 import Markdown from './Markdown.tsx'
 import Card from '@mui/material/Card'
@@ -17,8 +18,9 @@ const IN_PROGRESS = Symbol('IN_PROGRESS')
 export interface ToolAction {
   tool_calls: { id: string; function: { name: string; arguments: string } }[]
   messages: MessageParam[]
+  index: number
 }
-export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
+export const ToolAction: FC<ToolAction> = ({ tool_calls, messages, index }) => {
   return (
     <Stack spacing={1}>
       {tool_calls.map((tool_call, key) => {
@@ -26,7 +28,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
         const { id, function: func } = tool_call
         const { name, arguments: args } = func
         const data = tryParse(args)
-        const output = findOutput(messages, id)
+        const output = findOutput(messages, id, index)
         return (
           <Card key={key}>
             <CardHeader
@@ -58,29 +60,22 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages }) => {
     </Stack>
   )
 }
-const findOutput = (messages: MessageParam[], id: string) => {
-  const message = messages.find((message) => {
+const findOutput = (messages: MessageParam[], id: string, index: number) => {
+  let output: MessageParam | undefined
+  for (; index < messages.length; index++) {
+    const message = messages[index]
     if ('tool_call_id' in message) {
-      return message.tool_call_id === id
+      if (message.tool_call_id === id) {
+        output = message
+        break
+      }
     }
-  })
-  if (message) {
-    assertString(message.content)
-    return tryParse(message.content)
+  }
+  if (output) {
+    assertString(output.content)
+    return tryParse(output.content)
   }
   return IN_PROGRESS
-}
-const tryParse = (value: string) => {
-  if (value === '') {
-    return ''
-  }
-  try {
-    return JSON.parse(value)
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return value === undefined ? null : value
-    }
-  }
 }
 
 const Output: FC<{ output: unknown }> = ({ output }) => {
