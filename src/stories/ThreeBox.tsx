@@ -78,7 +78,11 @@ const ThreeBox: FC<ThreeBoxProps> = ({
         <Left>
           <Messages thread={thread} />
           <Box sx={{ height: (theme) => theme.spacing(2) }} />
-          <Input prompt={scopedPrompt} transcribe={transcribe} />
+          <Input
+            prompt={scopedPrompt}
+            transcribe={transcribe}
+            thread={thread}
+          />
           <ThreadInfo
             splice={splice}
             thread={thread}

@@ -35,7 +35,7 @@ const RemoteThread: FC<RemoteThreadProps> = (props) => {
       TransitionComponent={Transition}
       keepMounted
     >
-      <AppBar color='error' position='sticky'>
+      <AppBar color='secondary' position='sticky'>
         <Toolbar>
           <IconButton
             edge='start'

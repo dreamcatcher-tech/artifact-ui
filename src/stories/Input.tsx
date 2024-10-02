@@ -1,3 +1,4 @@
+import Debug from 'debug'
 import TurndownService from 'turndown'
 import SpeedDial from '@mui/material/SpeedDial'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
@@ -8,7 +9,6 @@ import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
 import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import { ThreeBoxProps } from './ThreeBox'
-import Debug from 'debug'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
@@ -21,10 +21,11 @@ import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 import Text from '@mui/icons-material/TextSnippet'
 import { Box } from '@mui/material'
 import { ClickAwayListener } from '@mui/base/ClickAwayListener'
+import { Thread } from '../constants'
 // import StateboardIcon from '@mui/icons-material/Monitor'
 // import MessageIcon from '@mui/icons-material/Forum'
 
-const debug = Debug('AI:Input')
+const log = Debug('AI:Input')
 const turndown = new TurndownService()
 
 interface SendProps {
@@ -50,7 +51,7 @@ const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
   })
-  debug('filesContent', filesContent, loading)
+  log('filesContent', filesContent, loading)
 
   const [open, setOpen] = useState(false)
   const actions = []
@@ -102,9 +103,10 @@ export interface InputProps {
   onRecording?: (isRecording: boolean) => void
   preload?: string
   presubmit?: boolean
+  thread?: Thread
 }
 const Input: FC<InputProps> = (props) => {
-  const { prompt, transcribe, onRecording, preload, presubmit } = props
+  const { prompt, transcribe, onRecording, preload, presubmit, thread } = props
   const [error, setError] = useState()
   if (error) {
     throw error
@@ -134,7 +136,7 @@ const Input: FC<InputProps> = (props) => {
     }
   }, [prompt])
   const send = useCallback(() => {
-    debug('send', value)
+    log('send', value)
     setValue('')
     setDisabled(true)
     if (typeof prompt !== 'function') {
@@ -152,7 +154,7 @@ const Input: FC<InputProps> = (props) => {
     const file = new File([recordingBlob], 'recording.webm', {
       type: recordingBlob.type,
     })
-    debug('transcribe', file)
+    log('transcribe', file)
     let active = true
     setDisabled(true)
     transcribe(file)
@@ -217,6 +219,10 @@ const Input: FC<InputProps> = (props) => {
   }
   // TODO if a file is uploaded, store on fs, then sample it, then goal it
 
+  // 0 = current, 1 = prior, -1 = escape has cleared the buffer
+  const [upIndex, setUpIndex] = useState(0)
+  const [tip, setTip] = useState('')
+
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       const isUnmodified = !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey
@@ -226,13 +232,65 @@ const Input: FC<InputProps> = (props) => {
       }
       if (e.key === 'Escape') {
         e.preventDefault()
+        if (value && upIndex === 0) {
+          setTip(value)
+          setUpIndex(-1)
+        } else {
+          setTip('')
+          setUpIndex(0)
+        }
         setValue('')
       }
+      if (isUnmodified) {
+        log('e.key', e.key)
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          log('up upIndex', upIndex)
+          if (upIndex === -1) {
+            setValue(tip)
+            setTip('')
+            setUpIndex(0)
+            return
+          }
+          if (upIndex === 0) {
+            setTip(value)
+          }
+          if (!thread) {
+            return
+          }
+          const message = getUserMessage(thread, upIndex + 1)
+          if (message) {
+            setValue(message)
+            setUpIndex(upIndex + 1)
+          }
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          log('down upIndex', upIndex)
+          if (upIndex <= 0) {
+            return
+          }
+          if (upIndex === 1) {
+            setValue(tip)
+            setTip('')
+            setUpIndex(0)
+          }
+          if (!thread) {
+            return
+          }
+          const message = getUserMessage(thread, upIndex - 1)
+          if (message) {
+            setValue(message)
+            setUpIndex(upIndex - 1)
+          }
+        }
+      }
     },
-    [send]
+    [send, thread, upIndex, value, tip]
   )
 
   useEffect(() => {
+    // TODO move these more global shortcuts to a global hook
     // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.ctrlKey) {
@@ -263,7 +321,7 @@ const Input: FC<InputProps> = (props) => {
     }
     globalThis.addEventListener('keydown', listener)
     return () => globalThis.removeEventListener('keydown', listener)
-  }, [start, disabled, mediaRecorder, stopRecording])
+  }, [start, disabled, mediaRecorder, stopRecording, thread])
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
@@ -319,7 +377,11 @@ const Input: FC<InputProps> = (props) => {
         fullWidth
         variant='outlined'
         placeholder={placeholder}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value)
+          setUpIndex(0)
+          setTip('')
+        }}
         disabled={disabled}
         onKeyDown={onKeyDown}
         onPaste={handlePaste}
@@ -332,3 +394,21 @@ const Input: FC<InputProps> = (props) => {
 }
 
 export default Input
+
+const getUserMessage = (thread: Thread, fromEnd: number) => {
+  let index = thread.messages.length - 1
+  let hitCount = 0
+  while (index >= 0) {
+    const message = thread.messages[index--]
+    if (message.role === 'user') {
+      // TODO handle prompts and selections being redone too
+      if (typeof message.content === 'string') {
+        hitCount++
+        if (hitCount === fromEnd) {
+          return message.content
+        }
+      }
+    }
+  }
+  return ''
+}
