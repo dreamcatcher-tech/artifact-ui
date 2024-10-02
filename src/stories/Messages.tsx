@@ -315,7 +315,7 @@ const Messages: FC<Messages> = ({ thread }) => {
     return null
   }
   return (
-    <StickToBottom className='messages'>
+    <StickToBottom className='messages-container'>
       <StickToBottom.Content>
         <Timeline
           sx={{

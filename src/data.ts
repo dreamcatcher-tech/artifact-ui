@@ -206,6 +206,7 @@ export const tpsReport: TestFile = {
         ],
         successes: [0, 0, 0, 0],
         name: 'Starter for 10',
+        befores: [],
       },
       iterations: [
         {

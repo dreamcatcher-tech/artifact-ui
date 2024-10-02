@@ -11,15 +11,21 @@ pre {
     white-space: pre-wrap;
   }
 
-.messages {
+.messages-container {
   flex-grow: 1;
+  position: relative; /* For positioning the scroll to bottom button */
+  overflow: hidden; 
+}
+
+.hidden-scroll {
   overflow: hidden;
   overflow-y: scroll; /* Allows vertical scrolling */
   -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
   scrollbar-width: none; /* Hide scrollbar for Firefox */
   position: relative;
+  overflow-x: hidden;
+  
 }
-
-.messages::-webkit-scrollbar {
+.hidden-scroll::-webkit-scrollbar {
   display: none; /* Hide scrollbar for Chrome, Safari */
 }

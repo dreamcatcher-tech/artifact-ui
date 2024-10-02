@@ -58,8 +58,8 @@ const summary = z
     'A summary of the test results combining all individual results into a ratio',
   )
 
-type TestCase = z.infer<typeof testCase>
-const testCase = z
+export type TestCase = z.infer<typeof testCase>
+export const testCase = z
   .object({
     summary: summary
       .extend({
@@ -74,7 +74,7 @@ const testCase = z
             'for each expectation, the sum of the successful outcomes so far.  When divided by the number of completed iterations, the ratio of successful outcomes is calculated',
           ),
         name: z.string().describe('the name of the test case'),
-        befores: z.array(z.number().int().gte(0)).optional().describe(
+        befores: z.array(z.number().int().gte(0)).describe(
           'Cases that must be run before this case, to set the starting state',
         ),
       })
@@ -202,7 +202,7 @@ export const addCase = (
   name: string,
   prompts: string[][],
   expectations: string[],
-  befores?: number[],
+  befores: number[],
 ) => {
   const parsed = testFile.parse(base)
   const test: TestCase = {
