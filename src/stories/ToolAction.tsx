@@ -71,6 +71,9 @@ const findOutput = (messages: MessageParam[], id: string) => {
   return IN_PROGRESS
 }
 const tryParse = (value: string) => {
+  if (value === '') {
+    return ''
+  }
   try {
     return JSON.parse(value)
   } catch (error) {

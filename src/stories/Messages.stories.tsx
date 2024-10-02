@@ -1,4 +1,5 @@
 import {
+  huge,
   longThread,
   mermaidThread,
   mermaidErrorThread,
@@ -23,6 +24,10 @@ export default meta
 type Story = StoryObj<typeof Messages>
 
 export const Chat: Story = {}
+
+export const Huge: Story = {
+  args: { thread: huge },
+}
 
 export const AutoScroll: Story = {
   args: { thread: longThread },
