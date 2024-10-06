@@ -187,7 +187,7 @@ export const tpsReport: TestFile = {
     completed: 1,
     hash: '65ea5741533a7611bb6f2c413f8ad765d0e488e7',
     path: 'tests/fixtures/test-file-runner.test.md',
-    agent: 'agents/hamr.md',
+    target: 'agents/hamr.md',
     assessor: 'agents/test-assessor.md',
   },
   cases: [
@@ -197,7 +197,7 @@ export const tpsReport: TestFile = {
         elapsed: 7011,
         iterations: 1,
         completed: 1,
-        prompts: [['list all customers']],
+        promptLists: [['list all customers']],
         expectations: [
           '10 customers listed',
           'it is short',

@@ -2,12 +2,7 @@ import useResizeObserver from 'use-resize-observer'
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Debug from 'debug'
 import { Backchat } from '../api/client-backchat.ts'
-import {
-  PID,
-  Splice,
-  TreeEntry,
-  type STATEBOARD_WIDGETS,
-} from '../constants.ts'
+import { PID, Splice, type STATEBOARD_WIDGETS } from '../constants.ts'
 import FileExplorer from '../widgets/FileExplorer.tsx'
 import CommitGraph from '../widgets/CommitGraph.tsx'
 import MarkdownEditor from '../widgets/MarkdownEditor.tsx'
@@ -19,6 +14,8 @@ import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import equal from 'fast-deep-equal'
+import { useDeepState } from '../react/utils.ts'
+import { TreeWatcher } from '../react/TreeWatcher.ts'
 
 const log = Debug('AI:Stateboard')
 
@@ -141,8 +138,9 @@ export interface StateboardApi {
   setSelectedSplice: (splice: Splice) => void
   useSelectedSplice: () => Splice | undefined
 }
+
 const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
-  const [pid, setPID] = useState<PID>(initialPid)
+  const [pid, setPID] = useDeepState<PID>(initialPid)
   const [fileSelections, setFileSelections] = useState<FileData[]>([])
   const [textSelection, setTextSelection] = useState<string | undefined>()
   const [textContents, setContents] = useState<string | null | undefined>()
@@ -160,14 +158,8 @@ const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
   log('spliceDepth', spliceDepth)
 
   useEffect(() => {
-    log('initialPid', initialPid)
-    setPID((current) => {
-      if (equal(current, initialPid)) {
-        return current
-      }
-      return initialPid
-    })
-  }, [initialPid])
+    setPID(initialPid)
+  }, [initialPid, setPID])
 
   useEffect(() => {
     if (!(backchat instanceof Backchat)) {
@@ -272,6 +264,7 @@ const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
     }
     let active = true
     log('selected file changed', selectedFilePath)
+    // TODO BUT if the selected path is the same, then don't reload ?
     setContents(null)
     setBinary(null)
 
@@ -335,6 +328,7 @@ const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
 
         const { pid, oid } = splices[splices.length - 1]
         const count = spliceDepth - splices.length
+        // TODO see what we have in the cache first
         const next = await backchat.splices(pid, { commit: oid, count })
 
         if (isMountedRef.current) {
@@ -465,143 +459,8 @@ const useApi = (backchat: Backchat, initialPid = backchat.pid) => {
       saveFile,
       selectedSplice,
       setSelectedSplice,
+      setPID,
     ]
   )
   return api
-}
-// const mock = (
-//   cwd: (FileData | null)[],
-//   setFiles: (files: FileData[]) => void
-// ) => {
-//   if (cwd.length <= 1) {
-//     setFiles([
-//       { id: 'lht', name: 'Projects', isDir: true },
-//       {
-//         id: 'mcd',
-//         name: 'chonky-sphere-v2.png',
-//         thumbnailUrl: 'https://chonky.io/chonky-sphere-v2.png',
-//       },
-//     ])
-//   } else {
-//     setFiles([{ id: 'lhtlht', name: 'Nested', ext: '' }])
-//   }
-// }
-
-class TreeWatcher {
-  // TODO store the trees for each path so we can instantly display back
-  // navigation
-  // or just use a local cache so they are instantly available when backchat
-  // calls, with caches named by the repo
-  #backchat: Backchat
-  #cwd: (FileData | null)[]
-  #splice: Splice
-  #aborter = new AbortController()
-  static start(backchat: Backchat, splice: Splice, cwd: (FileData | null)[]) {
-    if (cwd.length < 1) {
-      throw new Error('cwd must have at least one item')
-    }
-    if (cwd[0] === null) {
-      if (cwd.length > 1) {
-        throw new Error('if root is null, cwd must have only one item')
-      }
-    }
-
-    const watcher = new TreeWatcher(backchat, splice, cwd)
-    return watcher
-  }
-  private constructor(
-    backchat: Backchat,
-    splice: Splice,
-    cwd: (FileData | null)[]
-  ) {
-    this.#backchat = backchat
-    this.#splice = splice
-    this.#cwd = cwd
-  }
-  get aborted() {
-    return this.#aborter.signal.aborted
-  }
-  stop() {
-    this.#aborter.abort()
-  }
-  async drill() {
-    let path = '.'
-    const promises = this.#cwd.map(async (item) => {
-      if (item !== this.#cwd[0] && item !== null) {
-        path += '/' + item.name
-      }
-      log('drill', path)
-      try {
-        const { pid, oid } = this.#splice
-        // TODO make this abortable
-        return this.#backchat.readTree(path, pid, oid)
-      } catch (err) {
-        console.error('error reading tree', item, err)
-      }
-    })
-    const trees = await Promise.all(promises)
-    const resolved = []
-    for (const tree of trees) {
-      if (tree) {
-        resolved.push(tree)
-      } else {
-        break
-      }
-    }
-    log('resolved', resolved)
-
-    const root = this.#splice.commit.tree
-    const cwd: FileData[] = toCwd(root, this.#cwd, resolved)
-    const files = toFiles(resolved[resolved.length - 1])
-    return { cwd, files }
-  }
-}
-// then do a second pass to deepen the data, like get the child count of each
-// directory, file modification times, size of files
-
-const toFiles = (tree: TreeEntry[]) => {
-  const files: FileData[] = tree.map((entry) => {
-    return {
-      id: entry.oid,
-      name: entry.path,
-      isDir: entry.type === 'tree',
-      isHidden: entry.path.startsWith('.'),
-      ext: entry.type !== 'tree' ? entry.path.split('.').pop() : undefined,
-    }
-  })
-  return files
-}
-const toCwd = (
-  root: string,
-  cwd: (FileData | null)[],
-  trees: TreeEntry[][]
-) => {
-  const map: FileData[] = []
-  let previous: TreeEntry[] | undefined
-  cwd = [...cwd]
-  for (const tree of trees) {
-    const was = cwd.shift()
-    if (was === undefined) {
-      throw new Error('unexpected undefined')
-    }
-    const name = was === null ? ' ' : was.name
-    const id = getId(root, previous, name)
-    map.push({ id, name, isDir: true, isHidden: name.startsWith('.') })
-    previous = tree
-  }
-  return map
-}
-const getId = (
-  root: string,
-  previous: TreeEntry[] | undefined,
-  name: string
-) => {
-  if (!previous) {
-    return root
-  }
-  const entry = previous.find((entry) => entry.path === name)
-  if (!entry || entry.type !== 'tree') {
-    throw new Error('expected tree entry: ' + name)
-  }
-  return entry.oid
 }

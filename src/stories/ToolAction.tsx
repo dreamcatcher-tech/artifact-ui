@@ -17,10 +17,16 @@ const IN_PROGRESS = Symbol('IN_PROGRESS')
 
 export interface ToolAction {
   tool_calls: { id: string; function: { name: string; arguments: string } }[]
+  status: string[]
   messages: MessageParam[]
   index: number
 }
-export const ToolAction: FC<ToolAction> = ({ tool_calls, messages, index }) => {
+export const ToolAction: FC<ToolAction> = ({
+  tool_calls,
+  status,
+  messages,
+  index,
+}) => {
   return (
     <Stack spacing={1}>
       {tool_calls.map((tool_call, key) => {
@@ -47,7 +53,7 @@ export const ToolAction: FC<ToolAction> = ({ tool_calls, messages, index }) => {
               />
             </CardContent>
             <CardHeader
-              title='Output:'
+              title={status[key] + ' Output:'}
               titleTypographyProps={{ variant: 'h6' }}
               avatar={<Terminal />}
             />

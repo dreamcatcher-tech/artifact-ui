@@ -218,7 +218,7 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
   )
 }
 
-interface Tool extends ToolAction {
+interface Tool extends Omit<ToolAction, 'status'> {
   name?: string
 }
 const Tool: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
@@ -268,7 +268,7 @@ const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
           onClick={handleExpandClick}
         >
           <Typography variant='h6' component='span'>
-            {title} {status}
+            {title} {status.join(' ')}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
@@ -277,6 +277,7 @@ const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
         <Collapse in={expanded} timeout={200}>
           <ToolAction
             tool_calls={tool_calls}
+            status={status}
             messages={messages}
             index={index}
           />
@@ -293,7 +294,7 @@ const Router: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
     setExpanded(!expanded)
   }
   const title = name.replace(' ', '\u00a0')
-  const { isInProgress } = useIsInProgress(messages, tool_calls, index)
+  const { isInProgress, status } = useIsInProgress(messages, tool_calls, index)
   const switchPath = useSwitchPath(tool_calls)
   return (
     <TimelineItem>
@@ -319,6 +320,7 @@ const Router: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
         <Collapse in={expanded} timeout={200}>
           <ToolAction
             tool_calls={tool_calls}
+            status={status}
             messages={messages}
             index={index}
           />
@@ -405,7 +407,7 @@ const useIsInProgress = (
       DONE = '✅',
       ERROR = '❌',
     }
-    const states: Status[] = tool_calls.map(() => Status.RUNNING)
+    const status: Status[] = tool_calls.map(() => Status.RUNNING)
     const toolsMap = new Map<string, number>()
     tool_calls.forEach(({ id }, index) => {
       toolsMap.set(id, index)
@@ -414,21 +416,21 @@ const useIsInProgress = (
     let hits = 0
 
     for (; index < messages.length; index++) {
-      const assistantMessage = messages[index]
-      if ('tool_call_id' in assistantMessage) {
-        if (typeof assistantMessage.content === 'string') {
-          if (toolsMap.has(assistantMessage.tool_call_id)) {
-            const toolIndex = toolsMap.get(assistantMessage.tool_call_id)
+      const toolMessage = messages[index]
+      if ('tool_call_id' in toolMessage) {
+        if (typeof toolMessage.content === 'string') {
+          if (toolsMap.has(toolMessage.tool_call_id)) {
+            const toolIndex = toolsMap.get(toolMessage.tool_call_id)
             assertInteger(toolIndex)
 
-            states[toolIndex] = Status.DONE
+            status[toolIndex] = Status.DONE
 
-            const parsed = tryParse(assistantMessage.content)
+            const parsed = tryParse(toolMessage.content)
             if (typeof parsed === 'object' && parsed !== null) {
               const { name, message } = parsed
               if (typeof name === 'string' && name.includes('Error')) {
                 if (typeof message === 'string') {
-                  states[toolIndex] = Status.ERROR
+                  status[toolIndex] = Status.ERROR
                 }
               }
             }
@@ -439,8 +441,8 @@ const useIsInProgress = (
         }
       }
     }
-    const isInProgress = states.some((state) => state === Status.RUNNING)
-    return { isInProgress, status: states.join(' ') }
+    const isInProgress = status.some((state) => state === Status.RUNNING)
+    return { isInProgress, status }
   }, [messages, tool_calls, index])
 }
 

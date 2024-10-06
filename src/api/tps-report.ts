@@ -10,7 +10,7 @@ export const outcome = z
       'the outcome of the test iteration, true if the expectation was met, false if it was not',
     ),
     analysis: z.array(z.string()).optional().describe(
-      'the step by step analysis of WHY the system prompt of the agent under test did NOT perform as well in the outcome as it could have',
+      'the step by step analysis of WHY the system prompt of the target agent under test did NOT perform as well in the outcome as it could have',
     ),
     improvements: z.array(z.string()).optional().describe(
       'the improvement(s) to the agent prompt that would have resulted in better performance to reach the outcome',
@@ -58,30 +58,32 @@ const summary = z
     'A summary of the test results combining all individual results into a ratio',
   )
 
+export const testCaseSummary = summary
+  .extend({
+    name: z.string().describe('the name of the test case'),
+    promptLists: z.array(z.array(z.string()))
+      .describe('the array of prompt arrays used for each iteration'),
+    expectations: z
+      .array(z.string())
+      .describe('the expectations for this test case'),
+    befores: z.array(z.number().int().gte(0)).describe(
+      'Cases that must be run before this case, to set the starting state',
+    ),
+    successes: z
+      .array(z.number().int().gte(0))
+      .describe(
+        'for each expectation, the sum of the successful outcomes so far.  When divided by the number of completed iterations, the ratio of successful outcomes is calculated',
+      ),
+  })
+  .strict()
+  .describe(
+    'A summary of the test results combining all individual results into a ratio',
+  )
+
 export type TestCase = z.infer<typeof testCase>
 export const testCase = z
   .object({
-    summary: summary
-      .extend({
-        prompts: z.array(z.array(z.string()))
-          .describe('the array of prompt arrays used for each iteration'),
-        expectations: z
-          .array(z.string())
-          .describe('the expectations for this test case'),
-        successes: z
-          .array(z.number().int().gte(0))
-          .describe(
-            'for each expectation, the sum of the successful outcomes so far.  When divided by the number of completed iterations, the ratio of successful outcomes is calculated',
-          ),
-        name: z.string().describe('the name of the test case'),
-        befores: z.array(z.number().int().gte(0)).describe(
-          'Cases that must be run before this case, to set the starting state',
-        ),
-      })
-      .strict()
-      .describe(
-        'A summary of the test results combining all individual results into a ratio',
-      )
+    summary: testCaseSummary
       .refine((v) => !!v.expectations.length, {
         message: 'expectations must be non-empty',
       })
@@ -126,20 +128,26 @@ export const testCase = z
     )
   }, { message: 'runs outcomes must sum to successes' })
 
+export const testFileSummary = summary.extend({
+  hash: md5
+    .describe('the hash of the test file used to generate the test run'),
+  path: z.string().regex(/\.md$/)
+    .describe('the path to the test file'),
+  target: z.string()
+    .describe(
+      'the path to the target agent file under test, typically something in the agents/ directory',
+    ),
+  assessor: z.string()
+    .describe(
+      'the path to the agent file to use to do the assessment of the test outcomes, typically agents/test-assessor.md or something in the agents/ directory',
+    ),
+})
+  .strict()
+
 export type TestFile = z.infer<typeof testFile>
 export const testFile = z
   .object({
-    summary: summary.extend({
-      hash: md5
-        .describe('the hash of the test file used to generate the test run'),
-      path: z.string()
-        .describe('the path to the test file'),
-      agent: z.string()
-        .describe('the path to the agent file under test'),
-      assessor: z.string()
-        .describe('path to the agent file that will assess the test results'),
-    })
-      .strict()
+    summary: testFileSummary
       .refine((value) => value.completed <= value.iterations, {
         message: 'completed cannot be greater than iterations',
       }),
@@ -176,17 +184,17 @@ export const testController = z.object({
 
 export const create = (
   path: string,
-  hash: string,
-  agent: string,
+  target: string,
   assessor: string,
   iterations: number,
+  hash: string,
 ) => {
   const blank: TestFile = {
     summary: {
       timestamp: Date.now(),
       path,
       hash,
-      agent,
+      target,
       assessor,
       elapsed: 0,
       iterations,
@@ -198,20 +206,20 @@ export const create = (
 }
 
 export const addCase = (
-  base: TestFile,
+  tpsReport: TestFile,
   name: string,
-  prompts: string[][],
+  promptLists: string[][],
   expectations: string[],
   befores: number[],
 ) => {
-  const parsed = testFile.parse(base)
+  const parsed = testFile.parse(tpsReport)
   const test: TestCase = {
     summary: {
       name,
       timestamp: Date.now(),
       elapsed: 0,
       iterations: parsed.summary.iterations,
-      prompts,
+      promptLists,
       expectations,
       completed: 0,
       successes: Array(expectations.length).fill(0),
@@ -238,6 +246,9 @@ export const addIteration = (
       test.summary.successes[index]++
     }
   })
+  if (test.iterations[iterationIndex]) {
+    throw new Error('iteration already exists: ' + iterationIndex)
+  }
   test.iterations[iterationIndex] = iteration
   let leastCompleted = Number.MAX_SAFE_INTEGER
   for (const _test of copy.cases) {
