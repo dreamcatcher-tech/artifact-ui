@@ -19,7 +19,6 @@ export interface ThreeBoxProps {
   remote?: RemoteTree
   prompt: (content: string, target: PID) => Promise<void>
   transcribe: (audio: File) => Promise<string>
-  agents?: string[]
 }
 
 const ThreeBox: FC<ThreeBoxProps> = ({
@@ -28,7 +27,6 @@ const ThreeBox: FC<ThreeBoxProps> = ({
   remote,
   prompt,
   transcribe,
-  agents,
 }) => {
   const messages = thread?.messages || []
   log('messages', messages)
@@ -88,7 +86,6 @@ const ThreeBox: FC<ThreeBoxProps> = ({
             thread={thread}
             remote={remote}
             onRemote={onRemote}
-            agents={agents}
           />
         </Left>
         <Center>

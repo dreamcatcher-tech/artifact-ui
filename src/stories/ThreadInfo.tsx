@@ -1,4 +1,3 @@
-import { Menu, MenuItem } from '@mui/material'
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
 import { FC, useEffect, useState } from 'react'
@@ -14,7 +13,6 @@ interface Chips {
   branches: string[]
   remote?: RemoteTree
   onRemote?: () => void
-  agents?: string[]
 }
 const Chips: FC<Chips> = ({
   agent,
@@ -24,7 +22,6 @@ const Chips: FC<Chips> = ({
   branches,
   remote,
   onRemote,
-  agents,
 }) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
@@ -84,7 +81,7 @@ const Chips: FC<Chips> = ({
           title={'Open this thread remotely'}
         />
       </a>
-      <ChipMenu agents={agents} agent={agent} />
+      <ChipMenu agent={agent} />
       {remote && (
         <Chip
           clickable={true}
@@ -121,15 +118,8 @@ interface ThreadInfo {
   thread?: Thread
   remote?: RemoteTree
   onRemote?: () => void
-  agents?: string[]
 }
-const ThreadInfo: FC<ThreadInfo> = ({
-  splice,
-  thread,
-  remote,
-  onRemote,
-  agents,
-}) => {
+const ThreadInfo: FC<ThreadInfo> = ({ splice, thread, remote, onRemote }) => {
   let chips
 
   if (!splice) {
@@ -153,7 +143,6 @@ const ThreadInfo: FC<ThreadInfo> = ({
         branches={pid.branches}
         remote={remote}
         onRemote={onRemote}
-        agents={agents}
       />
     )
   }
@@ -193,81 +182,15 @@ const onClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
   event.preventDefault()
 }
 
-const ChipMenu: FC<{ agent: string; agents?: string[] }> = ({
-  agents = [],
-  agent,
-}) => {
-  if (!agents || agents.length === 0) {
-    if (agent) {
-      agents = ['agents/hamr.md', agent, 'agents/o1.md', 'agents/gpt-4o.md']
-    }
-  }
-
-  const [anchorEl, setAnchorEl] = useState<null | HTMLButtonElement>(null)
-  const [selectedOption, setSelectedOption] = useState(agent)
-
-  const handleBaseChipClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleOptionClick = (option: string) => () => {
-    setSelectedOption(option)
-    setAnchorEl(null)
-  }
-
+const ChipMenu: FC<{ agent: string }> = ({ agent }) => {
+  // TODO navigate to the selected agent file on click
   return (
-    <>
-      <Chip
-        label={toName(selectedOption)}
-        onClick={handleBaseChipClick}
-        component='button'
-        size='small'
-        title={`Agent: ${selectedOption}`}
-      />
-      <Menu
-        anchorEl={anchorEl}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        MenuListProps={{
-          style: {
-            padding: 0,
-            backgroundColor: 'transparent',
-          },
-        }}
-        slotProps={{
-          paper: {
-            style: {
-              backgroundColor: 'transparent',
-              boxShadow: 'none',
-            },
-          },
-        }}
-      >
-        {agents.map((path, index) => (
-          <MenuItem
-            key={index}
-            onClick={handleOptionClick(path)}
-            sx={{ padding: 0 }}
-          >
-            <Chip
-              size='small'
-              label={toName(path)}
-              color={path === agent ? 'success' : 'default'}
-              sx={{ margin: 0.5 }}
-              title={`Agent: ${path}`}
-            />
-          </MenuItem>
-        ))}
-      </Menu>
-    </>
+    <Chip
+      label={toName(agent)}
+      component='button'
+      size='small'
+      title={`Agent: ${agent}`}
+    />
   )
 }
 
