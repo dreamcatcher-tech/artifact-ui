@@ -131,8 +131,8 @@ export const testCase = z
 export const testFileSummary = summary.extend({
   hash: md5
     .describe('the hash of the test file used to generate the test run'),
-  path: z.string().regex(/\.md$/)
-    .describe('the path to the test file'),
+  path: z.string().regex(/\.test\.md$/)
+    .describe('the path to the test file, which must end in .test.md'),
   target: z.string()
     .describe(
       'the path to the target agent file under test, typically something in the agents/ directory',
@@ -231,14 +231,28 @@ export const addCase = (
   return testFile.parse(parsed)
 }
 
+export const addCaseResult = (
+  base: TestFile,
+  caseIndex: number,
+  caseResult: TestCase,
+) => {
+  const clean = testFile.parse(base)
+  const test = clean.cases[caseIndex]
+  if (test.iterations.length) {
+    throw new Error('iterations already exist for: ' + caseIndex)
+  }
+  clean.cases[caseIndex] = caseResult
+  return updateSummary(clean)
+}
+
 export const addIteration = (
   base: TestFile,
   caseIndex: number,
   iterationIndex: number,
   iteration: TestIteration,
 ) => {
-  const copy = testFile.parse(base)
-  const test = copy.cases[caseIndex]
+  const clean = testFile.parse(base)
+  const test = clean.cases[caseIndex]
   test.summary.completed++
   test.summary.elapsed = Date.now() - test.summary.timestamp
   iteration.outcomes.forEach(({ outcome }, index) => {
@@ -250,13 +264,17 @@ export const addIteration = (
     throw new Error('iteration already exists: ' + iterationIndex)
   }
   test.iterations[iterationIndex] = iteration
+  return updateSummary(clean)
+}
+
+const updateSummary = (tpsReport: TestFile) => {
   let leastCompleted = Number.MAX_SAFE_INTEGER
-  for (const _test of copy.cases) {
-    if (_test.summary.completed < leastCompleted) {
-      leastCompleted = _test.summary.completed
+  for (const test of tpsReport.cases) {
+    if (test.summary.completed < leastCompleted) {
+      leastCompleted = test.summary.completed
     }
   }
-  copy.summary.completed = leastCompleted
-  copy.summary.elapsed = Date.now() - copy.summary.timestamp
-  return testFile.parse(copy)
+  tpsReport.summary.completed = leastCompleted
+  tpsReport.summary.elapsed = Date.now() - tpsReport.summary.timestamp
+  return testFile.parse(tpsReport)
 }
