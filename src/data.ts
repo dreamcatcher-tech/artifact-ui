@@ -7,6 +7,7 @@ export const longThread: Thread = {
   messageOffset: 0,
   focusedFiles: [],
   stateboards: [],
+  messageStats: {},
   messages: [
     {
       role: 'system',
@@ -288,6 +289,7 @@ export const tpsReport: TestFile = {
 export const testThread: Thread = {
   agent: 'agents/o1.md',
   messageOffset: 0,
+  messageStats: {},
   messages: [
     {
       content: 'run the test tests/meetings.test.md',
@@ -448,6 +450,7 @@ export const testThread: Thread = {
 export const filesStateboard: Thread = {
   agent: 'agents/files.md',
   messageOffset: 0,
+  messageStats: {},
   messages: [
     {
       content: 'what files have I got ?',
@@ -574,6 +577,7 @@ export const filesStateboard: Thread = {
 export const router: Thread = {
   agent: 'agents/o1.md',
   messageOffset: 0,
+  messageStats: {},
   messages: [
     {
       content: '/o1',
@@ -615,6 +619,7 @@ export const parallelToolCalls: Thread = {
   messageOffset: 0,
   focusedFiles: [],
   stateboards: [],
+  messageStats: {},
   messages: [
     {
       role: 'user',
@@ -699,6 +704,7 @@ export const parallelToolCalls: Thread = {
 export const huge: Thread = {
   agent: 'agents/test-file-runner.md',
   messageOffset: 0,
+  messageStats: {},
   messages: [
     {
       content: '/test-file-runner ',
