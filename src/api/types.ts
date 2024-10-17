@@ -6,7 +6,7 @@ import { completionMessage } from './zod.ts'
 import type { Backchat } from './client-backchat.ts'
 import { assert } from '@sindresorhus/is'
 import type OpenAI from 'openai'
-import { fixedRandomness, randomness } from './randomness.ts'
+import { randomness } from './randomness.ts'
 export { randomness }
 type CommitOid = string
 
