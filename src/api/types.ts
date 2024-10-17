@@ -3,12 +3,11 @@ import { Chalk } from 'chalk'
 import { z, ZodSchema } from 'zod'
 export type { AssistantMessage, CompletionMessage } from './zod.ts'
 import { completionMessage } from './zod.ts'
-import { ripemd160 } from '@noble/hashes/ripemd160'
-import { base32crockford } from '@scure/base'
 import type { Backchat } from './client-backchat.ts'
 import { assert } from '@sindresorhus/is'
 import type OpenAI from 'openai'
-
+import { randomness } from './randomness.ts'
+export { randomness }
 type CommitOid = string
 
 const sequenceInteger = z.number().int().gte(0)
@@ -20,7 +19,7 @@ const sequenceKey = z.string().refine((data) => {
   }
 }, 'sequence key must be an integer')
 
-export { Backchat }
+export { type Backchat }
 export const Proctype = z.enum(['SERIAL', 'BRANCH', 'DAEMON', 'EFFECT'])
 // TODO FORGET = 'FORGET', // allow fire and forget actions
 // BUT forget needs to be a separate option as we need DAEMON and FORGET
@@ -502,12 +501,19 @@ const { black, red, green, blue, magenta, cyan, bold } = new Chalk({ level: 1 })
 const colors = [red, green, blue, magenta, cyan, black]
 let colorIndex = 0
 const colorMap = new Map<string, number>()
-export const colorize = (string: string, noSubstring = false) => {
+export const colorize = (
+  string: string,
+  noSubstring = false,
+  noColor = false,
+) => {
   let sub = string
   if (!noSubstring) {
     sub = string.substring(0, 7)
   }
   let index
+  if (noColor) {
+    return sub
+  }
   if (colorMap.has(sub)) {
     index = colorMap.get(sub)!
   } else {
@@ -520,7 +526,7 @@ export const colorize = (string: string, noSubstring = false) => {
 
   return colors[index](bold(sub))
 }
-export const print = (pid?: PID) => {
+export const print = (pid?: PID, noColor = false) => {
   if (!pid) {
     return '(no pid)'
   }
@@ -530,11 +536,15 @@ export const print = (pid?: PID) => {
       !segment.startsWith('act_') &&
       !segment.startsWith('rep_') &&
       !segment.startsWith('the_')
-    return colorize(segment, noSubstring)
+    return colorize(segment, noSubstring, noColor)
   })
-  return `${colorize(pid.repoId)}/${pid.account}/${pid.repository}:${
-    branches.join('/')
-  }`
+  const noSubstring = false
+  const repoId = colorize(pid.repoId, noSubstring, noColor)
+  return `${repoId}/${pid.account}/${pid.repository}:${branches.join('/')}`
+}
+export const printPlain = (pid?: PID) => {
+  const noColor = true
+  return print(pid, noColor)
 }
 export const freezePid = (pid: PID) => {
   if (!pid.repoId) {
@@ -639,17 +649,11 @@ const checkUndefined = (params: Params) => {
   }
 }
 
-export const generateActorId = (seed: string) => {
-  return 'act_' + hash(seed)
+export const generateActorId = () => {
+  return 'act_' + randomness()
 }
-export const generateBackchatId = (seed: string) => {
-  return 'bac_' + hash(seed)
-}
-export const generateThreadId = (seed: string) => {
-  return 'the_' + hash(seed)
-}
-export const generateAgentHash = (creationString: string) => {
-  return 'age_' + hash(creationString)
+export const generateBackchatId = () => {
+  return 'bac_' + randomness()
 }
 
 export const getActorId = (source: PID) => {
@@ -700,6 +704,7 @@ export const isPidEqual = (pid1: PID, pid2: PID) => {
 export const META_SYMBOL = Symbol.for('settling commit')
 export type Meta = {
   parent?: CommitOid
+  // TODO add the PID so we know what the id of the branch that returned was
 }
 export const withMeta = async <T>(promise: MetaPromise<T>) => {
   const result = await promise
@@ -737,12 +742,6 @@ export const getRoot = (pid: PID) => {
 }
 export const getBaseName = (pid: PID) => {
   return pid.branches[pid.branches.length - 1]
-}
-
-export const hash = (seed: string) => {
-  const hash = ripemd160(seed)
-  const encoded = base32crockford.encode(hash)
-  return encoded.slice(-16)
 }
 
 export const getContent = (message: AssistantsThread['messages'][number]) => {
@@ -785,6 +784,7 @@ export const agentSchema = z.object({
   config: agentConfigSchema,
   runner: z.enum(['ai-runner']),
   commands: z.array(z.string()),
+  napps: z.array(z.string()),
   instructions: z.string().max(256000),
 })
 export type Agent = z.infer<typeof agentSchema>
@@ -803,10 +803,12 @@ export const chatParams = agentConfigSchema.extend({
   })).optional(),
 })
 export type ChatParams = z.infer<typeof chatParams>
+
 export const backchatStateSchema = z.object({
   /** The base thread that this backchat session points to - the thread of last resort */
   target: pidSchema,
 })
+
 export type Returns<T extends Record<string, ZodSchema>> = {
   [K in keyof T]: ZodSchema
 }
@@ -875,7 +877,7 @@ export const ioStruct = z.object({
   state: z.record(jsonSchema),
 })
 export const reasoning = z.array(z.string()).describe(
-  'the brief step by step reasoning why this function was called and what it is trying to achieve',
+  'Step by step reasoning why this function was called and what it is trying to achieve.  This is working space for clarifying thought and is not passed through to the function',
 )
 export type TreeEntry = {
   /**

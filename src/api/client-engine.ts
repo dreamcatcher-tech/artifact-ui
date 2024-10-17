@@ -276,16 +276,14 @@ const request = async (
       throw new Error(msg)
     }
     if (cache) {
-      cache.put(toGetRequest(request, params), response.clone())
+      await cache.put(toGetRequest(request, params), response.clone())
     }
-  } else {
-    console.log('cache hit', path, params)
   }
 
   if (opts.binary) {
     const arrayBuffer = await response.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
-    return uint8Array
+    const bytes = new Uint8Array(arrayBuffer)
+    return bytes
   }
   const outcome = await response.json()
   if (outcome.error) {
