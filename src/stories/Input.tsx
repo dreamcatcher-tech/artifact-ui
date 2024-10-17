@@ -1,3 +1,5 @@
+import Debug from 'debug'
+import TurndownService from 'turndown'
 import SpeedDial from '@mui/material/SpeedDial'
 import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import SpeedDialAction from '@mui/material/SpeedDialAction'
@@ -6,19 +8,25 @@ import { useAudioRecorder } from 'react-audio-voice-recorder'
 import { useFilePicker } from 'use-file-picker'
 import { LiveAudioVisualizer } from 'react-audio-visualize'
 import { FC, useCallback, useEffect, useRef, useState } from 'react'
-import Debug from 'debug'
+import { ThreeBoxProps } from './ThreeBox'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
 import MicIcon from '@mui/icons-material/Mic'
 import Link from '@mui/icons-material/Link'
-import Terminal from '@mui/icons-material/Terminal'
+// import Terminal from '@mui/icons-material/Terminal'
 import Image from '@mui/icons-material/Image'
 import Attach from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/ArrowUpwardRounded'
 import Text from '@mui/icons-material/TextSnippet'
 import { Box } from '@mui/material'
-const debug = Debug('AI:Input')
+import { ClickAwayListener } from '@mui/base/ClickAwayListener'
+import { Thread } from '../constants'
+// import StateboardIcon from '@mui/icons-material/Monitor'
+// import MessageIcon from '@mui/icons-material/Forum'
+
+const log = Debug('AI:Input')
+const turndown = new TurndownService()
 
 interface SendProps {
   send: (arg0: unknown) => void
@@ -39,35 +47,14 @@ const Mic: FC<MicProps> = ({ onEvent, disabled }) => (
   </IconButton>
 )
 
-const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
-  disabled,
-  handleBackchat,
-}) => {
+const AttachMenu: FC<{ disabled: boolean }> = ({ disabled }) => {
   const { openFilePicker, filesContent, loading } = useFilePicker({
     accept: '.txt',
   })
-  debug('filesContent', filesContent, loading)
-  // const speedDialRef = useRef(null)
+  log('filesContent', filesContent, loading)
 
-  // const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
-  // if (!speedDialRef.current )
-  // if (
-  //   speedDialRef.current &&
-  //   'contains' in speedDialRef.current &&
-  //   !speedDialRef.current.contains(event.relatedTarget)
-  // ) {
-  // setOpen(false)
-  // }
-  // }
   const [open, setOpen] = useState(false)
   const actions = []
-  if (handleBackchat) {
-    actions.push({
-      icon: <Terminal />,
-      name: 'Backchat',
-      onClick: handleBackchat,
-    })
-  }
   const onClick = () => {}
   actions.push(
     { icon: <FileIcon />, name: 'Files', onClick: openFilePicker },
@@ -78,49 +65,48 @@ const AttachMenu: FC<{ disabled: boolean; handleBackchat?: () => void }> = ({
 
   return (
     <Box sx={{ position: 'relative', width: 40 }}>
-      <SpeedDial
-        open={open}
-        onClick={() => setOpen(!open)}
-        // onBlur={handleBlur}
-        sx={{ position: 'absolute', top: -28, left: -5 }}
-        ariaLabel='SpeedDial'
-        icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
-        FabProps={{ size: 'small', color: 'default', disabled }}
-        direction='right'
-      >
-        {actions.map((action) => (
-          <SpeedDialAction
-            key={action.name}
-            icon={action.icon}
-            onClickCapture={() => {
-              setOpen(false)
-              action.onClick()
-            }}
-            tooltipTitle={action.name}
-          />
-        ))}
-      </SpeedDial>
+      <ClickAwayListener onClickAway={() => setOpen(false)}>
+        <SpeedDial
+          open={open}
+          onClick={() => setOpen(!open)}
+          // onBlur={handleBlur}
+          sx={{ position: 'absolute', top: -28, left: -5 }}
+          ariaLabel='SpeedDial'
+          icon={<SpeedDialIcon icon={<Attach fontSize='medium' />} />}
+          FabProps={{
+            size: 'small',
+            color: 'default',
+            disabled,
+          }}
+          direction='right'
+        >
+          {actions.map((action) => (
+            <SpeedDialAction
+              key={action.name}
+              icon={action.icon}
+              onClick={() => {
+                setOpen(false)
+                action.onClick()
+              }}
+              tooltipTitle={action.name}
+            />
+          ))}
+        </SpeedDial>
+      </ClickAwayListener>
     </Box>
   )
 }
 
 export interface InputProps {
-  prompt?: (text: string) => Promise<void>
-  transcribe?: (audio: File) => Promise<string>
+  prompt?: (content: string) => Promise<void>
+  transcribe?: ThreeBoxProps['transcribe']
   onRecording?: (isRecording: boolean) => void
-  handleBackchat?: () => void
   preload?: string
   presubmit?: boolean
+  thread?: Thread
 }
 const Input: FC<InputProps> = (props) => {
-  const {
-    prompt,
-    transcribe,
-    onRecording,
-    handleBackchat,
-    preload,
-    presubmit,
-  } = props
+  const { prompt, transcribe, onRecording, preload, presubmit, thread } = props
   const [error, setError] = useState()
   if (error) {
     throw error
@@ -134,7 +120,9 @@ const Input: FC<InputProps> = (props) => {
     useAudioRecorder()
   const start = useCallback(() => {
     startRecording()
-    onRecording && onRecording(true)
+    if (onRecording) {
+      onRecording(true)
+    }
     setDisabled(true)
   }, [startRecording, onRecording])
 
@@ -148,7 +136,7 @@ const Input: FC<InputProps> = (props) => {
     }
   }, [prompt])
   const send = useCallback(() => {
-    debug('send', value)
+    log('send', value)
     setValue('')
     setDisabled(true)
     if (typeof prompt !== 'function') {
@@ -166,7 +154,7 @@ const Input: FC<InputProps> = (props) => {
     const file = new File([recordingBlob], 'recording.webm', {
       type: recordingBlob.type,
     })
-    debug('transcribe', file)
+    log('transcribe', file)
     let active = true
     setDisabled(true)
     transcribe(file)
@@ -182,7 +170,9 @@ const Input: FC<InputProps> = (props) => {
         if (!active) {
           return
         }
-        onRecording && onRecording(false)
+        if (onRecording) {
+          onRecording(false)
+        }
         setDisabled(false)
       })
     return () => {
@@ -206,7 +196,12 @@ const Input: FC<InputProps> = (props) => {
         ) : (
           <>
             {mediaRecorder && (
-              <LiveAudioVisualizer height={50} mediaRecorder={mediaRecorder} />
+              <LiveAudioVisualizer
+                height={50}
+                mediaRecorder={mediaRecorder}
+                width={47}
+                barWidth={15}
+              />
             )}
             <Mic
               onEvent={mediaRecorder ? stopRecording : start}
@@ -218,11 +213,15 @@ const Input: FC<InputProps> = (props) => {
     ),
     startAdornment: (
       <InputAdornment position='start'>
-        <AttachMenu disabled={disabled} handleBackchat={handleBackchat} />
+        <AttachMenu disabled={disabled} />
       </InputAdornment>
     ),
   }
   // TODO if a file is uploaded, store on fs, then sample it, then goal it
+
+  // 0 = current, 1 = prior, -1 = escape has cleared the buffer
+  const [upIndex, setUpIndex] = useState(0)
+  const [tip, setTip] = useState('')
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -233,15 +232,65 @@ const Input: FC<InputProps> = (props) => {
       }
       if (e.key === 'Escape') {
         e.preventDefault()
+        if (value && upIndex === 0) {
+          setTip(value)
+          setUpIndex(-1)
+        } else {
+          setTip('')
+          setUpIndex(0)
+        }
         setValue('')
       }
+      if (isUnmodified) {
+        log('e.key', e.key)
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          log('up upIndex', upIndex)
+          if (upIndex === -1) {
+            setValue(tip)
+            setTip('')
+            setUpIndex(0)
+            return
+          }
+          if (upIndex === 0) {
+            setTip(value)
+          }
+          if (!thread) {
+            return
+          }
+          const message = getUserMessage(thread, upIndex + 1)
+          if (message) {
+            setValue(message)
+            setUpIndex(upIndex + 1)
+          }
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          log('down upIndex', upIndex)
+          if (upIndex <= 0) {
+            return
+          }
+          if (upIndex === 1) {
+            setValue(tip)
+            setTip('')
+            setUpIndex(0)
+          }
+          if (!thread) {
+            return
+          }
+          const message = getUserMessage(thread, upIndex - 1)
+          if (message) {
+            setValue(message)
+            setUpIndex(upIndex - 1)
+          }
+        }
+      }
     },
-    [send]
+    [send, thread, upIndex, value, tip]
   )
 
-  const ref = useRef<HTMLTextAreaElement>(null)
-
   useEffect(() => {
+    // TODO move these more global shortcuts to a global hook
     // hold ctrl + space to toggle recording
     const listener = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.ctrlKey) {
@@ -260,17 +309,19 @@ const Input: FC<InputProps> = (props) => {
         e.preventDefault()
         // ctrl + y for a new tab / window without the hash
         // ctrl + shift + y to get a new session in the current window
-        const urlWithoutHash = window.location.href.split('#')[0]
+
+        const urlWithoutHash = window.location.origin + window.location.pathname
         if (e.shiftKey) {
-          window.location.assign(urlWithoutHash)
+          // TODO do a backchat call to make a new thread, and don't allow
+          // another one until this has finished
         } else {
-          window.open(urlWithoutHash, '_blank')
+          window.open(urlWithoutHash, '_blank', 'noopener')
         }
       }
     }
     globalThis.addEventListener('keydown', listener)
     return () => globalThis.removeEventListener('keydown', listener)
-  }, [start, disabled, mediaRecorder, stopRecording])
+  }, [start, disabled, mediaRecorder, stopRecording, thread])
 
   const [doPreSubmit, setDoPreSubmit] = useState(presubmit)
   useEffect(() => {
@@ -281,20 +332,83 @@ const Input: FC<InputProps> = (props) => {
     send() // Remove the argument passed to the send function
   }, [prompt, doPreSubmit, send, value])
 
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault()
+      const clipboardData = event.clipboardData
+      const html = clipboardData.getData('text/html')
+      let text = clipboardData.getData('text/plain')
+      console.log('html', html)
+      console.log('text', text)
+      if (html) {
+        text = turndown.turndown(html)
+      }
+      const textarea = ref.current
+      if (!textarea) {
+        console.error('textarea is not defined')
+        return
+      }
+      const startPos = textarea.selectionStart
+      const endPos = textarea.selectionEnd
+
+      setValue(value.substring(0, startPos) + text + value.substring(endPos))
+      setTimeout(() => {
+        textarea.selectionStart = startPos
+        textarea.selectionEnd = startPos + text.length
+      })
+    },
+    [value]
+  )
+  const [hasFocus, setHasFocus] = useState(true)
+  useEffect(() => {
+    if (!disabled && hasFocus) {
+      ref.current?.focus()
+    }
+  }, [disabled, hasFocus])
+
   return (
-    <TextField
-      inputRef={ref}
-      value={disabled ? '' : value}
-      multiline
-      fullWidth
-      variant='outlined'
-      placeholder={placeholder}
-      InputProps={inputProps}
-      onChange={(e) => setValue(e.target.value)}
-      disabled={disabled}
-      onKeyDown={onKeyDown}
-    />
+    <ClickAwayListener onClickAway={() => setHasFocus(false)}>
+      <TextField
+        autoFocus={true}
+        inputRef={ref}
+        value={disabled ? '' : value}
+        multiline
+        fullWidth
+        variant='outlined'
+        placeholder={placeholder}
+        onChange={(e) => {
+          setValue(e.target.value)
+          setUpIndex(0)
+          setTip('')
+        }}
+        disabled={disabled}
+        onKeyDown={onKeyDown}
+        onPaste={handlePaste}
+        slotProps={{
+          input: inputProps,
+        }}
+      />
+    </ClickAwayListener>
   )
 }
 
 export default Input
+
+const getUserMessage = (thread: Thread, fromEnd: number) => {
+  let index = thread.messages.length - 1
+  let hitCount = 0
+  while (index >= 0) {
+    const message = thread.messages[index--]
+    if (message.role === 'user') {
+      // TODO handle prompts and selections being redone too
+      if (typeof message.content === 'string') {
+        hitCount++
+        if (hitCount === fromEnd) {
+          return message.content
+        }
+      }
+    }
+  }
+  return ''
+}

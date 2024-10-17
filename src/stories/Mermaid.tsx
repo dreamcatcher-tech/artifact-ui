@@ -1,11 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react'
-import mermaid from 'mermaid'
+import type { Mermaid as MermaidType } from 'mermaid'
+
+const getMermaid = () => {
+  const { mermaid } = globalThis as unknown as { mermaid: MermaidType }
+  if (!mermaid) {
+    throw new Error('Mermaid is not loaded')
+  }
+  return mermaid
+}
 
 interface MermaidProps {
   chart: string
 }
 
 export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
+  const mermaid = getMermaid()
   const chartRef = useRef<HTMLDivElement>(null)
   const [raw, setRaw] = useState(true)
 
@@ -18,7 +27,7 @@ export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       .catch(() => {
         setRaw(true)
       })
-  }, [chart])
+  }, [mermaid, chart])
 
   useEffect(() => {
     const element = chartRef.current
@@ -26,7 +35,7 @@ export const Mermaid: React.FC<MermaidProps> = ({ chart }) => {
       return
     }
     mermaid.run({ nodes: [element] })
-  }, [raw])
+  }, [mermaid, raw])
 
   return (
     <div ref={chartRef} className='mermaid'>

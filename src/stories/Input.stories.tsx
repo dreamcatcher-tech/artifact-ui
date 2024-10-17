@@ -3,11 +3,24 @@ import Input from './Input.tsx'
 import delay from 'delay'
 import { userEvent, within } from '@storybook/test'
 import { assert } from '@sindresorhus/is'
+import { longThread } from '../data.ts'
+import { Thread } from '../constants.ts'
+
+const thread: Thread = {
+  ...longThread,
+  messages: [
+    ...longThread.messages,
+    { role: 'user', content: 'First' },
+    { role: 'user', content: 'Second' },
+    { role: 'user', content: 'Third' },
+  ],
+}
 
 const meta: Meta<typeof Input> = {
   title: 'Input',
   component: Input,
   args: {
+    thread,
     prompt: async (text: string) => {
       console.log('prompt', text)
       await new Promise((resolve) => setTimeout(resolve, 500))
@@ -18,32 +31,28 @@ const meta: Meta<typeof Input> = {
       await new Promise((resolve) => setTimeout(resolve, 500))
       return 'Hello'
     },
-    handleBackchat: () => {
-      console.log('backchat')
-    },
   },
 }
 export default meta
 
 type Story = StoryObj<typeof Input>
 
+export const Ready: Story = {}
+export const NoThread: Story = {
+  args: { thread: undefined },
+}
 export const Loading: Story = {
   args: {
     prompt: undefined,
     transcribe: undefined,
   },
 }
-export const Ready: Story = {}
 export const Attachments: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const attach = canvas.getByLabelText('SpeedDial')
     await userEvent.click(attach)
   },
-}
-export const NoBackchat: Story = {
-  args: { handleBackchat: undefined },
-  play: Attachments.play,
 }
 export const Narrow: Story = {
   parameters: {

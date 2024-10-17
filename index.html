@@ -5,9 +5,30 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DreamcatcherGPT</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .container {
+        height: 100%;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" class="container"></div>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/+esm'
+      globalThis.mermaid = mermaid
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

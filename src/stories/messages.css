@@ -1,3 +1,31 @@
 pre {
+  white-space: pre-wrap;
+}
+
+.frontmatter {
+    background-color: #f6f8fa;
+    padding-left: 1em;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    font-family: monospace;
     white-space: pre-wrap;
+  }
+
+.messages-container {
+  flex-grow: 1;
+  position: relative; /* For positioning the scroll to bottom button */
+  overflow: hidden; 
+}
+
+.hidden-scroll {
+  overflow: hidden;
+  overflow-y: scroll; /* Allows vertical scrolling */
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  position: relative;
+  overflow-x: hidden;
+  
+}
+.hidden-scroll::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari */
 }

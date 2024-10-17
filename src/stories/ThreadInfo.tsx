@@ -1,27 +1,30 @@
-import posix from 'path-browserify'
-import remarkGfm from 'remark-gfm'
-import Markdown from 'react-markdown'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
 import Stack from '@mui/material/Stack'
 import { Typography } from '@mui/material'
-import { FC, useCallback, useEffect, useState } from 'react'
-import { CommitObject, Agent, Splice } from '../api/web-client.types'
+import { FC, useEffect, useState } from 'react'
+import { CommitObject, Splice, Thread } from '../api/types.ts'
 import Chip from '@mui/material/Chip'
-import { assert } from '@sindresorhus/is'
+import { RemoteTree } from '../react/thread-tree-watcher.ts'
 
-interface Display {
-  commit?: CommitObject
-  oid?: string
-  agent?: Agent
-  md?: string
-  threadId?: string
+interface Chips {
+  agent: string
+  commit: CommitObject
+  oid: string
+  repo: string
+  branches: string[]
+  remote?: RemoteTree
+  onRemote?: () => void
 }
-const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
+const Chips: FC<Chips> = ({
+  agent,
+  commit,
+  oid,
+  repo,
+  branches,
+  remote,
+  onRemote,
+}) => {
   const timestamp = commit?.committer.timestamp
   const [secondsElapsed, setSecondsElapsed] = useState(0)
-
   useEffect(() => {
     if (!timestamp) {
       return
@@ -40,66 +43,113 @@ const Display: FC<Display> = ({ threadId, commit, oid, agent, md }) => {
     const interval = setInterval(updateElapsedTime, 1000)
     return () => clearInterval(interval)
   }, [timestamp])
+
   // TODO show dirty status of the repo, actions pending, etc
   const since = `${formatElapsedTime(secondsElapsed)}`
-  const label = agent ? getName(agent) : <i>loading...</i>
-  const path = agent && agent.source.path
-  const [open, setOpen] = useState(false)
-  const openDialog = useCallback(() => setOpen(true), [setOpen])
-  const onClick = agent && md ? openDialog : undefined
+  const location = window.location.origin + window.location.pathname
+  const repoUrl = `https://github.com/${repo}`
+  const branchUrl = `${location}#branches=${branches.join('/')}`
+  const branchLabel = prettyBranches(branches)
+  const commitUrl = `${branchUrl}&commit=${oid}`
 
+  let remoteLabel = ''
+  if (remote) {
+    remoteLabel = 'loading...'
+    if (remote.splice) {
+      remoteLabel = `Show the remote thread: ${remote.splice.pid.branches.join('/')}`
+    }
+  }
   return (
-    <Stack direction='row' spacing={1} padding={1} alignItems='center'>
-      <Chip label={label} color='warning' size='small' onClick={onClick} />
-      <Typography mt={1} variant='caption' component='span'>
-        {!commit || !oid ? (
-          'loading commit...'
-        ) : (
-          <>
-            <i>commit: </i>
-            <b>{oid.slice(0, 8)} </b>
-            <i>thread: </i>
-            <b>{threadId?.substring(0, 11)} </b>
-            <i>when:</i> {since}
-          </>
-        )}
+    <>
+      <a href={repoUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
+        <Chip
+          clickable={true}
+          onClick={() => window.open(repoUrl, '_blank', 'noopener')}
+          label={repo}
+          color='warning'
+          size='small'
+          title={'Open this repo on github.com'}
+        />
+      </a>
+      <a href={branchUrl} style={{ textDecoration: 'none' }} onClick={onClick}>
+        <Chip
+          clickable={true}
+          label={branchLabel}
+          onClick={() => window.open(branchUrl, '_blank', 'noopener')}
+          color='info'
+          size='small'
+          title={'Open this thread remotely'}
+        />
+      </a>
+      <ChipMenu agent={agent} />
+      {remote && (
+        <Chip
+          clickable={true}
+          onClick={onRemote}
+          label='remote'
+          color='secondary'
+          size='small'
+          title={remoteLabel}
+        />
+      )}
+      <Typography
+        mt={1}
+        variant='caption'
+        component='span'
+        title='Open this commit remotely'
+      >
+        <i>commit: </i>
+        <a
+          href={commitUrl}
+          style={{ textDecoration: 'none' }}
+          target='_blank'
+          rel='noopener'
+        >
+          <b>{oid.slice(0, 8)} </b>
+        </a>
+        <i>when:</i> {since}
       </Typography>
-
-      <Dialog open={open} onClose={() => setOpen(false)} scroll='paper'>
-        <DialogTitle>
-          Agent: <b>{path}</b>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Markdown remarkPlugins={[remarkGfm]}>{md || ''}</Markdown>
-        </DialogContent>
-      </Dialog>
-    </Stack>
+    </>
   )
 }
 
 interface ThreadInfo {
-  threadId?: string
-  agent?: Agent
   splice?: Splice
-  md?: string
+  thread?: Thread
+  remote?: RemoteTree
+  onRemote?: () => void
 }
-const ThreadInfo: FC<ThreadInfo> = ({ threadId, agent, splice, md }) => {
-  if (!threadId) {
-    return (
-      <Typography mt={1} variant='caption'>
-        loading...
-      </Typography>
+const ThreadInfo: FC<ThreadInfo> = ({ splice, thread, remote, onRemote }) => {
+  let chips
+
+  if (!splice) {
+    chips = (
+      <Chip
+        clickable={false}
+        label={<i>loading...</i>}
+        color='info'
+        size='small'
+      />
+    )
+  } else {
+    const { commit, oid, pid } = splice
+    const repo = `${pid.account}/${pid.repository}`
+    chips = (
+      <Chips
+        agent={thread?.agent || '...'}
+        commit={commit}
+        oid={oid}
+        repo={repo}
+        branches={pid.branches}
+        remote={remote}
+        onRemote={onRemote}
+      />
     )
   }
-  const { commit, oid } = splice || {}
   return (
-    <Display
-      threadId={threadId || ''}
-      commit={commit}
-      oid={oid}
-      agent={agent}
-      md={md}
-    />
+    <Stack direction='row' spacing={1} padding={1} alignItems='center'>
+      {chips}
+    </Stack>
   )
 }
 export default ThreadInfo
@@ -125,9 +175,24 @@ function formatElapsedTime(secondsElapsed: number) {
 
   return formattedString
 }
-const getName = (agent: Agent) => {
-  const path = agent.source.path
-  assert.truthy(path.endsWith('.md'), 'invalid agent path: ' + path)
-  const name = posix.basename(path, '.md')
-  return name
+const prettyBranches = (branches: string[]) =>
+  branches.map((b) => b.substring(0, 7)).join('/')
+
+const onClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+  event.preventDefault()
 }
+
+const ChipMenu: FC<{ agent: string }> = ({ agent }) => {
+  // TODO navigate to the selected agent file on click
+  return (
+    <Chip
+      label={toName(agent)}
+      component='button'
+      size='small'
+      title={`Agent: ${agent}`}
+    />
+  )
+}
+
+const toName = (agent: string) =>
+  agent.split('/').pop()?.split('.').shift() || ''

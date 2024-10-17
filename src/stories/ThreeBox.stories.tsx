@@ -1,17 +1,30 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import ThreeBox from './ThreeBox.tsx'
-import { splice, longThread, shortThread, blankThread } from './data.ts'
+import {
+  filesStateboard,
+  splice,
+  longThread,
+  shortThread,
+  blankThread,
+} from '../data.ts'
+import { Box } from '@mui/material'
 
 const meta: Meta<typeof ThreeBox> = {
   title: 'ThreeBox',
   component: ThreeBox,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  render: (args) => (
+    <Box sx={{ height: '100vh' }}>
+      <ThreeBox {...args} />
+    </Box>
+  ),
   args: {
     thread: blankThread,
-    threadId: 'testThreadId',
-    inputProps: {
-      prompt: async (text: string) => {
-        console.log('prompt', text)
-      },
+    splice,
+    prompt: async (text: string) => {
+      console.log('prompt', text)
     },
   },
 }
@@ -20,17 +33,30 @@ export default meta
 type Story = StoryObj<typeof ThreeBox>
 
 export const Basic: Story = {}
+export const Loading: Story = {
+  args: { splice: undefined },
+}
+export const Remote: Story = {
+  args: {
+    remote: { thread: longThread, splice },
+  },
+}
 export const Short: Story = {
   args: {
     thread: shortThread,
-    md: '## Short Thread\n\nThis is a short thread.',
     splice,
   },
 }
+export const FilesStateboard: Story = {
+  args: {
+    thread: filesStateboard,
+    splice,
+  },
+}
+
 export const Long: Story = {
   args: {
     thread: longThread,
-    threadId: 'testThreadId',
   },
 }
 
@@ -47,17 +73,6 @@ export const Narrow: Story = {
         },
       },
       defaultViewport: 'narrow',
-    },
-  },
-}
-export const Preload: Story = {
-  args: {
-    inputProps: {
-      preload:
-        'Update HAL to the latest version by using the engage-help function with "hal-system" as the help name and "Update HAL" as the prompt.  Dont ask me any questions, just do it using your best guess.',
-      prompt: async (text: string) => {
-        console.log('prompt', text)
-      },
     },
   },
 }

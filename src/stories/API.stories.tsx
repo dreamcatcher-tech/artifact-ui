@@ -1,28 +1,26 @@
-import '../examples/button.css'
-import { WebClientEngine } from '../api/web-client-engine.ts'
-import { Backchat } from '../api/web-client-backchat.ts'
-import Provider from '../react/Provider.tsx'
+import { WebClientEngine } from '../api/client-engine.ts'
+import { Backchat } from '../api/client-backchat.ts'
+import ArtifactProvider from '../react/ArtifactProvider.tsx'
 import type { Meta, StoryObj } from '@storybook/react'
 import { within } from '@storybook/test'
 import Debug from 'debug'
 import { useCallback, useState } from 'react'
 import { usePing, useBackchat, useBackchatThread } from '../react/hooks.ts'
-import { print } from '../api/web-client.types.ts'
-import { Crypto } from '../api/web-client-crypto.ts'
+import { print } from '../api/types.ts'
+import { Crypto } from '../api/crypto.ts'
 
 const log = Debug('AI:API')
 
 const url = import.meta.env.VITE_API_URL
 
 const PingButton = () => {
-  const session = useBackchat()
-  log('session', session)
-  log('session %s', print(session.pid))
+  const backchat = useBackchat()
+  log('backchat', backchat)
+  log('backchat %s', print(backchat.pid))
   const ping = usePing()
   const [latency, setLatency] = useState(0)
-  const { focusId, ...backchatData } = useBackchatThread()
-  log('focusId', focusId)
-  log('backchatData', backchatData)
+  const thread = useBackchatThread()
+  log('thread', thread)
 
   const onClick = useCallback(async () => {
     log('ping')
@@ -52,14 +50,14 @@ const PingButton = () => {
 }
 const APIHarness = () => {
   return (
-    <Provider>
+    <ArtifactProvider>
       <div>
         <h1>API</h1>
         <p>url: {url}</p>
         <p>import.meta.env.VITE_API_URL: {import.meta.env.VITE_API_URL}</p>
       </div>
       <PingButton />
-    </Provider>
+    </ArtifactProvider>
   )
 }
 

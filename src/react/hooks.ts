@@ -1,41 +1,31 @@
 import equal from 'fast-deep-equal'
-import { ArtifactContext } from '../react/Provider.tsx'
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { ArtifactContext } from './ArtifactProvider.tsx'
+import { useCallback, useContext, useEffect, useState } from 'react'
 import Debug from 'debug'
 import {
   Splice,
   Backchat,
   PID,
   print,
-  getActorId,
-  freezePid,
   ApiFunctions,
-  Thread,
   Triad,
   PathTriad,
-  BackchatThread,
-  addPeer,
-} from '../api/web-client.types.ts'
+  ioStruct,
+  backchatStateSchema,
+} from '../api/types.ts'
+import { RemoteTree, ThreadTreeWatcher } from './thread-tree-watcher.ts'
 import posix from 'path-browserify'
-import { ulid } from 'ulid'
-import { assertObject } from '@sindresorhus/is'
-import { ThreeBoxProps } from '../stories/ThreeBox.tsx'
+import { z } from 'zod'
 const log = Debug('AI:hooks')
 
 export const useBackchat = (): Backchat => {
   const { backchat } = useContext(ArtifactContext)
   return backchat
 }
-export const useArtifactString = (triad?: PathTriad): string | undefined => {
-  const { string } = useArtifactBundle(triad)
-  return string
-}
-const useArtifactBundle = (
-  triad?: PathTriad
-): { splice?: Splice; string?: string } => {
+const useArtifact = (triad?: PathTriad) => {
   const splice = useSplice(triad)
   const [lastSplice, setLastSplice] = useState<Splice>()
-  const [string, setString] = useState<string>()
+  const [contents, setContents] = useState<string>()
   const { path } = triad || {}
   if (!equal(lastSplice, splice)) {
     setLastSplice(splice)
@@ -44,22 +34,40 @@ const useArtifactBundle = (
   if (path && lastSplice && lastSplice.changes) {
     if (lastSplice.changes[path]) {
       const { patch } = lastSplice.changes[path]
-      if (patch && string !== patch) {
-        setString(patch)
+      if (patch && contents !== patch) {
+        setContents(patch)
       }
     }
   }
-  return { splice: lastSplice, string }
+  return { splice: lastSplice, contents }
 }
-export const useArtifact = <T>({
-  path,
-  pid,
-  commit,
-}: PathTriad): T | undefined => {
-  const string = useArtifactString({ path, pid, commit })
-  if (string) {
-    return JSON.parse(string) as T
+export const useArtifactJSON = <T extends z.ZodType>(
+  triad?: PathTriad,
+  schema?: T
+) => {
+  const { splice, contents } = useArtifact(triad)
+  if (!triad) {
+    return { json: undefined, splice: undefined }
   }
+  let json: z.infer<T> | undefined
+  if (contents) {
+    json = JSON.parse(contents)
+    if (schema) {
+      json = schema.parse(json) as z.infer<T>
+    }
+  }
+  return { splice, json }
+}
+export const useBranchState = <T extends z.ZodType>(schema: T, pid?: PID) => {
+  const triad = { pid, path: '.io.json' }
+  const { json } = useArtifactJSON(triad, ioStruct)
+  if (!pid) {
+    return
+  }
+  if (!json) {
+    return
+  }
+  return schema.parse(json.state) as z.infer<T>
 }
 
 export const useSplice = (triad?: Partial<Triad>) => {
@@ -117,43 +125,25 @@ export const useSplice = (triad?: Partial<Triad>) => {
   log('useSplice %s', print(pid), path)
   return splice
 }
-export const useBackchatThread = (): ThreeBoxProps & { focusId?: string } => {
-  const { threadId, pid } = useBackchat()
-  return useThreadBundle(threadId, pid)
-}
-export const useThread = (threadId?: string) => {
-  // TODO cache the bundles
-  // TODO blank what is returned whenever the threadId switches
+export const useBackchatThread = () => {
   const backchat = useBackchat()
-  const pid = threadId ? addPeer(backchat.pid, threadId) : undefined
-  const bundle = useThreadBundle(threadId, pid)
-  const { focusId, ...rest } = bundle
-  log('dropping focus', focusId)
-  return rest
-}
-const useThreadBundle = (threadId?: string, pid?: PID) => {
-  const path = 'threads/' + threadId + '.json'
-  const [thread, setThread] = useState<Thread>()
-  const { splice, string } = useArtifactBundle({ path, pid })
+  const state = useBranchState(backchatStateSchema, backchat.pid)
+  const [target, setTarget] = useState<PID>()
+
+  if (!equal(target, state?.target)) {
+    setTarget(state?.target)
+  }
+
+  const [tree, setTree] = useState<Partial<RemoteTree>>({})
   useEffect(() => {
-    setThread(undefined)
-  }, [threadId])
-  const backchatThread = useMemo(() => {
-    if (string) {
-      return JSON.parse(string) as BackchatThread
+    if (!target) {
+      return
     }
-  }, [string])
-  useEffect(() => {
-    if (backchatThread) {
-      const { focus, ...rest } = backchatThread
-      log('dropping focus', focus)
-      setThread(rest)
-    }
-  }, [backchatThread])
-  const focusId = backchatThread?.focus
-  const mdSource = thread ? thread.agent.source : undefined
-  const md = useArtifactString(mdSource)
-  return { thread, threadId, splice, md, focusId }
+    const watcher = ThreadTreeWatcher.watch(backchat, target, setTree)
+    return () => watcher.stop()
+  }, [backchat, target])
+
+  return tree
 }
 
 export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
@@ -165,30 +155,6 @@ export const useArtifactBytes = ({ pid, path, commit }: PathTriad) => {
 export const usePing = () => {
   const backchat = useBackchat()
   return (...args: Parameters<typeof backchat.ping>) => backchat.ping(...args)
-}
-
-export const useDNS = (repo: string) => {
-  const backchat = useBackchat()
-  const [pid, setPid] = useState<PID>()
-  const setError = useError()
-  useEffect(() => {
-    let active = true
-    if (!backchat) {
-      return
-    }
-    backchat
-      .dns(repo)
-      .then((pid) => {
-        if (active) {
-          setPid(pid)
-        }
-      })
-      .catch(setError)
-    return () => {
-      active = false
-    }
-  }, [backchat, repo, setError])
-  return pid
 }
 
 export const useActions = (isolate: string, target?: PID) => {
@@ -221,18 +187,15 @@ export const useActions = (isolate: string, target?: PID) => {
   }
   return actions
 }
-export const usePrompt = (threadId?: string) => {
+export const usePrompt = () => {
   const backchat = useBackchat()
-  const prompt = useCallback(
-    async (content: string) => {
+  return useCallback(
+    async (content: string, target: PID) => {
       log('prompt', content)
-      await backchat.prompt(content, threadId)
+      await backchat.prompt(content, target)
     },
-    [backchat, threadId]
+    [backchat]
   )
-  if (backchat) {
-    return prompt
-  }
 }
 
 export const useLatestCommit = (pid?: PID): Splice | undefined => {
@@ -248,49 +211,13 @@ export const useError = () => {
   return setError
 }
 export const useTranscribe = () => {
-  const api = useBackchat()
+  const backchat = useBackchat()
   const transcribe = useCallback(
     async (audio: File) => {
-      const transcription = await api.transcribe({ audio })
+      const transcription = await backchat.transcribe({ audio })
       return transcription.text
     },
-    [api]
+    [backchat]
   )
   return transcribe
-}
-
-export const recoverHal = (halPid: PID, terminalPid: PID, create = false) => {
-  let fragment = parseHashFragment()
-  if (create) {
-    fragment = undefined
-  }
-  if (!fragment) {
-    const sessionId = ulid()
-    const actorId = getActorId(terminalPid)
-    setFragment(actorId, sessionId)
-    log('new hal sessionId set')
-  } else {
-    log('recovered hal fragment')
-  }
-  assertObject(fragment, 'fragment error')
-  const { actorId, sessionId } = fragment
-  const branches = [...halPid.branches, actorId, sessionId]
-  const session = { ...halPid, branches }
-  freezePid(session)
-  return session
-}
-
-const parseHashFragment = () => {
-  const hash = window.location.hash.substring(1)
-  const params = new URLSearchParams(hash)
-  const actorId = params.get('actorId')
-  const sessionId = params.get('sessionId')
-  if (actorId && sessionId) {
-    return { actorId, sessionId }
-  }
-}
-
-const setFragment = (actor: string, thread: string) => {
-  const params = new URLSearchParams({ actor, thread })
-  window.location.hash = params.toString()
 }

@@ -1,10 +1,12 @@
-import { Agent, Thread } from '../api/web-client.types'
-import { FC, useState } from 'react'
+import { tryParse } from '../react/utils.ts'
+import Slide from '@mui/material/Slide'
+import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom'
+import { Agent, Thread } from '../api/types.ts'
+import { FC, useMemo, useState } from 'react'
 import './messages.css'
 import CircularProgress from '@mui/material/CircularProgress'
 import { green } from '@mui/material/colors'
 import Chip from '@mui/material/Chip'
-import Debug from 'debug'
 import AgentIcon from '@mui/icons-material/SupportAgent'
 import DaveIcon from '@mui/icons-material/SentimentDissatisfied'
 import ToolIcon from '@mui/icons-material/Construction'
@@ -28,31 +30,19 @@ import DraftsIcon from '@mui/icons-material/Drafts'
 import FolderIcon from '@mui/icons-material/Folder'
 import Tooltip from '@mui/material/Tooltip'
 import { ToolAction } from './ToolAction.tsx'
-import { assertString } from '@sindresorhus/is'
+import { assertInteger, assertString } from '@sindresorhus/is'
 import Box from '@mui/material/Box'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { styled } from '@mui/material/styles'
 import IconButton, { IconButtonProps } from '@mui/material/IconButton'
 import Collapse from '@mui/material/Collapse'
-import remarkGfm from 'remark-gfm'
-import Markdown, { Components } from 'react-markdown'
-import { Mermaid } from './Mermaid.tsx'
+import Markdown from './Markdown.tsx'
+import RouterIcon from '@mui/icons-material/AltRoute'
+import { MessageParam } from '../constants.ts'
+import KeyboardDownIcon from '@mui/icons-material/KeyboardArrowDown'
 
 interface ExpandMoreProps extends IconButtonProps {
   expand: boolean
-}
-
-const renderers: Partial<Components> = {
-  code: ({ className, children, ...props }) => {
-    const match = /language-(mermaid)/.exec(className || '')
-    return match ? (
-      <Mermaid chart={String(children).replace(/\n$/, '')} />
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    )
-  },
 }
 
 const ExpandMore = styled((props: ExpandMoreProps) => {
@@ -69,7 +59,6 @@ const ExpandMore = styled((props: ExpandMoreProps) => {
   }),
 }))
 
-const debug = Debug('AI:ThreeBox')
 const STATUS = { RUNNING: 'RUNNING', DONE: 'DONE', ERROR: 'ERROR' }
 
 const Progress = () => (
@@ -88,16 +77,16 @@ const Progress = () => (
 interface ChatType {
   content: string
   type: 'user' | 'goalie' | 'runner' | 'system'
-  path?: string
+  name?: string
 }
-const ChatType: FC<ChatType> = ({ content, type, path }) => {
+const ChatType: FC<ChatType> = ({ content, type, name }) => {
   const defaultExpanded = type === 'system' ? false : true
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const handleExpandClick = () => {
     setExpanded(!expanded)
   }
-
+  const title = (name ? name : chatTitles[type]).replace(' ', '\u00a0')
   return (
     <TimelineItem>
       <TimelineSeparator>
@@ -116,17 +105,15 @@ const ChatType: FC<ChatType> = ({ content, type, path }) => {
           sx={{ display: 'flex', alignItems: 'center' }}
           onClick={handleExpandClick}
         >
-          <Typography variant='h6' component='span' sx={{ width: 100 }}>
-            {chatTitles[type] + '\u00A0' + (path ? path : '')}
+          <Typography variant='h6' component='span'>
+            {title}
           </Typography>
           <ExpandMore expand={expanded}>
             <ExpandMoreIcon />
           </ExpandMore>
         </Box>
-        <Collapse in={expanded} timeout='auto'>
-          <Markdown components={renderers} remarkPlugins={[remarkGfm]}>
-            {content || ''}
-          </Markdown>
+        <Collapse in={expanded} timeout={200}>
+          <Markdown content={content || ''}></Markdown>
         </Collapse>
       </TimelineContent>
     </TimelineItem>
@@ -140,8 +127,8 @@ enum ChatColors {
 }
 const chatTitles = {
   user: 'Dave',
-  goalie: 'HAL',
-  runner: 'HAL',
+  goalie: '',
+  runner: '',
   system: 'Agent:',
 }
 const chatIcons = {
@@ -154,15 +141,16 @@ const chatIcons = {
 interface Chat {
   content: string
   path?: string
+  name?: string
 }
 const Dave: FC<Chat> = ({ content }) => (
   <ChatType content={content} type='user' />
 )
-const Assistant: FC<Chat> = ({ content }) => (
-  <ChatType content={content} type='goalie' />
+const Assistant: FC<Chat> = ({ content, name }) => (
+  <ChatType content={content} type='goalie' name={name} />
 )
-const System: FC<Chat> = ({ content, path }) => (
-  <ChatType content={content} type='system' path={path} />
+const System: FC<Chat> = ({ content }) => (
+  <ChatType content={content} type='system' />
 )
 interface AgentPanel {
   agent: Agent
@@ -220,16 +208,7 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
                 <ListItemIcon>
                   <DraftsIcon />
                 </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Markdown
-                      components={renderers}
-                      remarkPlugins={[remarkGfm]}
-                    >
-                      {instructions}
-                    </Markdown>
-                  }
-                />
+                <ListItemText primary={<Markdown content={instructions} />} />
               </ListItem>
             </Tooltip>
           </List>
@@ -238,71 +217,274 @@ const AgentPanel: FC<AgentPanel> = ({ agent }) => {
     </TimelineItem>
   )
 }
-const Tool: FC<ToolAction> = ({ tool_calls, messages }) => (
-  <TimelineItem>
-    <TimelineSeparator>
-      <TimelineDot color='secondary' sx={{ position: 'relative' }}>
-        <ToolIcon />
-      </TimelineDot>
-      <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
-    </TimelineSeparator>
-    <TimelineContent>
-      <ToolAction tool_calls={tool_calls} messages={messages} />
-    </TimelineContent>
-  </TimelineItem>
-)
+
+interface Tool extends Omit<ToolAction, 'status'> {
+  name?: string
+}
+const Tool: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
+  if (isSwitch(tool_calls)) {
+    return (
+      <Router
+        tool_calls={tool_calls}
+        messages={messages}
+        name={name}
+        index={index}
+      />
+    )
+  }
+  return (
+    <ToolCall
+      tool_calls={tool_calls}
+      messages={messages}
+      name={name}
+      index={index}
+    />
+  )
+}
+const ToolCall: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  const handleExpandClick = () => {
+    setExpanded(!expanded)
+  }
+  const title = name.replace(' ', '\u00a0')
+  const { isInProgress, status } = useIsInProgress(messages, tool_calls, index)
+  return (
+    <TimelineItem>
+      <TimelineSeparator>
+        <TimelineDot
+          color='secondary'
+          sx={{ position: 'relative' }}
+          onClick={handleExpandClick}
+        >
+          <ToolIcon />
+          {isInProgress && <Progress />}
+        </TimelineDot>
+        <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
+      </TimelineSeparator>
+      <TimelineContent className='parent'>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center' }}
+          onClick={handleExpandClick}
+        >
+          <Typography variant='h6' component='span'>
+            {title} {status.join(' ')}
+          </Typography>
+          <ExpandMore expand={expanded}>
+            <ExpandMoreIcon />
+          </ExpandMore>
+        </Box>
+        <Collapse in={expanded} timeout={200}>
+          <ToolAction
+            tool_calls={tool_calls}
+            status={status}
+            messages={messages}
+            index={index}
+          />
+        </Collapse>
+      </TimelineContent>
+    </TimelineItem>
+  )
+}
+
+const Router: FC<Tool> = ({ tool_calls, messages, name = '', index }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  const handleExpandClick = () => {
+    setExpanded(!expanded)
+  }
+  const title = name.replace(' ', '\u00a0')
+  const { isInProgress, status } = useIsInProgress(messages, tool_calls, index)
+  const switchPath = useSwitchPath(tool_calls)
+  return (
+    <TimelineItem>
+      <TimelineSeparator>
+        <TimelineDot color='error' sx={{ position: 'relative' }}>
+          <RouterIcon />
+          {isInProgress && <Progress />}
+        </TimelineDot>
+        <TimelineConnector sx={{ bgcolor: 'secondary.main' }} />
+      </TimelineSeparator>
+      <TimelineContent>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center' }}
+          onClick={handleExpandClick}
+        >
+          <Typography variant='h6' component='span'>
+            {title + ' ➡️ ' + switchPath}
+          </Typography>
+          <ExpandMore expand={expanded}>
+            <ExpandMoreIcon />
+          </ExpandMore>
+        </Box>
+        <Collapse in={expanded} timeout={200}>
+          <ToolAction
+            tool_calls={tool_calls}
+            status={status}
+            messages={messages}
+            index={index}
+          />
+        </Collapse>
+      </TimelineContent>
+    </TimelineItem>
+  )
+}
 
 interface Messages {
   thread?: Thread
 }
 const Messages: FC<Messages> = ({ thread }) => {
-  const path = thread?.agent.name
   const messages = thread?.messages || []
+
   if (!messages.length) {
     return null
   }
   return (
-    <Timeline
-      sx={{
-        [`& .${timelineItemClasses.root}:before`]: {
-          flex: 0,
-          padding: 0,
-        },
-      }}
-    >
-      {messages.map((message, key) => {
-        const { role, content } = message
-        debug('role', role, 'content', content)
-        switch (role) {
-          case 'user':
-            assertString(content)
-            return <Dave key={key} content={content} />
-          case 'assistant':
-            if (message.tool_calls) {
-              return (
-                <Tool
-                  key={key}
-                  tool_calls={message.tool_calls}
-                  messages={messages}
-                />
-              )
-            } else {
-              if (!content) {
-                console.error('empty content:', message)
-              }
-              return <Assistant key={key} content={content || ''} />
+    <StickToBottom className='messages-container'>
+      <StickToBottom.Content>
+        <Timeline
+          sx={{
+            [`& .${timelineItemClasses.root}:before`]: {
+              flex: 0,
+              padding: 0,
+            },
+          }}
+        >
+          {messages.map((message, key) => {
+            const { role, content = '' } = message
+            switch (role) {
+              case 'user':
+                assertString(content)
+                return <Dave key={key} content={content} />
+              case 'assistant':
+                if (message.tool_calls) {
+                  return (
+                    <Tool
+                      key={key}
+                      tool_calls={message.tool_calls}
+                      messages={messages}
+                      name={message.name}
+                      index={key}
+                    />
+                  )
+                } else {
+                  assertString(content)
+                  return (
+                    <Assistant
+                      key={key}
+                      content={content}
+                      name={message.name}
+                    />
+                  )
+                }
+              case 'system':
+                // TODO display the entire Agent
+                assertString(content)
+                return <System key={key} content={content} />
+              case 'tool':
+                return null
+              default:
+                throw new Error(`unknown type ${role}`)
             }
-          case 'system':
-            // TODO display the entire Agent
-            return <System key={key} content={content} path={path} />
-          case 'tool':
-            return null
-          default:
-            throw new Error(`unknown type ${role}`)
-        }
-      })}
-    </Timeline>
+          })}
+        </Timeline>
+      </StickToBottom.Content>
+      <ScrollToBottom />
+    </StickToBottom>
   )
 }
 
 export default Messages
+
+const useIsInProgress = (
+  messages: MessageParam[],
+  tool_calls: { id: string }[],
+  index: number
+) => {
+  return useMemo(() => {
+    enum Status {
+      RUNNING = '⏱',
+      DONE = '✅',
+      ERROR = '❌',
+    }
+    const status: Status[] = tool_calls.map(() => Status.RUNNING)
+    const toolsMap = new Map<string, number>()
+    tool_calls.forEach(({ id }, index) => {
+      toolsMap.set(id, index)
+    })
+
+    let hits = 0
+
+    for (; index < messages.length; index++) {
+      const toolMessage = messages[index]
+      if ('tool_call_id' in toolMessage) {
+        if (typeof toolMessage.content === 'string') {
+          if (toolsMap.has(toolMessage.tool_call_id)) {
+            const toolIndex = toolsMap.get(toolMessage.tool_call_id)
+            assertInteger(toolIndex)
+
+            status[toolIndex] = Status.DONE
+
+            const parsed = tryParse(toolMessage.content)
+            if (typeof parsed === 'object' && parsed !== null) {
+              const { name, message } = parsed
+              if (typeof name === 'string' && name.includes('Error')) {
+                if (typeof message === 'string') {
+                  status[toolIndex] = Status.ERROR
+                }
+              }
+            }
+          }
+          if (++hits === tool_calls.length) {
+            break
+          }
+        }
+      }
+    }
+    const isInProgress = status.some((state) => state === Status.RUNNING)
+    return { isInProgress, status }
+  }, [messages, tool_calls, index])
+}
+
+const isSwitch = (tool_calls: { function: { name: string } }[]) => {
+  return tool_calls[0].function.name === 'agents_switch'
+}
+const useSwitchPath = (tool_calls: { function: { arguments: string } }[]) => {
+  return useMemo(() => {
+    try {
+      const args = JSON.parse(tool_calls[0].function.arguments)
+      const path = args.path || ''
+      return path.replace(' ', '\u00a0')
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return '(parse error...)'
+      }
+    }
+  }, [tool_calls])
+}
+
+function ScrollToBottom() {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext()
+
+  return (
+    <Slide direction='up' in={!isAtBottom} mountOnEnter unmountOnExit>
+      <IconButton
+        size='large'
+        sx={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          bottom: '0',
+          bgcolor: 'grey.300',
+          color: 'common.white',
+          '&:hover': {
+            bgcolor: 'grey.800',
+          },
+        }}
+        onClick={() => scrollToBottom()}
+      >
+        <KeyboardDownIcon />
+      </IconButton>
+    </Slide>
+  )
+}
