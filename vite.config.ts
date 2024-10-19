@@ -4,7 +4,7 @@ import sri from '@vividlemon/vite-plugin-sri'
 
 
 if (!process.env.VITE_API_URL) {
-  process.env.VITE_API_URL = 'https://longthreat-next.deno.dv'
+  process.env.VITE_API_URL = 'https://longthreat-next.deno.dev'
   // process.env.VITE_API_URL = 'https://localhost:8002'
   // process.env.VITE_API_URL = 'https://192.168.1.49:8000'
 }
