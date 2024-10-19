@@ -17,11 +17,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,12 +31,15 @@ jobs:
 
       - name: Build step
         run: npm run build
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
       - name: Upload to Deno Deploy
         uses: denoland/deployctl@v1
         with:
           project: 'longthreat-ui'
-          entrypoint: 'https://deno.land/std@0.217.0/http/file_server.ts'
+          entrypoint: 'https://jsr.io/@std/http/1.0.8/file_server.ts'
           root: 'dist'
 
       - name: Publish to Chromatic
