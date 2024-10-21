@@ -807,6 +807,7 @@ export type ChatParams = z.infer<typeof chatParams>
 export const backchatStateSchema = z.object({
   /** The base thread that this backchat session points to - the thread of last resort */
   target: pidSchema,
+  threadCount: z.number().int().gte(0),
 })
 
 export type Returns<T extends Record<string, ZodSchema>> = {

@@ -3,11 +3,12 @@ import react from '@vitejs/plugin-react'
 import sri from '@vividlemon/vite-plugin-sri'
 
 
-if (!process.env.VITE_API_URL) {
-  process.env.VITE_API_URL = 'https://longthreat-next.deno.dev'
-  // process.env.VITE_API_URL = 'https://localhost:8002'
-  // process.env.VITE_API_URL = 'https://192.168.1.49:8000'
+
+
+if (process.env.VITE_API_URL) {
+  throw new Error('VITE_API_URL already set: ' + process.env.VITE_API_URL)
 }
+process.env.VITE_API_URL = 'https://napps-api.deno.dev'
 
 function excludeStories(): Plugin {
   return {
